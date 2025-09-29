@@ -1,0 +1,3 @@
+{"timestamp":"2025-01-01T00:00:00Z","vehicle_id":"V1","position":{"lat":48.8566,"lon":2.3522}}
+{"timestamp":"2025-01-01T00:00:01Z","vehicle_id":"V1","position":{"lat":48.85661,"lon":2.35221},"motion":{"speed_kph":5.2}}
+{"timestamp":"2025-01-01T00:00:02Z","vehicle_id":"V1","position":{"lat":48.85662,"lon":2.35222},"motion":{"speed_kph":10.1}}
