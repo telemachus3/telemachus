@@ -1,0 +1,10 @@
+
+
+
+pandas
+pyarrow
+fastparquet
+jsonschema
+ajv-cli
+ajv-formats
+ipykernel

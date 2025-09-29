@@ -1,10 +1,27 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "telemachus"
 version = "0.1.0"
 description = "Telemachus Python SDK"
 authors = [{name = "Telemachus Project"}]
-license = "AGPL-3.0"
-dependencies = ["pandas", "jsonschema"]
+license = {text = "AGPL-3.0"}
+dependencies = [
+    "pandas",
+    "jsonschema",
+    "pyarrow",
+    "fastparquet"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "ruff",
+    "ipykernel"
+]
+
+[tool.setuptools.packages.find]
+include = ["telemachus*"]
