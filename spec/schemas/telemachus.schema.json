@@ -1,30 +1,137 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Telemachus Core v0.1",
+  "title": "Telemachus Core v0.1-alpha",
+  "description": "Telemachus Core (alpha): GNSS, motion, IMU, CAN/engine, events, quality and source metadata.",
   "type": "object",
   "properties": {
-    "timestamp": { "type": "string", "format": "date-time" },
-    "vehicle_id": { "type": "string" },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC ISO-8601 timestamp"
+    },
+    "vehicle_id": {
+      "type": "string",
+      "description": "Unique vehicle identifier (fleet-specific)"
+    },
     "position": {
       "type": "object",
+      "description": "Geographical position and derived attributes",
       "properties": {
-        "lat": { "type": "number" },
-        "lon": { "type": "number" }
+        "lat": { "type": "number", "description": "Latitude (decimal degrees)" },
+        "lon": { "type": "number", "description": "Longitude (decimal degrees)" },
+        "altitude_m": { "type": "number", "description": "Altitude in meters (optional)" },
+        "heading_deg": { "type": "number", "minimum": 0, "maximum": 360, "description": "Heading in degrees (0-360)" }
       },
       "required": ["lat", "lon"]
     },
     "motion": {
       "type": "object",
       "properties": {
-        "speed_kph": { "type": "number" }
+        "speed_kph": { "type": "number", "minimum": 0, "description": "Speed in km/h" },
+        "bearing_deg": { "type": "number", "minimum": 0, "maximum": 360, "description": "Bearing (optional)" }
       }
     },
-    "event": {
+    "quality": {
       "type": "object",
+      "description": "GNSS quality metrics",
       "properties": {
-        "type": { "type": "string" }
+        "hdop": { "type": "number", "description": "Horizontal dilution of precision" },
+        "vdop": { "type": "number" },
+        "pdop": { "type": "number" },
+        "num_satellites": { "type": "integer", "minimum": 0 },
+        "fix_type": { "type": "string", "enum": ["none", "2d", "3d", "dgps", "rtk"] }
+      }
+    },
+    "imu": {
+      "type": "object",
+      "description": "Inertial Measurement Unit (IMU) raw or aggregated data (optional). Units SI: m/s² for accel, rad/s for gyro, µT for magnetometer",
+      "properties": {
+        "accel": {
+          "type": "object",
+          "properties": {
+            "x_ms2": { "type": "number" },
+            "y_ms2": { "type": "number" },
+            "z_ms2": { "type": "number" }
+          }
+        },
+        "gyro": {
+          "type": "object",
+          "properties": {
+            "x_rads": { "type": "number" },
+            "y_rads": { "type": "number" },
+            "z_rads": { "type": "number" }
+          }
+        },
+        "mag": {
+          "type": "object",
+          "properties": {
+            "x_ut": { "type": "number" },
+            "y_ut": { "type": "number" },
+            "z_ut": { "type": "number" }
+          }
+        },
+        "sample_rate_hz": { "type": "number", "description": "Sampling rate in Hz (if applicable)" }
+      }
+    },
+    "engine": {
+      "type": "object",
+      "description": "CAN/Engine data (vehicle bus). Field availability depends on provider/OBD access.",
+      "properties": {
+        "rpm": { "type": "number", "minimum": 0, "description": "Engine RPM" },
+        "odometer_km": { "type": "number", "minimum": 0, "description": "Odometer in kilometers" },
+        "fuel_pct": { "type": "number", "minimum": 0, "maximum": 100, "description": "Fuel level percentage" },
+        "fuel_l": { "type": "number", "description": "Fuel amount in liters (if available)" },
+        "fuel_rate_lph": { "type": "number", "description": "Fuel consumption rate L/h" },
+        "throttle_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "engine_temp_c": { "type": "number" },
+        "battery_voltage_v": { "type": "number" }
+      }
+    },
+    "events": {
+      "type": "array",
+      "description": "Event list detected or reported by device/server (harsh braking, overspeed, geofence, etc.)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string" },
+          "severity": { "type": "string", "enum": ["low", "medium", "high"], "description": "Optional severity" },
+          "start": { "type": "string", "format": "date-time" },
+          "end": { "type": "string", "format": "date-time" },
+          "metadata": { "type": "object", "additionalProperties": true }
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "description": "Optional contextual enrichments (topography, weather, road attributes)",
+      "properties": {
+        "topography": {
+          "type": "object",
+          "properties": {
+            "slope_deg": { "type": "number" },
+            "surface_type": { "type": "string" }
+          }
+        },
+        "weather": {
+          "type": "object",
+          "properties": {
+            "temp_c": { "type": "number" },
+            "precip_mm": { "type": "number" }
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "source": {
+      "type": "object",
+      "description": "Provenance metadata (which provider, device id, ingestion time)",
+      "properties": {
+        "provider": { "type": "string" },
+        "device_id": { "type": "string" },
+        "ingest_timestamp": { "type": "string", "format": "date-time" }
       }
     }
   },
-  "required": ["timestamp", "vehicle_id", "position"]
+  "required": ["timestamp", "vehicle_id", "position"],
+  "additionalProperties": false
 }
