@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Install ajv-cli
-        run: npm install -g ajv-cli
+      - name: Install ajv + formats
+        run: npm install -g ajv-cli ajv-formats
       - name: Validate examples
-        run: ajv validate -s schemas/telemachus.schema.json -d "examples/*.jsonl"
+        run: ajv validate -c ajv-formats -s schemas/telemachus.schema.json -d "examples/*.json"
