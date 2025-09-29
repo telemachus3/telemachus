@@ -13,7 +13,7 @@ It aims to unify fragmented data from providers (Geotab, Webfleet, Samsara, etc.
 - 📖 [State of the Art](02_state_of_the_art.md)
 - 📐 [Core Specification v0.1-alpha](03_spec_core.md)
 - 🧪 [Examples](04_examples.md)
-- 🧾 [JSON Schema](../schemas/telemachus.schema.json)
+- 🧾 [JSON Schema](https://raw.githubusercontent.com/telemachus3/telemachus-spec/main/schemas/telemachus.schema.json)
 
 ---
 
