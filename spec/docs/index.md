@@ -55,11 +55,11 @@ Telemachus wants to do for **telematics** what GTFS did for **public transport**
 
 ```mermaid
 flowchart LR
-    A["Providers (Geotab, Webfleet, Samsara)"] --> B["Telemachus Core\nOpen Pivot Schema"]
-    B --> C["Fleet Premium\nMissions, KPIs, SLA"]
-    B --> D["Research\nData Science, Simulation"]
-    C --> E["Business Apps\nFleet Management, Insurance"]
-    D --> F["Scientific Outputs\nPublications, Models"]
+    A[Providers (Geotab, Webfleet, Samsara)] --> B[Telemachus Core - Open Pivot Schema]
+    B --> C[Fleet Premium - Missions, KPIs, SLA]
+    B --> D[Research - Data Science, Simulation]
+    C --> E[Business Apps - Fleet Management, Insurance]
+    D --> F[Scientific Outputs - Publications, Models]
 ```
 
 ## 📖 Citation
