@@ -23,5 +23,27 @@ ajv validate -s schemas/telemachus.schema.json -d examples/*.jsonl
 - telemachus-py – Python SDK
 - telemachus-cli – CLI tool
 
+## Citation
+If you use Telemachus in research or projects, please cite:
+
+S. Edet (2025). *Telemachus Core Specification (v0.1-alpha)*.  
+Zenodo. https://doi.org/10.5281/zenodo.17228092
+
+## Roadmap & Changelog
+- [Roadmap](docs/10_roadmap.md)
+- [Changelog](CHANGELOG.md)
+
+## CLI Examples
+```bash
+# Validate a file
+telemachus validate examples/geotab.json
+
+# Convert JSON/JSONL directory to Parquet
+telemachus to-parquet examples/ -o fleet.parquet
+
+# Compute Completeness Score
+telemachus tcs fleet.parquet
+```
+
 ## License
 MIT
