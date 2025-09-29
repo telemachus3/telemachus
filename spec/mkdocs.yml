@@ -10,9 +10,10 @@ repo_url: https://github.com/telemachus3/telemachus-spec
 edit_uri: blob/main/
 
 nav:
-  - Introduction: docs/01_introduction.md
-  - State of the Art: docs/02_state_of_the_art.md
-  - Core Specification: docs/03_spec_core.md
+  - Introduction: 01_introduction.md
+  - State of the Art: 02_state_of_the_art.md
+  - Core Specification: 03_spec_core.md
+  - Examples: 04_examples.md
 
 theme:
   name: mkdocs
