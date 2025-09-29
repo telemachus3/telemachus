@@ -1,9 +1,6 @@
-
-
-
 # Examples
 
-This page provides a complete example of a Telemachus Core record using **GNSS**, **Motion**, **Quality**, **IMU**, **Engine/CAN**, **Events**, **Context**, and **Source** fields.
+Examples are essential for understanding how to implement and utilize the Telemachus Core schema effectively. They provide concrete illustrations of how data should be structured, making it easier for developers and analysts to interpret, validate, and integrate telemetry data consistently across different systems and applications.
 
 ---
 
@@ -69,21 +66,80 @@ Below is a comprehensive example JSON record that demonstrates all major field g
 }
 ```
 
+### Explanation of Field Groups
+
+- **timestamp** and **vehicle_id**: Identify when the record was captured and which vehicle it pertains to.
+- **position**: Provides the geospatial fix including latitude, longitude, altitude, and heading.
+- **motion**: Describes the vehicle's movement with speed and bearing.
+- **quality**: Indicates GNSS fix quality metrics to assess data reliability.
+- **imu**: Contains inertial measurement unit data such as acceleration, rotation rates, magnetometer readings, and sample rate.
+- **engine**: Captures engine and CAN bus telemetry including RPM, odometer, fuel status, throttle position, engine temperature, and battery voltage.
+- **events**: Lists detected driving events like harsh braking, with severity and timing metadata.
+- **context**: Adds environmental and road conditions such as topography and weather.
+- **source**: Identifies the data provider, device ID, and ingest timestamp for traceability.
+
 ---
 
-## Field Group Explanations
+## Minimal Record Example
 
-- **GNSS/Position**: `lat`, `lon`, `altitude_m`, and `heading_deg` give the geospatial fix and orientation.
-- **Motion**: Includes `speed_kph` and `bearing_deg` (direction of movement).
-- **Quality**: GNSS fix quality metrics such as `hdop`, `vdop`, `pdop`, satellite count, and fix type.
-- **IMU**: Inertial sensors: acceleration, gyroscope, magnetometer, and sample rate.
-- **Engine/CAN**: Engine telemetry such as RPM, odometer, fuel, throttle, temperature, and battery voltage.
-- **Events**: List of detected events (e.g., harsh braking) with metadata.
-- **Context**: Environmental and road context (e.g., topography, weather).
-- **Source**: Data provider/device, device ID, and ingest timestamp.
+A minimal valid Telemachus Core record includes only the required fields: `timestamp`, `vehicle_id`, and `position` with latitude and longitude.
+
+```json
+{
+  "timestamp": "2025-01-01T12:00:00Z",
+  "vehicle_id": "FLEET-123",
+  "position": {
+    "lat": 48.8566,
+    "lon": 2.3522
+  }
+}
+```
+
+This minimal record is useful for basic location tracking scenarios where additional telemetry data is not available or necessary.
 
 ---
 
-## Notes
-- Values are illustrative only.
-- All groups (GNSS, Motion, IMU, CAN, etc.) are optional except `timestamp`, `vehicle_id`, and `position.lat/lon`.
+## Dataset Example
+
+Telemetry data is often collected as a series of records representing sequential time points. Below is an example dataset containing multiple Telemachus Core records in an array.
+
+```json
+[
+  {
+    "timestamp": "2025-01-01T12:00:00Z",
+    "vehicle_id": "FLEET-123",
+    "position": {"lat": 48.8566, "lon": 2.3522},
+    "motion": {"speed_kph": 50.0, "bearing_deg": 180.0}
+  },
+  {
+    "timestamp": "2025-01-01T12:00:10Z",
+    "vehicle_id": "FLEET-123",
+    "position": {"lat": 48.8570, "lon": 2.3525},
+    "motion": {"speed_kph": 52.4, "bearing_deg": 182.0},
+    "engine": {"rpm": 2400}
+  },
+  {
+    "timestamp": "2025-01-01T12:00:20Z",
+    "vehicle_id": "FLEET-123",
+    "position": {"lat": 48.8575, "lon": 2.3530},
+    "quality": {"hdop": 0.9, "num_satellites": 11}
+  }
+]
+```
+
+This dataset format is ideal for applications such as:
+
+- **Simulation**: Feeding time-series telemetry into vehicle simulators.
+- **Fleet Analysis**: Monitoring vehicle behavior over time for diagnostics or optimization.
+- **Data Visualization**: Plotting trajectories and sensor data trends.
+
+---
+
+## Best Practices
+
+- Use ISO-8601 format for all timestamps to ensure consistency and interoperability.
+- Always specify units for all measurements (e.g., meters, degrees, seconds) to avoid ambiguity.
+- Include only required fields for minimal records; add optional fields as available to enrich data quality.
+- Leverage the `context` field to provide environmental and situational information that can enhance analysis.
+- Maintain clear and consistent `source` metadata for data provenance and auditing.
+- Validate data quality fields to assess the reliability of GNSS and sensor measurements before use.

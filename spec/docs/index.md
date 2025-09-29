@@ -1,10 +1,21 @@
-
-
 # Telemachus Core Specification
 
 Welcome to the **Telemachus Core** documentation.  
 This project defines an **open pivot format** for B2B telematics data (GNSS, IMU, CAN, Events, Context).  
 It aims to unify fragmented data from providers (Geotab, Webfleet, Samsara, etc.) into a single, neutral schema.
+
+## ❓ Why Telemachus?
+
+- Open: A transparent and accessible format for all stakeholders.  
+- Extensible: Designed to accommodate evolving telematics data types and sources.  
+- Interoperable: Bridges diverse providers and systems under a unified schema.  
+- Bridging science and business: Facilitates both research innovation and practical applications.
+
+## 👥 Who is it for?
+
+- Researchers: Access standardized data for analysis and modeling.  
+- Developers/Integrators: Simplify integration with multiple telematics providers.  
+- Fleet Operators/Insurers: Leverage consistent data for operations, monitoring, and risk assessment.
 
 ---
 

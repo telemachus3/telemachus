@@ -1,5 +1,3 @@
-
-
 # Roadmap
 
 This roadmap outlines the planned evolution of the **Telemachus** project.
@@ -14,6 +12,8 @@ This roadmap outlines the planned evolution of the **Telemachus** project.
 - Deliver Python SDK (`telemachus-py`) with DataFrame + Parquet support.
 - Deliver CLI tool (`telemachus-cli`) with validation and conversion commands.
 - Publish example datasets (RS3 simulation, provider samples).
+- Publish RS3 simulation datasets in Telemachus format (JSON/Parquet).
+- Add "Getting Started" tutorials for SDK and CLI in the documentation.
 
 ---
 
@@ -26,6 +26,9 @@ This roadmap outlines the planned evolution of the **Telemachus** project.
 - Engage first adopters (researchers, SSII, mobility players).
 - Publish **white paper** and present at industry/scientific conferences.
 - Register DOI (Zenodo) for citation and adoption in academia.
+- Provide official RS3 baseline dataset with TCS = 100% as reference.
+- Publish benchmark comparing SaaS providers (Geotab, Webfleet, Samsara) vs RS3 baseline.
+- Submit first scientific paper or extended abstract to an academic venue.
 
 ---
 
@@ -38,6 +41,9 @@ This roadmap outlines the planned evolution of the **Telemachus** project.
 - Build **community governance model** (open RFC process).
 - Explore integration with **Otonomo/High Mobility/Flespi** and OEM APIs.
 - Internationalization: documentation in FR/EN and wider community engagement.
+- Formalize Road Genome context into a structured module (if adopted).
+- Establish partnerships with standardization bodies (ISO, OGC, CEN).
+- Provide certification or compliance badge for adopters.
 
 ---
 
