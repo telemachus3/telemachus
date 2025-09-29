@@ -55,11 +55,7 @@ Telemachus wants to do for **telematics** what GTFS did for **public transport**
 
 ```mermaid
 graph TD
-  Provider[Providers: Geotab, Webfleet, Samsara] --> Core[Telemachus Core - Open Pivot Schema]
-  Core --> Fleet[Fleet Premium - Missions, KPIs, SLA]
-  Core --> Research[Research - Data Science, Simulation]
-  Fleet --> Apps[Business Apps - Fleet Management, Insurance]
-  Research --> Science[Scientific Outputs - Publications, Models]
+  A[Start] --> B[End]
 ```
 
 ## 📖 Citation
