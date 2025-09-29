@@ -1,0 +1,28 @@
+
+
+site_name: Telemachus Core Spec
+site_description: Open pivot specification for B2B telematics (GNSS, IMU, CAN, Events, Context)
+site_author: Telemachus Project
+site_url: https://telemachus3.github.io/telemachus-spec/
+
+repo_name: telemachus3/telemachus-spec
+repo_url: https://github.com/telemachus3/telemachus-spec
+edit_uri: blob/main/
+
+nav:
+  - Introduction: docs/01_introduction.md
+  - State of the Art: docs/02_state_of_the_art.md
+  - Core Specification: docs/03_spec_core.md
+
+theme:
+  name: mkdocs
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - tables
+  - codehilite
+
+plugins:
+  - search
