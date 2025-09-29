@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+title: "Telemachus Core Specification"
+message: "Please cite this project using the following metadata."
+authors:
+  - family-names: "Edet"
+    given-names: "Sébastien"
+keywords:
+  - telematics
+  - interoperability
+  - open standard
+  - mobility
+  - fleet management
+  - data standardization
+license: AGPL-3.0
+version: 0.1-alpha
+date-released: 2025-09-30
+repository-code: "https://github.com/telemachus3/telemachus-spec"
+abstract: >
+  Telemachus Core is an open pivot format for B2B telematics data, designed to unify
+  fragmented provider datasets (Geotab, Webfleet, Samsara, Teltonika) into a consistent,
+  extensible schema. It supports GNSS, IMU, CAN, events, and context enrichments for
+  both scientific research and fleet management applications.
+doi: 10.5281/zenodo.xxxxx

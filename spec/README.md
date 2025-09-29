@@ -1,4 +1,5 @@
 [![Docs](https://img.shields.io/badge/docs-online-blue)](https://telemachus3.github.io/telemachus-spec/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17228092.svg)](https://doi.org/10.5281/zenodo.17228092)
 # Telemachus Core Specification
 
 **Telemachus Core** is an open pivot format for telematics data.  
