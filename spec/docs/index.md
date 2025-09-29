@@ -61,3 +61,12 @@ flowchart LR
     C --> E[Business Apps<br/>Fleet Management, Insurance]
     D --> F[Scientific Outputs<br/>Publications, Models]
 ```
+
+## 📖 Citation
+
+If you use Telemachus in research or projects, please cite:
+
+S. Edet (2025). *Telemachus Core Specification (v0.1-alpha)*.  
+Zenodo. https://doi.org/10.5281/zenodo.17228092  
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17228092.svg)](https://doi.org/10.5281/zenodo.17228092)
