@@ -13,9 +13,19 @@ nav:
   - State of the Art: 02_state_of_the_art.md
   - Core Specification: 03_spec_core.md
   - Examples: 04_examples.md
+  - Provider Mappings: 05_provider_mappings.md
+  - Completeness Score: 06_tcs.md
+  - Context Extensions: 07_contexts.md
+  - Versioning Policy: 08_versioning.md
+  - Glossary: 09_glossary.md
+  - Roadmap: 10_roadmap.md
 
 theme:
-  name: mkdocs
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
 
 markdown_extensions:
   - admonition
@@ -26,3 +36,4 @@ markdown_extensions:
 
 plugins:
   - search
+  - mermaid2

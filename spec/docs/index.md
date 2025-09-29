@@ -37,3 +37,16 @@ Telemachus wants to do for **telematics** what GTFS did for **public transport**
 - Provide an **open, simple standard**.  
 - Enable **interoperability** across providers.  
 - Support both **scientific research** and **business applications**.  
+
+---
+
+## 🔗 Data Flow Overview
+
+```mermaid
+flowchart LR
+    A[Providers<br/>(Geotab, Webfleet, Samsara...)] --> B[Telemachus Core<br/>Open Pivot Schema]
+    B --> C[Fleet Premium<br/>Missions, KPIs, SLA]
+    B --> D[Research<br/>Data Science, Simulation]
+    C --> E[Business Apps<br/>Fleet Management, Insurance]
+    D --> F[Scientific Outputs<br/>Publications, Models]
+```
