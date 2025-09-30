@@ -1,0 +1,33 @@
+
+
+version: "0.1.0"
+dataset_id: "tele-demo-001"
+created_utc: "2025-09-30T10:00:00Z"
+producer: "RoadSimulator3"
+frequency_hz: 10
+crs: "EPSG:4326"
+
+units:
+  speed: "m/s"
+  acceleration: "m/s^2"
+  gyro: "rad/s"
+
+vehicle:
+  id: "VEH-DEMO"
+  type: "passenger_car"
+
+source:
+  route_engine: "OSRM-car"
+  terrain: "IGN-RGEALTI"
+  weather: "clear"
+
+tables:
+  - name: "trajectory"
+    format: "parquet"
+    path: "tables/trajectory.parquet"
+  - name: "imu"
+    format: "parquet"
+    path: "tables/imu.parquet"
+  - name: "events"
+    format: "parquet"
+    path: "tables/events.parquet"

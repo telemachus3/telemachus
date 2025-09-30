@@ -1,10 +1,2 @@
-from .dataset import TelemachusDataset
-
-__all__ = [
-    "load_jsonl",
-    "validate",
-    "to_parquet",
-    "from_parquet",
-    "score_completeness",
-    "TelemachusDataset",
-]
+__all__ = ["cli", "models", "validate", "io_export", "io_import"]
+__version__ = "0.1.0"

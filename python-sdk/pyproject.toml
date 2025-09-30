@@ -3,17 +3,22 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "telemachus"
+name = "telemachus-py"
 version = "0.1.0"
-description = "Telemachus Python SDK"
+description = "Telemachus: an open telematics pivot format (manifest YAML + Parquet tables) with Python tools to export, validate and read datasets."
 authors = [{name = "Telemachus Project"}]
-license = {text = "AGPL-3.0"}
+license = {text = "MIT"}
 dependencies = [
-    "pandas",
-    "jsonschema",
-    "pyarrow",
-    "fastparquet"
+    "pydantic>=2.7",
+    "pandas>=2.1",
+    "pyarrow>=16.0",
+    "click>=8.1",
+    "pyyaml>=6.0",
+    "jsonschema>=4.22"
 ]
+
+[project.scripts]
+tele = "telemachus.cli:tele"
 
 [project.optional-dependencies]
 dev = [
@@ -23,6 +28,18 @@ dev = [
     "ruff",
     "ipykernel"
 ]
+viz = [
+    "matplotlib"
+]
+geo = [
+    "geopandas",
+    "shapely",
+    "pyproj"
+]
 
 [tool.setuptools.packages.find]
 include = ["telemachus*"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+pythonpath = ["."]

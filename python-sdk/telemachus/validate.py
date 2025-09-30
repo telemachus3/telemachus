@@ -1,99 +1,142 @@
-import os, json, jsonschema, urllib.request
+"""
+Validation utilities for Telemachus datasets (v0.1).
 
-DEFAULT_SCHEMA_URL = os.getenv(
-    "TELEMACHUS_SCHEMA_URL",
-    "https://raw.githubusercontent.com/telemachus3/telemachus-spec/main/schemas/telemachus.schema.json"
-)
+This module validates a dataset described by a YAML manifest (dataset.yaml)
+and a set of Parquet tables (trajectory/imu/events/...).
 
-def _load_schema(schema_path_or_url: str | None = None):
-    path = schema_path_or_url or DEFAULT_SCHEMA_URL
-    if path.startswith("http"):
-        with urllib.request.urlopen(path) as r:
-            return json.loads(r.read().decode("utf-8"))
-    with open(path) as f:
-        return json.load(f)
+Key entry points:
+- validate_manifest(manifest_path) -> (ok: bool, report: str)
+- summarize_dataset(manifest_path) -> str
 
-def validate(path: str, schema: str | None = None):
-    schema_obj = _load_schema(schema)
-    validator = jsonschema.Draft7Validator(schema_obj)
-    with open(path) as f:
-        data = [json.loads(line) for line in f]
-    errors = []
-    for i, rec in enumerate(data):
-        errs = list(validator.iter_errors(rec))
-        if errs:
-            errors.append({"index": i, "errors": [e.message for e in errs]})
-    return {"ok": len(errors) == 0, "errors": errors}
+Backward-compat note:
+The previous implementation validated JSON/JSONL records against a remote Draft-7 schema.
+Telemachus v0.1 now uses a local YAML manifest + Parquet tables. For convenience, a thin
+`validate()` wrapper is provided to keep a similar return signature.
+"""
+
+from __future__ import annotations
+
+import os
+from typing import Tuple
+
+import yaml
+import pyarrow.parquet as pq
+from jsonschema import Draft202012Validator
+
+from .models import Manifest
+from .schemas.manifest_schema import MANIFEST_SCHEMA
 
 
-# Parquet conversion and completeness scoring utilities
-import pandas as pd
+def _load_yaml(path: str) -> dict:
+    with open(path, "r") as f:
+        return yaml.safe_load(f)
 
-def to_parquet(json_path: str, out_path: str, schema: str | None = None):
+
+def _check_parquet(path: str) -> Tuple[bool, str]:
+    try:
+        pq.ParquetFile(path)  # lightweight read of metadata
+        return True, ""
+    except Exception as e:
+        return False, f"Cannot read Parquet '{path}': {e}"
+
+
+def validate_manifest(manifest_path: str) -> tuple[bool, str]:
     """
-    Load a JSON or JSONL file, validate records, and export to Parquet.
-    """
-    schema_obj = _load_schema(schema)
-    validator = jsonschema.Draft7Validator(schema_obj)
-    records = []
-    with open(json_path) as f:
-        for i, line in enumerate(f):
-            rec = json.loads(line)
-            errs = list(validator.iter_errors(rec))
-            if errs:
-                raise ValueError(f"Validation errors at record {i}: {[e.message for e in errs]}")
-            records.append(rec)
-    df = pd.json_normalize(records)
-    df.to_parquet(out_path, index=False)
-    return out_path
+    Validate a Telemachus manifest and referenced Parquet tables.
 
-def from_parquet(path: str):
+    Returns:
+        (ok, report)
+        ok: bool indicating success
+        report: human-readable summary of validation outcome
     """
-    Load a Parquet file into a pandas DataFrame.
-    """
-    return pd.read_parquet(path)
+    if not os.path.exists(manifest_path):
+        return False, f"❌ Manifest not found: {manifest_path}"
 
-def score_completeness(df: pd.DataFrame, core_fields: list[str] | None = None) -> dict:
+    data = _load_yaml(manifest_path)
+
+    # 1) JSON Schema structure validation
+    errors = sorted(Draft202012Validator(MANIFEST_SCHEMA).iter_errors(data), key=lambda e: e.path)
+    if errors:
+        report = "\n".join([f"- {e.message} @ {list(e.path)}" for e in errors])
+        return False, f"❌ Schema errors:\n{report}"
+
+    # 2) Pydantic semantic checks
+    try:
+        manifest = Manifest(**data)
+    except Exception as e:
+        return False, f"❌ Manifest semantic validation failed: {e}"
+
+    # 3) Parquet tables existence + readability
+    base = os.path.dirname(os.path.abspath(manifest_path))
+    missing = []
+    unreadable = []
+    for t in manifest.tables:
+        table_path = os.path.join(base, t.path)
+        if not os.path.exists(table_path):
+            missing.append(table_path)
+            continue
+        ok, err = _check_parquet(table_path)
+        if not ok:
+            unreadable.append(err)
+
+    if missing or unreadable:
+        parts = []
+        if missing:
+            parts.append("Missing tables:\n" + "\n".join(f"- {p}" for p in missing))
+        if unreadable:
+            parts.append("Unreadable tables:\n" + "\n".join(f"- {e}" for e in unreadable))
+        return False, "❌ Parquet issues detected:\n" + "\n".join(parts)
+
+    return True, f"✅ Manifest OK — {manifest.dataset_id} (freq={manifest.frequency_hz}Hz, tables={len(manifest.tables)})"
+
+
+def summarize_dataset(manifest_path: str) -> str:
     """
-    Compute Telemahus Completeness Score (TCS) for a DataFrame.
-    Returns global score (%) and per-field coverage.
+    Produce a short textual summary (rows, columns) for each table in the dataset.
     """
-    if core_fields is None:
-        core_fields = [
-            "timestamp",
-            "vehicle_id",
-            "position.lat",
-            "position.lon",
-            "position.altitude_m",
-            "position.heading_deg",
-            "motion.speed_kph",
-            "motion.bearing_deg",
-            "quality.hdop",
-            "quality.vdop",
-            "quality.pdop",
-            "quality.num_satellites",
-            "quality.fix_type",
-            "imu.accel.x_ms2",
-            "imu.accel.y_ms2",
-            "imu.accel.z_ms2",
-            "imu.gyro.x_rads",
-            "imu.gyro.y_rads",
-            "imu.gyro.z_rads",
-            "imu.mag.x_ut",
-            "imu.mag.y_ut",
-            "imu.mag.z_ut",
-            "engine.rpm",
-            "engine.odometer_km",
-            "engine.fuel_pct",
-            "engine.fuel_l",
-            "engine.fuel_rate_lph",
-            "engine.throttle_pct",
-            "engine.engine_temp_c",
-            "engine.battery_voltage_v"
-        ]
-    total = len(core_fields)
-    coverage = {}
-    for field in core_fields:
-        coverage[field] = float(df[field].notna().mean()) if field in df.columns else 0.0
-    score = sum(coverage.values()) / total * 100
-    return {"score_pct": score, "coverage": coverage}
+    if not os.path.exists(manifest_path):
+        return f"❌ Manifest not found: {manifest_path}"
+
+    data = _load_yaml(manifest_path)
+    base = os.path.dirname(os.path.abspath(manifest_path))
+
+    try:
+        m = Manifest(**data)
+    except Exception as e:
+        return f"❌ Manifest semantic validation failed: {e}"
+
+    lines = [f"Dataset: {m.dataset_id} — freq={m.frequency_hz}Hz"]
+    for t in m.tables:
+        p = os.path.join(base, t.path)
+        if not os.path.exists(p):
+            lines.append(f"- {t.name}: MISSING ({p})")
+            continue
+        try:
+            pf = pq.ParquetFile(p)
+            rows = pf.metadata.num_rows
+            cols = pf.schema_arrow.names
+            lines.append(f"- {t.name}: {rows} rows, cols={list(cols)}")
+        except Exception as e:
+            lines.append(f"- {t.name}: ERROR reading ({e})")
+    return "\n".join(lines)
+
+
+# ---- Compatibility wrapper ----
+
+def validate(path: str, schema: str | None = None) -> dict:
+    """
+    Compatibility wrapper to keep a dict-style response for callers used to the old API.
+
+    If `path` is a YAML file (manifest), run the v0.1 manifest validation.
+    Otherwise, return a helpful error directing users to the new workflow.
+    """
+    if path.lower().endswith((".yml", ".yaml")):
+        ok, report = validate_manifest(path)
+        return {"ok": ok, "errors": [] if ok else [report]}
+    return {
+        "ok": False,
+        "errors": [
+            "Telemachus v0.1 validates YAML manifests + Parquet tables. "
+            "Provide a dataset.yaml path (see tele validate <manifest>)."
+        ],
+    }
