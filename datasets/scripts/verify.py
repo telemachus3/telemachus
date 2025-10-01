@@ -89,6 +89,37 @@ def _ok_speed_alias(cols: Iterable[str]) -> bool:
 def _get_speed_series(df: pd.DataFrame) -> pd.Series:
     return df["speed"] if "speed" in df.columns else df["speed_mps"]
 
+def _get_timestamp_series(df: pd.DataFrame, meta: dict) -> pd.Series:
+    """Return a UTC-aware pandas Series for timestamps using either the canonical
+    'timestamp' column or any known aliases (including dataset-provided aliases).
+    """
+    # Preferred direct column
+    if "timestamp" in df.columns:
+        ts = df["timestamp"]
+    else:
+        # Build candidate list: default aliases + dataset.json mapping if provided
+        candidates = list(DEFAULT_ALIASES.get("timestamp", []))
+        user_alias = (meta.get("column_aliases") or {}).get("timestamp")
+        if user_alias:
+            if isinstance(user_alias, list):
+                candidates = user_alias + candidates
+            else:
+                candidates = [user_alias] + candidates
+        src = next((c for c in candidates if c in df.columns), None)
+        if src is None:
+            raise AssertionError(
+                "missing 'timestamp' and no known alias found; available columns: " + ", ".join(map(str, df.columns))
+            )
+        ts = df[src]
+        # If milliseconds-labeled aliases are used, convert accordingly
+        if src in ("time_ms", "timestamp_ms"):
+            ts = pd.to_datetime(ts, unit="ms", utc=True)
+    # Normalize to datetime64[ns, UTC]
+    if pd.api.types.is_datetime64_any_dtype(ts):
+        ts = ts.dt.tz_convert("UTC") if getattr(ts.dt, "tz", None) is not None else ts.dt.tz_localize("UTC")
+    else:
+        ts = pd.to_datetime(ts, utc=True, errors="coerce")
+    return ts
 
 def _haversine_km(lat1, lon1, lat2, lon2) -> float:
     # Inputs in degrees; output in kilometers
@@ -143,10 +174,23 @@ def verify_dataset(dpath: Path, *, strict: bool, min_hz: float, max_hz: float) -
     print(f"[OK] loaded {src}: rows={len(df):,}, cols={len(df.columns)}")
 
     cols = list(df.columns)
-    missing = [c for c in REQ if c not in cols and not (c == "speed" and "speed_mps" in cols)]
+
+    def _has_alias(cname: str) -> bool:
+        if cname == "speed":
+            return ("speed" in cols) or ("speed_mps" in cols)
+        alts = DEFAULT_ALIASES.get(cname, [])
+        return any(a in cols for a in alts)
+
+    # Treat a column as present if either the target or any known alias exists
+    missing = [c for c in REQ if not ((c in cols) or _has_alias(c))]
+
     if any(k in missing for k in ("acc_x","acc_y","acc_z","gyro_x","gyro_y","gyro_z")):
         print("[HINT] IMU columns missing after alias resolution. Available columns are:")
         print(sorted(cols))
+    if "timestamp" in missing:
+        print("[HINT] No 'timestamp' column found. If your CSV uses 'ts' or 'time_ms', consider adding 'column_aliases' in dataset.json or ensure headers are correct.")
+        print("Available columns:", sorted(cols))
+
     assert _ok_speed_alias(cols), "need 'speed' or 'speed_mps'"
     assert not missing, f"missing required columns: {missing}"
 
@@ -159,12 +203,9 @@ def verify_dataset(dpath: Path, *, strict: bool, min_hz: float, max_hz: float) -
         else:
             print(f"[WARN] {msg}")
 
-    # Timestamp checks
-    ts_series = df["timestamp"]
-    if pd.api.types.is_datetime64_any_dtype(ts_series):
-        ts = ts_series.dt.tz_convert("UTC") if ts_series.dt.tz is not None else ts_series.dt.tz_localize("UTC")
-    else:
-        ts = pd.to_datetime(ts_series, utc=True, errors="coerce")
+    # Timestamp checks (robust to alias-only CSV)
+    ts = _get_timestamp_series(df, meta)
+
     assert ts.notna().all(), "invalid timestamps (NaT detected)"
     assert ts.is_monotonic_increasing, "timestamps must be monotonic increasing"
     dt = ts.diff().dt.total_seconds().dropna()
