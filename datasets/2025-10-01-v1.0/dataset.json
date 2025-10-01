@@ -1,6 +1,16 @@
 {
   "format": "Telemachus",
   "version": "0.1",
+  "column_aliases": {
+    "acc_x": "ax_mps2",
+    "acc_y": "ay_mps2",
+    "acc_z": "az_mps2",
+    "gyro_x": "gx_rad_s",
+    "gyro_y": "gy_rad_s",
+    "gyro_z": "gz_rad_s",
+    "timestamp": "timestamp",
+    "speed": "speed"
+  },
   "generated_at_utc": "2025-10-01T09:06:03.645881Z",
   "vehicle_id": "VL-HN-01",
   "trip_id": "HN-TELEMACHUS_20251001_090550",
