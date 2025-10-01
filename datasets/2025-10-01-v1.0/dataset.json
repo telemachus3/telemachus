@@ -1,0 +1,16 @@
+{
+  "format": "Telemachus",
+  "version": "0.1",
+  "generated_at_utc": "2025-10-01T09:06:03.645881Z",
+  "vehicle_id": "VL-HN-01",
+  "trip_id": "HN-TELEMACHUS_20251001_090550",
+  "artifacts": {
+    "parquet": "data/simulations/TELEMACHUS_20251001_090550/telemachus/samples.parquet",
+    "csv": "data/simulations/TELEMACHUS_20251001_090550/telemachus/samples.csv"
+  },
+  "source": {
+    "project": "RoadSimulator3",
+    "rs3_outdir": "data/simulations/TELEMACHUS_20251001_090550",
+    "rs3_timeline": "data/simulations/TELEMACHUS_20251001_090550/timeline.csv"
+  }
+}
