@@ -120,12 +120,13 @@ def verify_dataset(dpath: Path, *, strict: bool, min_hz: float, max_hz: float) -
 
     pq = dpath / "samples.parquet"
     csv = dpath / "samples.csv"
-    if pq.exists():
-        df = pd.read_parquet(pq)
-        src = pq.name
-    elif csv.exists():
+    # Prefer CSV for widest compatibility in CI; fallback to Parquet
+    if csv.exists():
         df = pd.read_csv(csv)
         src = csv.name
+    elif pq.exists():
+        df = pd.read_parquet(pq)
+        src = pq.name
     else:
         raise AssertionError("missing samples.csv or samples.parquet")
 
