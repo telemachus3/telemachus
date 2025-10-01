@@ -28,7 +28,7 @@ df = pd.read_csv("2025-10-01-v1.0/samples.csv")
 df_parquet = pd.read_parquet("2025-10-01-v1.0/samples.parquet")
 ```
 
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/telemachus3/telemachus-datasets/blob/main/notebooks/quickstart.ipynb)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/telemachus3/telemachus-datasets/blob/main/examples/quickstart.ipynb)
 
 Ce notebook permet d’explorer le dataset directement dans votre navigateur, sans installation préalable. Il offre une introduction interactive à l’analyse des données Telemachus. 
 
