@@ -1,60 +1,36 @@
-# tests/test_dataset.py
-# Modern test aligned with Telemachus v0.1 (manifest YAML + Parquet tables)
-
 import os
-import tempfile
-import pandas as pd
+from pathlib import Path
 
-from telemachus.io_export import export_rs3_to_telemachus
-from telemachus.validate import validate_manifest, summarize_dataset
+import pytest
+
+from telemachus.core.dataset import Dataset
 
 
-def test_dataset_flow_modern():
-    with tempfile.TemporaryDirectory() as tmp:
-        # Create minimal RS3-like CSV inputs
-        traj_csv = os.path.join(tmp, "trajectory.csv")
-        pd.DataFrame({
-            "timestamp": ["2025-01-01T00:00:00Z", "2025-01-01T00:00:00.1Z"],
-            "lat": [48.8566, 48.85661],
-            "lon": [2.3522, 2.35221],
-            "speed": [10.0, 10.2],
-        }).to_csv(traj_csv, index=False)
+def test_dataset_manifest_load_and_summary(tmp_path: Path, monkeypatch):
+    """
+    Synthetic minimal manifest + empty parquet tables.
+    Note: we only check plumbing here; deep schema validation is in bridge tests.
+    """
+    # fake files (empty parquet files are allowed for plumbing checks)
+    (tmp_path / "tables").mkdir()
+    (tmp_path / "tables" / "traj.parquet").touch()
+    (tmp_path / "tables" / "imu.parquet").touch()
 
-        imu_csv = os.path.join(tmp, "imu.csv")
-        pd.DataFrame({
-            "timestamp": ["2025-01-01T00:00:00Z", "2025-01-01T00:00:00.1Z"],
-            "acc_x": [0.1, 0.1],
-            "acc_y": [0.0, 0.0],
-            "acc_z": [9.81, 9.81],
-            "gyro_x": [0.001, 0.001],
-            "gyro_y": [0.0, 0.0],
-            "gyro_z": [0.0, 0.0],
-        }).to_csv(imu_csv, index=False)
+    manifest = {
+        "name": "demo",
+        "version": "0.1",
+        "tables": [
+            {"name": "trajectory", "path": "tables/traj.parquet"},
+            {"name": "imu", "path": "tables/imu.parquet"},
+        ],
+    }
+    mpath = tmp_path / "dataset.yaml"
+    mpath.write_text(__import__("yaml").safe_dump(manifest), encoding="utf-8")
 
-        events_csv = os.path.join(tmp, "events.csv")
-        pd.DataFrame({
-            "timestamp": ["2025-01-01T00:00:00.05Z"],
-            "event_type": ["start"],
-        }).to_csv(events_csv, index=False)
+    ds = Dataset.from_manifest(mpath)
+    assert "trajectory" in ds.tables
+    assert "imu" in ds.tables
 
-        # Export to Telemachus dataset
-        outdir = os.path.join(tmp, "out")
-        export_rs3_to_telemachus(
-            traj_csv=traj_csv,
-            imu_csv=imu_csv,
-            events_csv=events_csv,
-            outdir=outdir,
-            freq_hz=10,
-            vehicle_id="VEH-TEST",
-            vehicle_type="passenger_car",
-        )
-
-        manifest_path = os.path.join(outdir, "dataset.yaml")
-
-        # Validate manifest + Parquet tables
-        ok, report = validate_manifest(manifest_path)
-        assert ok, report
-
-        # Summarize dataset
-        summary = summarize_dataset(manifest_path)
-        assert "trajectory" in summary and "imu" in summary and "events" in summary
+    # summary should not fail even if tables are empty
+    s = ds.summary()
+    assert isinstance(s, dict)

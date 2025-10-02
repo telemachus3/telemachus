@@ -41,5 +41,26 @@ These schemas are implementation mirrors:
 
 See the [Telemachus Spec](https://telemachus3.github.io/telemachus-spec/01_introduction/) for the formal definition.
 
+## Python API
+
+The Python API provides convenient access to Telemachus datasets. You can load a dataset from a manifest file, read individual tables as pandas DataFrames, and validate all tables against their schemas.
+
+Example usage:
+
+```python
+from telemachus.core.dataset import Dataset
+
+# Load a dataset from a manifest YAML file
+dataset = Dataset.from_manifest("path/to/dataset.yaml")
+
+# Read a table as a pandas DataFrame
+df_trajectory = dataset.read_df("trajectory")
+
+# Validate all tables in the dataset
+dataset.validate_all()
+```
+
+This API simplifies working with Telemachus datasets in Python, enabling easy data analysis and validation.
+
 ## License
-AGPL-3
+GPL-3.0
