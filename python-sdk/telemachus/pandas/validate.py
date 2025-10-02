@@ -6,7 +6,46 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pandas as pd
 
-from telemachus.core.schemas import TABLE_SCHEMAS  # existing authoritative schemas
+def _resolve_table_schemas():
+    """Lazily resolve a dict-like registry of PyArrow schemas from telemachus.core.schemas.
+    Strategy:
+    1) import telemachus.core.schemas as mod
+    2) try common dict names TABLE_SCHEMAS/SCHEMAS/TABLES/ARROW_SCHEMAS/SCHEMA_REGISTRY
+    3) otherwise, BUILD a registry from individual pa.Schema attributes (e.g., TRAJECTORY_SCHEMA)
+    """
+    try:
+        from telemachus.core import schemas as _schemas
+    except Exception as _e:
+        raise ImportError("Cannot import telemachus.core.schemas module") from _e
+    # 2) Direct-known dict names
+    for name in ("TABLE_SCHEMAS", "SCHEMAS", "TABLES", "ARROW_SCHEMAS", "SCHEMA_REGISTRY"):
+        reg = getattr(_schemas, name, None)
+        if isinstance(reg, dict):
+            try:
+                if all(isinstance(v, pa.Schema) for v in reg.values()):
+                    return reg
+            except Exception:
+                pass
+    # 3) Build from individual pa.Schema attributes
+    built = {}
+    for attr in dir(_schemas):
+        obj = getattr(_schemas, attr)
+        if isinstance(obj, pa.Schema):
+            # derive table name from attribute, e.g. TRAJECTORY_SCHEMA -> "trajectory"
+            name = attr.lower()
+            if name.endswith("_schema"):
+                name = name[:-7]
+            # common prefixes/suffixes cleanup
+            for prefix in ("tele_", "telemahcus_", "telemachus_", "tbl_", "table_"):
+                if name.startswith(prefix):
+                    name = name[len(prefix):]
+            built[name] = obj
+    if built:
+        return built
+    raise ImportError(
+        "No suitable PyArrow schema registry found in telemachus.core.schemas. "
+        "Expected a dict[str, pa.Schema] (e.g., TABLE_SCHEMAS) or individual *_SCHEMA symbols."
+    )
 
 
 def _cast_table_to_schema(tbl: pa.Table, schema: pa.Schema, strict_types: bool) -> pa.Table:
@@ -58,6 +97,7 @@ def validate_df_against_arrow_schema(
     - If allow_extra_columns=False: raises if DataFrame has columns not present in schema.
     - If strict_types=True: fails on any dtype mismatch (no casting attempt).
     """
+    TABLE_SCHEMAS = _resolve_table_schemas()
     if table not in TABLE_SCHEMAS:
         raise KeyError(f"Unknown Telemachus table '{table}'. Known: {list(TABLE_SCHEMAS)}")
 

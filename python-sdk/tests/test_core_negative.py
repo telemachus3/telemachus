@@ -12,7 +12,7 @@ from telemachus.core.validate_tables import (
     validate_imu_df,
     validate_events_df,
 )
-from telemachus.core.semantics import assert_units, check_alignment
+from telemachus.core.semantics import assert_units, check_alignment, AlignmentWarning
 
 
 def test_invalid_lat_lon_out_of_bounds():
@@ -63,8 +63,9 @@ def test_alignment_exceeds_tolerance_warns():
         "gyro_y": [0.0, 0.0, 0.0],
         "gyro_z": [0.0, 0.0, 0.0],
     })
-    # By default should only warn, not raise; we don't assert on warnings here
-    metrics = check_alignment(traj, imu, tolerance_ns=1_000)
+    # By default should only warn, not raise; we check warnings here
+    with pytest.warns(AlignmentWarning):
+        metrics = check_alignment(traj, imu, tolerance_ns=1_000)
     assert metrics["exceeds"] > 0
 
 

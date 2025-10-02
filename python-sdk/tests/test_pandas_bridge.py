@@ -20,7 +20,18 @@ def _synthetic_traj_df(n=10, start="2025-01-01T00:00:00Z"):
     ts = pd.date_range(start=start, periods=n, freq="1s", tz="UTC")
     lat = 48.0 + np.linspace(0, 0.001, n)
     lon = 2.0 + np.linspace(0, 0.001, n)
-    df = pd.DataFrame({"timestamp": ts, "lat": lat, "lon": lon})
+    # required by trajectory schema: timestamp_ns, speed_mps, alt (and timestamp/lat/lon)
+    ts_ns = ts.view("int64")
+    speed = np.full(n, 0.0, dtype="float32")
+    alt = np.zeros(n, dtype="float32")
+    df = pd.DataFrame({
+        "timestamp": ts,
+        "timestamp_ns": ts_ns,
+        "lat": lat,
+        "lon": lon,
+        "speed_mps": speed,
+        "alt": alt,
+    })
     return df
 
 

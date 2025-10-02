@@ -19,9 +19,14 @@ def test_dataset_manifest_load_and_summary(tmp_path: Path, monkeypatch):
     manifest = {
         "name": "demo",
         "version": "0.1",
+        "dataset_id": "demo-000",
+        "created_utc": "2025-01-01T00:00:00Z",
+        "producer": "tests",
+        "frequency_hz": 10,
+        "vehicle": {"id": "VL-TEST", "type": "van"},
         "tables": [
-            {"name": "trajectory", "path": "tables/traj.parquet"},
-            {"name": "imu", "path": "tables/imu.parquet"},
+            {"name": "trajectory", "format": "parquet", "path": "tables/traj.parquet"},
+            {"name": "imu", "format": "parquet", "path": "tables/imu.parquet"},
         ],
     }
     mpath = tmp_path / "dataset.yaml"

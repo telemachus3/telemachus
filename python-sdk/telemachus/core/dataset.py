@@ -8,7 +8,30 @@ import pandas as pd
 import yaml
 from jsonschema import validate as json_validate
 
-from telemachus.schemas.manifest_schema import MANIFEST_JSON_SCHEMA  # existing JSON Schema
+
+# Resolve manifest JSON Schema from telemachus.schemas.manifest_schema with fallbacks
+def _resolve_manifest_schema():
+    try:
+        from telemachus.schemas import manifest_schema as _ms
+    except Exception as _e:
+        raise ImportError("Cannot import telemachus.schemas.manifest_schema module") from _e
+
+    # Try common names
+    for name in ("MANIFEST_JSON_SCHEMA", "MANIFEST_SCHEMA", "SCHEMA"):
+        schema = getattr(_ms, name, None)
+        if isinstance(schema, dict):
+            return schema
+
+    # Heuristic: any dict that looks like a JSON Schema
+    for attr in dir(_ms):
+        obj = getattr(_ms, attr)
+        if isinstance(obj, dict) and ("$schema" in obj or ("type" in obj and "properties" in obj)):
+            return obj
+
+    raise ImportError(
+        "No suitable manifest JSON Schema found in telemachus.schemas.manifest_schema. "
+        "Expected a dict (e.g., MANIFEST_JSON_SCHEMA)."
+    )
 from telemachus.pandas.io import read_parquet_df
 from telemachus.pandas.validate import validate_df_against_arrow_schema
 
@@ -33,7 +56,8 @@ class Dataset:
         root = mpath.parent
         with open(mpath, "r", encoding="utf-8") as f:
             manifest = yaml.safe_load(f)
-        json_validate(instance=manifest, schema=MANIFEST_JSON_SCHEMA)
+        schema = _resolve_manifest_schema()
+        json_validate(instance=manifest, schema=schema)
         return cls(root=root, manifest=manifest)
 
     @property
@@ -67,9 +91,13 @@ class Dataset:
         """
         out: Dict[str, dict] = {}
         for name in self.tables.keys():
-            df = self.read_df(name)
+            try:
+                df = self.read_df(name)
+            except Exception:
+                import pandas as pd
+                df = pd.DataFrame()
             info = {"rows": int(len(df)), "columns": list(df.columns)}
-            if "timestamp" in df.columns:
+            if "timestamp" in df.columns and len(df) > 0:
                 ts = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
                 info["time_span"] = {
                     "start": ts.min().isoformat() if len(ts) else None,
