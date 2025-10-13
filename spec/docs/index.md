@@ -26,7 +26,7 @@ The Core Specification is defined in RFC-0001 and forms the foundation for datas
 - 👉 [Introduction](01_introduction.md)
 - 📖 [State of the Art](02_state_of_the_art.md)
 - 📐 [Core Specification v0.2](03_spec_core.md)
-- 📄 [RFCs Overview](../rfcs/)
+- 📄 [RFCs Overview](https://github.com/telemachus3/telemachus-spec/tree/main/rfcs)
 - 🗺️ [Provider Mappings](05_provider_mappings.md)
 - ⚙️ [Versioning & Governance](08_versioning.md)
 - 🧪 [Examples](04_examples.md)

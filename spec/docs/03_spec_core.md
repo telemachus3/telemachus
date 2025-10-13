@@ -4,7 +4,7 @@
 
 The Telemachus Core v0.2 schema defines the foundational structure of the Telemachus standard, designed to ensure interoperability between simulation, telematics, and open mobility datasets. This core schema establishes a common framework for representing vehicle telemetry data, facilitating consistent data exchange and integration across diverse applications and platforms.
 
-This core schema is defined and detailed in [RFC-0001: Telemachus Core Specification v0.2](../rfcs/RFC-0001-telemachus-core-0.2.md), which provides the formal specification and rationale behind the schema design.
+This core schema is defined and detailed in [RFC-0001: Telemachus Core Specification v0.2](https://github.com/telemachus3/telemachus-spec/blob/main/rfcs/RFC-0001-telemachus-core-0.2.md), which provides the formal specification and rationale behind the schema design.
 
 ### Version Alignment
 
@@ -171,4 +171,4 @@ The JSON Schema for Telemachus Core v0.2 is available at:
 
 ## Schema Governance
 
-The Telemachus Core schema evolves through a community-driven process based on RFC proposals. Changes, enhancements, and extensions are proposed via RFC documents and undergo review, discussion, and validation testing as outlined in [RFC-0011: Telemachus Schema Validation and Governance](../rfcs/RFC-0011-telemachus-schema-validation.md). This process ensures that the core schema remains robust, interoperable, and responsive to emerging requirements in the vehicle telemetry domain.
+The Telemachus Core schema evolves through a community-driven process based on RFC proposals. Changes, enhancements, and extensions are proposed via RFC documents and undergo review, discussion, and validation testing as outlined in [RFC-0011: Telemachus Schema Validation and Governance](https://github.com/telemachus3/telemachus-spec/blob/main/rfcs/RFC-0011-versioning-and-governance-policy.md). This process ensures that the core schema remains robust, interoperable, and responsive to emerging requirements in the vehicle telemetry domain.

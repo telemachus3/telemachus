@@ -1,6 +1,6 @@
 # Context Extensions (v0.2)
 
-This document specifies **Context Extensions** aligned with [RFC-0004 (Extended FieldGroups)](../rfc-0004.md) and [RFC-0009 (RS3 Integration Pipeline)](../rfc-0009.md).
+This document specifies **Context Extensions** aligned with [RFC-0004 (Extended FieldGroups)](https://github.com/telemachus3/telemachus-spec/blob/main/rfcs/RFC-0004-extended-fieldgroups-schema.md) and [RFC-0009 (RS3 Integration Pipeline)](https://github.com/telemachus3/telemachus-spec/blob/main/rfcs/RFC-0009-rs3-integration-pipeline.md).
 
 **Telemachus Core v0.2** supports *contexts* as optional extensions for Telemachus v0.2 datasets, referenced by the `context` field at the record level. Contexts enrich telematics records with external data and are designed to be flexible: they can be ignored by simple integrations or fully exploited by advanced pipelines.
 
@@ -10,7 +10,7 @@ Contexts provide a way to incorporate additional information that complements th
 
 ## Version Alignment
 
-This document follows the Telemachus Specification v0.2 and adheres to the governance model defined in [RFC-0011](../rfc-0011.md).
+This document follows the Telemachus Specification v0.2 and adheres to the governance model defined in [RFC-0011](https://github.com/telemachus3/telemachus-spec/blob/main/rfcs/RFC-0011-versioning-and-governance-policy.md).
 
 ---
 
@@ -28,7 +28,7 @@ This document follows the Telemachus Specification v0.2 and adheres to the gover
 
 Topography context provides information about the physical characteristics of the terrain, such as slope and surface type. This data is important for understanding vehicle performance and safety in relation to road conditions.
 
-This context can be populated using data from RS3 curvature studies as described in [RFC-0009](../rfc-0009.md) or from external geographic APIs as referenced in [RFC-0005](../rfc-0005.md).
+This context can be populated using data from RS3 curvature studies as described in [RFC-0009](https://github.com/telemachus3/telemachus-spec/blob/main/rfcs/RFC-0009-rs3-integration-pipeline.md) or from external geographic APIs as referenced in [RFC-0005](https://github.com/telemachus3/telemachus-spec/blob/main/rfcs/RFC-0005–adapter-architecture.md).
 
 ```json
 "context": {
@@ -43,7 +43,7 @@ This context can be populated using data from RS3 curvature studies as described
 
 Weather context adds environmental conditions like temperature and precipitation. This information is crucial for analyzing how weather impacts driving behavior, vehicle efficiency, and delivery reliability.
 
-Weather data can be integrated from external APIs as outlined in [RFC-0005](../rfc-0005.md) and incorporated into RS3 pipelines per [RFC-0009](../rfc-0009.md).
+Weather data can be integrated from external APIs as outlined in [RFC-0005](https://github.com/telemachus3/telemachus-spec/blob/main/rfcs/RFC-0005–adapter-architecture.md) and incorporated into RS3 pipelines per [RFC-0009](https://github.com/telemachus3/telemachus-spec/blob/main/rfcs/RFC-0009-rs3-integration-pipeline.md).
 
 ```json
 "context": {
@@ -104,7 +104,7 @@ Environmental Impact context provides data related to vehicle emissions and ener
 
 ## Governance and Evolution
 
-New context types are proposed as separate RFCs and versioned independently to ensure modularity and flexibility. The governance process follows the guidelines established in [RFC-0011](../rfc-0011.md), enabling community-driven evolution of the Telemachus specification and its extensions.
+New context types are proposed as separate RFCs and versioned independently to ensure modularity and flexibility. The governance process follows the guidelines established in [RFC-0011](https://github.com/telemachus3/telemachus-spec/blob/main/rfcs/RFC-0011-versioning-and-governance-policy.md), enabling community-driven evolution of the Telemachus specification and its extensions.
 
 ---
 

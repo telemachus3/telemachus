@@ -35,7 +35,7 @@ Telemachus offers significant advantages for various stakeholders:
 
 ## Evolution through RFCs
 
-Since version 0.2, Telemachus has adopted a rigorous RFC (Request for Comments) governance model to guide its ongoing development. This approach ensures transparent, community-driven evolution of the standard, with each RFC addressing specific aspects of the specification. The current RFCs range from RFC-0001 through RFC-0011, covering core schema definitions, dataset specifications, extensions, adapters, validation, integration, and governance. For a complete list and details, see the [Telemachus RFC Index](../rfcs/).
+Since version 0.2, Telemachus has adopted a rigorous RFC (Request for Comments) governance model to guide its ongoing development. This approach ensures transparent, community-driven evolution of the standard, with each RFC addressing specific aspects of the specification. The current RFCs range from RFC-0001 through RFC-0011, covering core schema definitions, dataset specifications, extensions, adapters, validation, integration, and governance. For a complete list and details, see the [Telemachus RFC Index](https://github.com/telemachus3/telemachus-spec/tree/main/rfcs/).
 
 ## What’s New in Telemachus 0.2
 
@@ -53,4 +53,4 @@ These RFCs collectively enhance the robustness, flexibility, and usability of Te
 
 ---
 
-For full details on all RFCs and the latest developments, please visit the [Telemachus RFC repository](../rfcs/).
+For full details on all RFCs and the latest developments, please visit the [Telemachus RFC repository](https://github.com/telemachus3/telemachus-spec/tree/main/rfcs/).
