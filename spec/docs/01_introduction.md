@@ -33,6 +33,24 @@ Telemachus offers significant advantages for various stakeholders:
 - Developers: Simplifies application development through a consistent and extensible data model.
 - Fleet Operators: Enhances operational efficiency and decision-making with interoperable and comprehensive telematics insights.
 
-## Conclusion
+## Evolution through RFCs
 
-Telemachus aims to become the GTFS of the telematics world, bridging the gap between open science and commercial B2B needs. By establishing a common standard, it fosters collaboration, transparency, and innovation across the telematics ecosystem, ultimately driving better outcomes for all participants.
+Since version 0.2, Telemachus has adopted a rigorous RFC (Request for Comments) governance model to guide its ongoing development. This approach ensures transparent, community-driven evolution of the standard, with each RFC addressing specific aspects of the specification. The current RFCs range from RFC-0001 through RFC-0011, covering core schema definitions, dataset specifications, extensions, adapters, validation, integration, and governance. For a complete list and details, see the [Telemachus RFC Index](../rfcs/).
+
+## What’s New in Telemachus 0.2
+
+The 0.2 release introduces several major RFCs that modernize and extend the standard:
+
+- **RFC-0001 (Core schema):** Defines the foundational data model and schema for Telemachus.
+- **RFC-0003 (Dataset specification):** Establishes the structure and requirements for telematics datasets.
+- **RFC-0004 (Extended FieldGroups):** Introduces modular extensions for richer data representation.
+- **RFC-0005 (Adapters):** Specifies mechanisms for integrating diverse telematics data sources.
+- **RFC-0007 (Validation):** Provides standardized validation rules to ensure data quality and consistency.
+- **RFC-0009 (RS3 integration):** Enables integration with the RS3 data format for enhanced interoperability.
+- **RFC-0011 (Governance):** Outlines the governance model for managing the Telemachus standard and RFC process.
+
+These RFCs collectively enhance the robustness, flexibility, and usability of Telemachus, positioning it as a leading open standard for telematics data exchange.
+
+---
+
+For full details on all RFCs and the latest developments, please visit the [Telemachus RFC repository](../rfcs/).

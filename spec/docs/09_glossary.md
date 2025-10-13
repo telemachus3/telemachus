@@ -1,10 +1,122 @@
 
+# Glossary (v0.2)
 
-# Glossary
-
-This glossary defines key terms used throughout the **Telemachus** documentation.
+This glossary consolidates all core and extended terms from RFCs 0001–0011, and defines key concepts as aligned with Telemachus Spec v0.2 and RFC-0011.
 
 ---
+
+## Version Alignment
+This glossary aligns with [Telemachus Spec v0.2](https://telemachus3.github.io/telemachus-spec/) and incorporates terminology from RFCs 0001–0011.
+
+---
+
+## Adapter
+**Adapter.** As defined in RFC-0005, a connector or software component that translates data from an industrial API or proprietary format to the Telemachus schema.
+
+## API
+**Application Programming Interface.** A set of definitions and protocols for building and integrating application software, enabling communication between different systems.
+
+## CAN
+**Controller Area Network.** A vehicle bus standard enabling communication between electronic control units (ECUs).
+
+## Context Extension
+**Context Extension.** An optional layer, as described in RFC-0004, that provides additional contextual information such as topography, weather, or infrastructure data to enrich Telemachus datasets.
+
+## CSV
+**Comma-Separated Values.** A simple file format used to store tabular data, where each line represents a data record and each value is separated by a comma.
+
+## DATEX II
+European standard (CEN) for traffic and travel data exchange. XML-based, complex but widely adopted.
+
+## Dataset Manifest
+**Dataset Manifest.** Introduced in RFC-0003, a structured document describing a dataset’s metadata, structure, and validation state within Telemachus.
+
+## Digital Twin
+A virtual representation of a physical asset, system, or process, updated with real-time data to enable simulation, analysis, and monitoring.
+
+## Edge Computing
+Distributed computing paradigm that brings computation and data storage closer to the location where it is needed, improving response times and saving bandwidth, particularly relevant for IoT and telematics.
+
+## Event (Telematics)
+Discrete driving or vehicle event detected by a device or provider, e.g. harsh braking, speeding, geofence entry.
+
+## FieldGroup
+**FieldGroup.** A logical grouping of related fields within the Telemachus schema, used to organize and modularize data structures.
+
+## Fleet Management System (FMS)
+A platform or software solution used to manage, monitor, and coordinate vehicles, drivers, and operations in a fleet, often integrating telematics data.
+
+## GNSS
+**Global Navigation Satellite System.** Generic term for satellite-based positioning systems (GPS, Galileo, GLONASS, BeiDou).
+
+## GPS
+**Global Positioning System.** The US GNSS constellation, often used as a synonym for satellite navigation.
+
+## GTFS
+**General Transit Feed Specification.** Open standard for describing public transport schedules and routes. Inspiration for Telemachus as an open mobility format.
+
+## HDOP / VDOP / PDOP
+**Dilution of Precision.**  
+- HDOP = Horizontal DOP  
+- VDOP = Vertical DOP  
+- PDOP = Position DOP (combined)  
+Lower values indicate better positioning accuracy.
+
+## IMU
+**Inertial Measurement Unit.** A device measuring acceleration, angular velocity, and sometimes magnetic field.  
+Used for dead reckoning, motion tracking, and stability.
+
+### Accelerometer
+Measures acceleration in m/s² along X, Y, Z axes.
+
+### Gyroscope
+Measures angular velocity in rad/s around X, Y, Z axes.
+
+### Magnetometer
+Measures magnetic field strength (µT), used for compass orientation.
+
+## JSON / JSONL
+**JSON (JavaScript Object Notation):** A lightweight, text-based data interchange format that is easy for humans to read and write, and for machines to parse and generate.  
+**JSONL (JSON Lines):** A format where each line is a valid JSON object, commonly used for streaming large datasets.
+
+## MQTT
+**Message Queuing Telemetry Transport.** A lightweight, publish-subscribe network protocol designed for constrained devices and low-bandwidth, high-latency, or unreliable networks, widely used in IoT applications.
+
+## NGSI-LD
+Open standard for context data exchange, based on JSON-LD. Used in smart city and IoT projects.
+
+## OBD-II
+**On-Board Diagnostics II.** Standardized interface (mainly in cars) for accessing diagnostic trouble codes and live engine parameters.
+
+## Parquet
+An open-source, columnar storage file format optimized for analytical workloads, providing efficient data compression and encoding schemes.
+
+## RFC (Request for Comments)
+**RFC (Request for Comments).** A formal document in the Telemachus project that defines specifications, processes, and governance decisions. RFCs serve as the authoritative source for standards and evolution of the Telemachus ecosystem.
+
+## RS3
+**RS3 (RoadSimulator3).** A simulation engine for mobility and vehicle data, integrated into Telemachus via RFC-0009.
+
+## SDK
+**Software Development Kit.** A collection of software tools, libraries, documentation, and code samples that facilitate the development of applications for a specific platform or standard.
+
+## Semantic Interoperability
+The ability of computer systems to exchange data with unambiguous, shared meaning, ensuring that the precise meaning of exchanged information is understood by all parties.
+
+## Standardization Bodies (CEN, ISO, OGC)
+Organizations responsible for developing and maintaining standards:  
+- **CEN:** European Committee for Standardization.  
+- **ISO:** International Organization for Standardization.  
+- **OGC:** Open Geospatial Consortium.
+
+## TCS
+**Telemachus Completeness Score.** A metric introduced by Telemachus to evaluate how complete a provider’s dataset is relative to the Core schema.
+
+## Validation CLI
+**Validation CLI.** As described in RFC-0007, a command-line tool provided by Telemachus to check whether datasets comply with the required schema and standards.
+
+## VIN
+**Vehicle Identification Number.** A unique 17-character code assigned to every motor vehicle, used for identification and traceability.
 
 ## GNSS
 **Global Navigation Satellite System.** Generic term for satellite-based positioning systems (GPS, Galileo, GLONASS, BeiDou).

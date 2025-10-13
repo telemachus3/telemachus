@@ -1,9 +1,12 @@
+# Versioning and Governance Policy (v0.2)
 
+This versioning policy, as defined in RFC-0011, governs all Telemachus schemas, datasets, contexts, and adapters, ensuring a consistent and transparent approach to version management across the ecosystem.
 
+---
 
-# Versioning Policy
+## Version Alignment
 
-The **Telemachus project** follows a versioning strategy inspired by [Semantic Versioning (SemVer)](https://semver.org/), with adaptations for schema-driven projects.
+This document follows Telemachus Spec v0.2 and defines governance principles for all future versions (v0.3+), providing a framework for evolution and compatibility.
 
 ---
 
@@ -15,17 +18,18 @@ Version numbers have the format:
 MAJOR.MINOR.PATCH
 ```
 
-- **MAJOR** → Breaking changes in the schema or SDKs.  
+- **MAJOR** → Breaking changes in the schema or SDKs, validated through a dedicated RFC proposal and accepted by governance following the RFC-0011 process.  
 - **MINOR** → Backward-compatible additions (new fields, new contexts).  
 - **PATCH** → Backward-compatible fixes (typos, doc updates, bugfixes).
 
 ---
 
-## Core vs Contexts vs Fleet Premium
+## Scope of Versioning
 
-- **Telemachus Core** (open schema) strictly follows SemVer.  
-- **Contexts** (optional enrichments) can evolve more flexibly, as they are namespaced and ignorable.  
-- **Fleet Premium** (proprietary KPIs) uses its own release cycle, but aligns with Core for compatibility.
+- **Core** (open schema) strictly follows SemVer and represents the foundational data model.  
+- **Contexts** (optional modules) are governed by RFC-0004, allowing flexible evolution while maintaining compatibility.  
+- **Fleet Premium** (proprietary KPIs and features) uses its own release cycle but aligns versioning with Core for compatibility.  
+- **Adapters** (industrial connectors) are governed by RFC-0005, ensuring standardized integration points.
 
 ---
 
@@ -38,17 +42,24 @@ MAJOR.MINOR.PATCH
 
 ---
 
-## Example Lifecycle
+## Governance Workflow
 
-- **v0.1-alpha** → First alpha (basic GNSS + IMU + CAN + Events).  
-- **v0.2** → Add new context types (road genome, weather). Backward-compatible.  
-- **v0.3** → Introduce TCS scoring reference. Backward-compatible.  
-- **v1.0** → First stable release, with finalized Core spec.  
-- **v2.0** → Breaking changes (if Core is significantly restructured).
+- **Proposal via RFC:** Changes are proposed through an RFC document progressing from Draft to Discussion and finally Accepted status.  
+- **Implementation and Validation:** Accepted RFCs are implemented and validated in compliance with RFC-0007.  
+- **Release and Version Tagging:** Releases follow SemVer rules, with version tags reflecting the nature of changes.  
+- **Publication:** All releases and changelogs are published on GitHub Pages for transparency.
 
 ---
 
-## Conclusion
+## Example Lifecycle
 
-This versioning policy ensures **stability for integrators** while allowing **innovation and extensibility**.  
-Users can confidently adopt Telemachus, knowing that **backward compatibility is preserved** within each MAJOR release series.
+- **v0.1-alpha** → Initial Core release (RFC-0001).  
+- **v0.2** → Addition of Datasets, Adapters, and Validation mechanisms (RFCs 0003–0007).  
+- **v0.3** → RS3 integration and TCS metrics introduction (RFCs 0009–0006).  
+- **v1.0** → Governance framework finalized and enforced (RFC-0011).
+
+---
+
+## Governance and Transparency
+
+The Telemachus project adopts an RFC-driven governance approach to ensure transparency, inclusiveness, and stability. Community members are encouraged to participate in discussions and proposals via the public repository at [https://github.com/telemachus3/telemachus-spec/discussions](https://github.com/telemachus3/telemachus-spec/discussions).

@@ -1,17 +1,24 @@
-# Context Extensions
+# Context Extensions (v0.2)
 
-**Telemachus Core** supports *contexts* as optional extensions to enrich telematics records with external data.  
-Contexts are designed to be flexible: they can be ignored by simple integrations, or fully exploited by advanced pipelines.
+This document specifies **Context Extensions** aligned with [RFC-0004 (Extended FieldGroups)](../rfc-0004.md) and [RFC-0009 (RS3 Integration Pipeline)](../rfc-0009.md).
+
+**Telemachus Core v0.2** supports *contexts* as optional extensions for Telemachus v0.2 datasets, referenced by the `context` field at the record level. Contexts enrich telematics records with external data and are designed to be flexible: they can be ignored by simple integrations or fully exploited by advanced pipelines.
 
 Contexts provide a way to incorporate additional information that complements the core telematics data. By adding contextual data, users can gain deeper insights and enhance the value of telematics records for various applications, from scientific research to business analytics.
+
+---
+
+## Version Alignment
+
+This document follows the Telemachus Specification v0.2 and adheres to the governance model defined in [RFC-0011](../rfc-0011.md).
 
 ---
 
 ## Purpose
 
 - Add **external knowledge** to telematics records without modifying the Core schema.  
-- Support scientific use cases (e.g. altitude for slope estimation).  
-- Support business use cases (e.g. weather impact on delivery performance).  
+- Support scientific use cases (e.g., altitude for slope estimation).  
+- Support business use cases (e.g., weather impact on delivery performance).  
 
 ---
 
@@ -20,6 +27,8 @@ Contexts provide a way to incorporate additional information that complements th
 ### Topography
 
 Topography context provides information about the physical characteristics of the terrain, such as slope and surface type. This data is important for understanding vehicle performance and safety in relation to road conditions.
+
+This context can be populated using data from RS3 curvature studies as described in [RFC-0009](../rfc-0009.md) or from external geographic APIs as referenced in [RFC-0005](../rfc-0005.md).
 
 ```json
 "context": {
@@ -34,6 +43,8 @@ Topography context provides information about the physical characteristics of th
 
 Weather context adds environmental conditions like temperature and precipitation. This information is crucial for analyzing how weather impacts driving behavior, vehicle efficiency, and delivery reliability.
 
+Weather data can be integrated from external APIs as outlined in [RFC-0005](../rfc-0005.md) and incorporated into RS3 pipelines per [RFC-0009](../rfc-0009.md).
+
 ```json
 "context": {
   "weather": {
@@ -45,7 +56,7 @@ Weather context adds environmental conditions like temperature and precipitation
 
 ### Road Genome
 
-The Road Genome context is a conceptual extension that aims to capture detailed geometric and risk-related properties of the road network, such as curve radius, clothoid parameters, and risk indices. This context is still a concept/idea and not yet a formal standard. Future developments could include additional parameters like lane width, surface friction, and traffic signage information.
+The Road Genome context is a conceptual extension that aims to capture detailed geometric and risk-related properties of the road network, such as curve radius, clothoid parameters, and risk indices. This context is related to RS3 curvature studies and may be included in a future RFC as a formal standard.
 
 ```json
 "context": {
@@ -57,22 +68,43 @@ The Road Genome context is a conceptual extension that aims to capture detailed 
 }
 ```
 
+### Environmental Impact
+
+Environmental Impact context provides data related to vehicle emissions and energy recovery, supporting sustainability analyses and regulatory compliance.
+
+```json
+"context": {
+  "environmental_impact": {
+    "co2_grams": 150.5,
+    "energy_recovered_kwh": 1.2
+  }
+}
+```
+
 ---
 
 ## Extensibility
 
-- Each context is **namespaced** (topography, weather, road_genome, etc.).  
+- Each context is **namespaced** (topography, weather, road_genome, environmental_impact, etc.).  
 - New contexts can be added without breaking compatibility.  
 - Unrecognized contexts can be safely ignored by consumers.  
 
 ---
 
-## Additional Potential Contexts
+## Emerging Contexts
 
-- Emissions: data related to vehicle emissions and environmental impact.  
-- Driver Behavior: metrics and indicators of driver performance and habits.  
-- Traffic Conditions: real-time or historical traffic flow and congestion data.  
-- Maintenance: information on vehicle maintenance status and schedules.  
+- **Emissions:** data related to vehicle emissions and environmental impact.  
+- **Driver Behavior:** metrics and indicators of driver performance and habits.  
+- **Traffic Conditions:** real-time or historical traffic flow and congestion data.  
+- **Maintenance:** information on vehicle maintenance status and schedules.  
+- **Urban Context:** data about urban density, speed limits, and infrastructure types, intended to align with open-data sources.  
+- **Safety Context:** derived accident risk metrics from historical datasets.  
+
+---
+
+## Governance and Evolution
+
+New context types are proposed as separate RFCs and versioned independently to ensure modularity and flexibility. The governance process follows the guidelines established in [RFC-0011](../rfc-0011.md), enabling community-driven evolution of the Telemachus specification and its extensions.
 
 ---
 

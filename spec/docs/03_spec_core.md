@@ -1,8 +1,14 @@
-# Telemachus Core Specification v0.1-alpha
+# Telemachus Core Specification v0.2
 
 ## Overview
 
-The Telemachus Core v0.1-alpha schema defines a standard structure for vehicle telemetry data. Standardization is critical to ensure interoperability, data quality, and easier integration between data providers, consumers, and analytical tools. This schema covers various data domains including GNSS positioning, motion parameters, data quality metrics, inertial measurement unit (IMU) readings, engine and CAN bus information, event logging, contextual metadata, and source identification.
+The Telemachus Core v0.2 schema defines the foundational structure of the Telemachus standard, designed to ensure interoperability between simulation, telematics, and open mobility datasets. This core schema establishes a common framework for representing vehicle telemetry data, facilitating consistent data exchange and integration across diverse applications and platforms.
+
+This core schema is defined and detailed in [RFC-0001: Telemachus Core Specification v0.2](../rfcs/RFC-0001-telemachus-core-0.2.md), which provides the formal specification and rationale behind the schema design.
+
+### Version Alignment
+
+This document follows the specifications outlined in RFC-0001 and corresponds to Telemachus Specification version 0.2, ensuring alignment between the schema definition and the broader Telemachus ecosystem.
 
 ## Required Fields
 
@@ -14,8 +20,8 @@ The Telemachus Core v0.1-alpha schema defines a standard structure for vehicle t
 ## Field Groups
 
 - **GNSS**
-  - `lat`: Latitude coordinate in decimal degrees. Required.
-  - `lon`: Longitude coordinate in decimal degrees. Required.
+  - `lat`: Latitude coordinate in decimal degrees. Required. Must follow the WGS84 coordinate reference system.
+  - `lon`: Longitude coordinate in decimal degrees. Required. Must follow the WGS84 coordinate reference system.
   - `altitude_m`: Altitude above mean sea level in meters. Optional.
   - `heading_deg`: Heading (direction of travel) in degrees, where 0 is North. Optional.
 
@@ -36,7 +42,7 @@ The Telemachus Core v0.1-alpha schema defines a standard structure for vehicle t
   - `mag_x`, `mag_y`, `mag_z`: Magnetic field along X, Y, Z axes in microteslas (µT). Optional.
   - `sample_rate_hz`: IMU sample rate in Hertz (Hz). Optional.
 
-- **Engine/CAN**
+- **Powertrain & Electrical**
   - `rpm`: Engine revolutions per minute. Optional.
   - `odometer_km`: Total distance traveled by the vehicle in kilometers. Optional.
   - `fuel_pct`: Remaining fuel as a percentage (0-100). Optional.
@@ -79,10 +85,13 @@ The Telemachus Core v0.1-alpha schema defines a standard structure for vehicle t
     - `device_id`: Unique identifier of the data collection device or sensor.
     - `ingest_timestamp`: ISO 8601 timestamp when the record was ingested or received by the system.
 
+- **Extended FieldGroups (RFC-0004)**
+  - The core schema can be optionally complemented by extended field groups as defined in RFC-0004, which provide additional structure for energy and diagnostics data to support advanced use cases.
+
 ## JSON Schema Link
 
-The JSON Schema for Telemachus Core v0.1-alpha is available at:  
-`schemas/telemachus.schema.json`
+The JSON Schema for Telemachus Core v0.2 is available at:  
+`https://telemachus3.github.io/telemachus-spec/schemas/telemachus_core_v0.2.json`
 
 
 ## Example Record
@@ -159,3 +168,7 @@ The JSON Schema for Telemachus Core v0.1-alpha is available at:
   }
 }
 ```
+
+## Schema Governance
+
+The Telemachus Core schema evolves through a community-driven process based on RFC proposals. Changes, enhancements, and extensions are proposed via RFC documents and undergo review, discussion, and validation testing as outlined in [RFC-0011: Telemachus Schema Validation and Governance](../rfcs/RFC-0011-telemachus-schema-validation.md). This process ensures that the core schema remains robust, interoperable, and responsive to emerging requirements in the vehicle telemetry domain.

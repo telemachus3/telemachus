@@ -1,5 +1,7 @@
 # Examples
 
+This document aligns with Telemachus v0.2 and references RFC-0001 and RFC-0003.
+
 Examples are essential for understanding how to implement and utilize the Telemachus Core schema effectively. They provide concrete illustrations of how data should be structured, making it easier for developers and analysts to interpret, validate, and integrate telemetry data consistently across different systems and applications.
 
 ---
@@ -35,7 +37,7 @@ Below is a comprehensive example JSON record that demonstrates all major field g
     "mag": {"x_ut": 25.3, "y_ut": -5.1, "z_ut": 43.2},
     "sample_rate_hz": 100
   },
-  "engine": {
+  "powertrain": {
     "rpm": 2450,
     "odometer_km": 10532.4,
     "fuel_pct": 67.5,
@@ -58,10 +60,16 @@ Below is a comprehensive example JSON record that demonstrates all major field g
     "topography": {"slope_deg": -3.0, "surface_type": "asphalt"},
     "weather": {"temp_c": 7.5, "precip_mm": 0.0}
   },
+  "energy": {
+    "battery_charge_pct": 85.0,
+    "energy_consumed_kwh": 12.3,
+    "regenerative_braking_kwh": 1.2
+  },
   "source": {
     "provider": "geotab",
     "device_id": "DEVICE-9876",
-    "ingest_timestamp": "2025-01-01T12:00:05Z"
+    "ingest_timestamp": "2025-01-01T12:00:05Z",
+    "schema_version": "0.2"
   }
 }
 ```
@@ -73,10 +81,13 @@ Below is a comprehensive example JSON record that demonstrates all major field g
 - **motion**: Describes the vehicle's movement with speed and bearing.
 - **quality**: Indicates GNSS fix quality metrics to assess data reliability.
 - **imu**: Contains inertial measurement unit data such as acceleration, rotation rates, magnetometer readings, and sample rate.
-- **engine**: Captures engine and CAN bus telemetry including RPM, odometer, fuel status, throttle position, engine temperature, and battery voltage.
+- **powertrain**: Captures engine and CAN bus telemetry including RPM, odometer, fuel status, throttle position, engine temperature, and battery voltage.
 - **events**: Lists detected driving events like harsh braking, with severity and timing metadata.
 - **context**: Adds environmental and road conditions such as topography and weather.
-- **source**: Identifies the data provider, device ID, and ingest timestamp for traceability.
+- **energy**: Represents optional extended FieldGroups related to vehicle energy management, including battery charge and energy consumption metrics (see RFC-0004).
+- **source**: Identifies the data provider, device ID, ingest timestamp, and schema version for traceability.
+
+This schema and its examples are designed to be validated against formal validation rules as specified in RFC-0007 to ensure data quality and consistency.
 
 ---
 
@@ -116,7 +127,7 @@ Telemetry data is often collected as a series of records representing sequential
     "vehicle_id": "FLEET-123",
     "position": {"lat": 48.8570, "lon": 2.3525},
     "motion": {"speed_kph": 52.4, "bearing_deg": 182.0},
-    "engine": {"rpm": 2400}
+    "powertrain": {"rpm": 2400}
   },
   {
     "timestamp": "2025-01-01T12:00:20Z",
@@ -133,6 +144,8 @@ This dataset format is ideal for applications such as:
 - **Fleet Analysis**: Monitoring vehicle behavior over time for diagnostics or optimization.
 - **Data Visualization**: Plotting trajectories and sensor data trends.
 
+Note that this dataset format aligns with RS3 integration protocols (RFC-0009) and can be accompanied by a dataset manifest as described in RFC-0003 for enhanced data management.
+
 ---
 
 ## Best Practices
@@ -143,3 +156,9 @@ This dataset format is ideal for applications such as:
 - Leverage the `context` field to provide environmental and situational information that can enhance analysis.
 - Maintain clear and consistent `source` metadata for data provenance and auditing.
 - Validate data quality fields to assess the reliability of GNSS and sensor measurements before use.
+
+---
+
+## Schema Governance
+
+Examples provided in this document are verified under the Telemachus validation framework as specified in RFC-0007, ensuring compliance with schema rules and data integrity. The schema and its examples evolve according to governance processes outlined in RFC-0011, enabling controlled updates and community-driven improvements.
