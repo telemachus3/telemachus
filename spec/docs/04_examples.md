@@ -40,15 +40,13 @@ Below is a comprehensive example JSON record that demonstrates all major field g
   "powertrain": {
     "rpm": 2450,
     "odometer_km": 10532.4,
-    "fuel_pct": 67.5,
-    "fuel_l": 45.2,
-    "fuel_rate_lph": 2.1,
     "throttle_pct": 34.0,
-    "engine_temp_c": 92.0,
+    "coolant_temp_c": 92.0,
     "battery_voltage_v": 13.8
   },
   "events": [
     {
+      "event_id": "EVT-001",
       "type": "harsh_brake",
       "severity": "high",
       "start": "2025-01-01T12:00:10Z",
@@ -58,12 +56,20 @@ Below is a comprehensive example JSON record that demonstrates all major field g
   ],
   "context": {
     "topography": {"slope_deg": -3.0, "surface_type": "asphalt"},
-    "weather": {"temp_c": 7.5, "precip_mm": 0.0}
+    "weather": {"temp_c": 7.5, "precip_mm": 0.0},
+    "environmental_impact": {"co2_emission_gpkm": 120, "noise_db": 65},
+    "urban": {"road_type": "city_street", "traffic_density": "moderate"},
+    "safety": {"lane_departure_warnings": 2, "collision_alerts": 1}
   },
   "energy": {
-    "battery_charge_pct": 85.0,
-    "energy_consumed_kwh": 12.3,
-    "regenerative_braking_kwh": 1.2
+    "fuel_pct": 67.5,
+    "fuel_l": 45.2,
+    "fuel_rate_lph": 2.1,
+    "consumed_kwh": 12.3,
+    "recovered_kwh": 1.2,
+    "state_of_charge_pct": 85.0,
+    "charging_status": "discharging",
+    "energy_source": "hybrid"
   },
   "source": {
     "provider": "geotab",
@@ -81,10 +87,10 @@ Below is a comprehensive example JSON record that demonstrates all major field g
 - **motion**: Describes the vehicle's movement with speed and bearing.
 - **quality**: Indicates GNSS fix quality metrics to assess data reliability.
 - **imu**: Contains inertial measurement unit data such as acceleration, rotation rates, magnetometer readings, and sample rate.
-- **powertrain**: Captures engine and CAN bus telemetry including RPM, odometer, fuel status, throttle position, engine temperature, and battery voltage.
+- **powertrain**: Captures engine and CAN bus telemetry including RPM, odometer, throttle position, coolant temperature, and battery voltage. This replaces the former `engine` group.
 - **events**: Lists detected driving events like harsh braking, with severity and timing metadata.
-- **context**: Adds environmental and road conditions such as topography and weather.
-- **energy**: Represents optional extended FieldGroups related to vehicle energy management, including battery charge and energy consumption metrics (see RFC-0004).
+- **context**: Adds environmental and road conditions such as topography and weather. It now also supports environmental, urban, and safety extensions per RFC-0004.
+- **energy**: Represents optional extended FieldGroups related to vehicle energy management, including fuel level and consumption, battery state of charge, charging status, and energy source type (see RFC-0004).
 - **source**: Identifies the data provider, device ID, ingest timestamp, and schema version for traceability.
 
 This schema and its examples are designed to be validated against formal validation rules as specified in RFC-0007 to ensure data quality and consistency.
@@ -102,6 +108,9 @@ A minimal valid Telemachus Core record includes only the required fields: `times
   "position": {
     "lat": 48.8566,
     "lon": 2.3522
+  },
+  "source": {
+    "schema_version": "0.2"
   }
 }
 ```
@@ -134,6 +143,28 @@ Telemetry data is often collected as a series of records representing sequential
     "vehicle_id": "FLEET-123",
     "position": {"lat": 48.8575, "lon": 2.3530},
     "quality": {"hdop": 0.9, "num_satellites": 11}
+  },
+  {
+    "timestamp": "2025-01-01T12:00:30Z",
+    "vehicle_id": "FLEET-123",
+    "position": {"lat": 48.8580, "lon": 2.3535},
+    "powertrain": {
+      "rpm": 2500,
+      "odometer_km": 10535.0,
+      "throttle_pct": 40.0,
+      "coolant_temp_c": 90.0,
+      "battery_voltage_v": 13.7
+    },
+    "energy": {
+      "fuel_pct": 65.0,
+      "fuel_l": 44.0,
+      "fuel_rate_lph": 2.0,
+      "consumed_kwh": 13.0,
+      "recovered_kwh": 1.5,
+      "state_of_charge_pct": 80.0,
+      "charging_status": "charging",
+      "energy_source": "hybrid"
+    }
   }
 ]
 ```
@@ -162,3 +193,5 @@ Note that this dataset format aligns with RS3 integration protocols (RFC-0009) a
 ## Schema Governance
 
 Examples provided in this document are verified under the Telemachus validation framework as specified in RFC-0007, ensuring compliance with schema rules and data integrity. The schema and its examples evolve according to governance processes outlined in RFC-0011, enabling controlled updates and community-driven improvements.
+
+All examples conform to the `telemachus_core_v0.2.json` schema.
