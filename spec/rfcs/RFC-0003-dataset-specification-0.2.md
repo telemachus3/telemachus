@@ -1,5 +1,3 @@
-
-
 ---
 RFC: 0003
 Title: Dataset Specification 0.2
