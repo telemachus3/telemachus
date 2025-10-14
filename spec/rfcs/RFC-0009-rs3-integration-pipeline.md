@@ -48,11 +48,16 @@ It does not cover RS3’s internal physics or simulation engine, only its output
 The RS3 → Telemachus pipeline follows four sequential stages:
 
 ```mermaid
-flowchart TD
+graph TD
   A[RS3 Simulation Engine] --> B[RS3 Exporter]
   B --> C[Telemachus Mapper]
   C --> D[Validator (telemachus-py)]
   D --> E[Dataset Publication (Zenodo/GitHub)]
+```
+
+> Fallback (text-only):
+```
+RS3 Simulation Engine -> RS3 Exporter -> Telemachus Mapper -> Validator (telemachus-py) -> Dataset Publication (Zenodo/GitHub)
 ```
 
 1. **Simulation Engine** — Generates raw signals (IMU, GNSS, vehicle dynamics).  
