@@ -1,5 +1,3 @@
-
-
 ---
 RFC: 0007
 Title: Validation Framework & CLI Rules

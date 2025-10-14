@@ -1,5 +1,3 @@
-
-
 ---
 RFC: 0005
 Title: Adapter Architecture & Provider Modules

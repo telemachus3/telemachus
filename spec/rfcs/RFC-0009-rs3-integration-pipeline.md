@@ -1,5 +1,3 @@
-
-
 ---
 RFC: 0009
 Title: RS3 Integration Pipeline

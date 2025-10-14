@@ -1,11 +1,11 @@
-# RFC-0004 — Extended FieldGroups Schema
-
-**Version:** 0.1-draft  
-**Status:** Draft  
-**Author:** Sébastien Edet  
-**Date:** 2025-10-13  
-**Project:** Telemachus Specification  
-
+---
+RFC: 0004
+Title: Extended FieldGroups Schema
+Version: 0.1-draft  
+Status: Draft  
+Author: Sébastien Edet  
+Date: 2025-10-13  
+Project: Telemachus Specification  
 ---
 
 ## 1. Purpose

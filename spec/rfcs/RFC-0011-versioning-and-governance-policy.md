@@ -1,5 +1,3 @@
-
-
 ---
 RFC: 0011
 Title: Versioning and Governance Policy
