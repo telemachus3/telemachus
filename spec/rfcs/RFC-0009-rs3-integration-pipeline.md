@@ -49,10 +49,10 @@ The RS3 → Telemachus pipeline follows four sequential stages:
 
 ```mermaid
 graph TD
-  A[RS3 Simulation Engine] --> B[RS3 Exporter]
-  B --> C[Telemachus Mapper]
-  C --> D[Validator (telemachus-py)]
-  D --> E[Dataset Publication (Zenodo/GitHub)]
+  A["RS3 Simulation Engine"] --> B["RS3 Exporter"]
+  B --> C["Telemachus Mapper"]
+  C --> D["Validator (telemachus‑py)"]
+  D --> E["Dataset Publication (Zenodo & GitHub)"]
 ```
 
 > Fallback (text-only):
