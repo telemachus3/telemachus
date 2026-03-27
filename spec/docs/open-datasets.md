@@ -104,6 +104,61 @@ Datasets evaluated against the Telemachus format schema (RFC-0013) for adapter d
 | Adapter | Not yet implemented |
 | Notes | 10 sensor types, published in Nature Scientific Data. Richest labeled dataset. |
 
+## Research-Grade Benchmarks (large, high quality)
+
+These datasets are too large for quick prototyping but serve as reference benchmarks for validating D1/D2 reconstruction quality.
+
+### Oxford RobotCar Dataset
+
+| Field | Value |
+|-------|-------|
+| Country | **UK (Oxford)** |
+| Carto required | OSRM extract: great-britain-latest.osm.pbf |
+| GPS | lat, lon (RTK), altitude — **10 Hz** |
+| IMU | accel 3-axis + **gyro 3-axis** — **100 Hz** |
+| Labels | None (but multiple weather, traffic, seasons) |
+| Trips | 1000+ km, multi-pass over same routes |
+| Format | ROS bags |
+| Download | **~100+ GB** |
+| License | Research use |
+| Link | robotcar-dataset.robots.ox.ac.uk |
+| Adapter | Needed (ROS to Telemachus format) |
+| Notes | Very high sensor quality (reference for D1/D2 validation). Ideal for benchmarking reconstruction. |
+
+### KITTI Raw Data
+
+| Field | Value |
+|-------|-------|
+| Country | **Germany (Karlsruhe)** |
+| Carto required | OSRM extract: germany-latest.osm.pbf |
+| GPS | lat, lon, altitude — **10 Hz** |
+| IMU | accel + gyro — **100 Hz** |
+| Labels | None (vision-oriented dataset) |
+| Trips | ~6h driving |
+| Format | Text files + calibration |
+| Download | **~180 GB** |
+| License | Research |
+| Link | cvlibs.net/datasets/kitti/raw_data.php |
+| Adapter | Feasible (well-documented format) |
+| Notes | Clean and well-synchronized. Good for GNSS/IMU fusion benchmarking. |
+
+### ApolloScape Trajectory
+
+| Field | Value |
+|-------|-------|
+| Country | **China (Beijing)** |
+| Carto required | OSRM extract: asia/china-latest.osm.pbf |
+| GPS | lat, lon — **1-10 Hz** |
+| IMU | accel + gyro — **100 Hz** |
+| Labels | Multi-agent vehicle trajectories |
+| Trips | Dense urban driving |
+| Format | JSON / CSV |
+| Download | Variable |
+| License | Research |
+| Link | apolloscape.auto/trajectory.html |
+| Adapter | Possible |
+| Notes | Interesting for multi-agent + dense traffic, less for pure inertial analysis. |
+
 ## Sources Not Usable for D0
 
 | Dataset | Country | Issue |
@@ -126,3 +181,9 @@ Datasets evaluated against the Telemachus format schema (RFC-0013) for adapter d
 | Spain (Madrid) | spain-latest.osm.pbf | N40 | SRTM only |
 | Brazil (Curitiba) | south-america/brazil-south-latest.osm.pbf | S25-S26 | SRTM only |
 | USA (California) | us-west-latest.osm.pbf | N37 | SRTM only |
+| India (Hyderabad) | asia/india-latest.osm.pbf | N17 | SRTM only |
+| UK (Oxford) | great-britain-latest.osm.pbf | N51 | SRTM only |
+| Germany (Karlsruhe) | germany-latest.osm.pbf | N49 | SRTM only |
+| Austria (Graz) | europe/austria-latest.osm.pbf | N47 | SRTM only |
+| China (Beijing) | asia/china-latest.osm.pbf | N39 | SRTM only |
+| Bangladesh (Rajshahi) | asia/bangladesh-latest.osm.pbf | N24 | SRTM only |
