@@ -55,6 +55,55 @@ Datasets evaluated against the Telemachus format schema (RFC-0013) for adapter d
 | Adapter | Not implemented — impractical (binary format, huge size) |
 | Notes | Highway-only driving. Rich CAN data but complex extraction. |
 
+### Smartphone IMU Road Accident Detection (Kaggle)
+
+| Field | Value |
+|-------|-------|
+| Country | **Unknown** |
+| Carto required | None (too few rows for map matching) |
+| GPS | lat, lon — embedded in CSV |
+| IMU | accel 3-axis + **gyro 3-axis** |
+| Labels | **Crash_Label (0=normal, 1=accident)** |
+| Format | CSV (single file) |
+| Download | **742 KB** |
+| License | CC0 Public Domain |
+| Link | kaggle.com/datasets/drabdulbari/smartphone-imu-road-accident-detection-dataset |
+| Adapter | Not yet implemented |
+| Notes | Only 8K rows. Has gyroscope — useful for IMU calibration validation. |
+
+### AEGIS Automotive Sensor Data (Zenodo)
+
+| Field | Value |
+|-------|-------|
+| Country | **Austria (Graz)** |
+| Carto required | OSRM extract: europe/austria-latest.osm.pbf |
+| GPS | Yes (GPS sensor) |
+| IMU | accel 3-axis + **gyro 3-axis** + OBD2/CAN |
+| Labels | None |
+| Format | CSV in ZIP |
+| Download | **37 MB** |
+| License | CC BY 4.0 |
+| Link | zenodo.org/records/820576 |
+| Adapter | Not yet implemented |
+| Notes | 35 trips, 1 driver, 1 vehicle. Small and clean. |
+
+### Harnessing Smartphone Sensors (Figshare / Nature Scientific Data)
+
+| Field | Value |
+|-------|-------|
+| Country | **Bangladesh (Rajshahi)** |
+| Carto required | OSRM extract: asia/bangladesh-latest.osm.pbf |
+| GPS | lat, lon, alt, speed, bearing, accuracy (Location.csv) |
+| IMU | accel 3-axis + **gyro 3-axis** + magnetometer + gravity |
+| Labels | **Road anomalies (bumps, potholes) + behavior (aggressive/standard/slow)** |
+| Format | CSV (separate files per sensor) |
+| Download | Moderate (~100 MB estimated) |
+| License | CC BY 4.0 |
+| Link | doi.org/10.6084/m9.figshare.25460755 |
+| Paper | nature.com/articles/s41597-024-04193-0 |
+| Adapter | Not yet implemented |
+| Notes | 10 sensor types, published in Nature Scientific Data. Richest labeled dataset. |
+
 ## Sources Not Usable for D0
 
 | Dataset | Country | Issue |
