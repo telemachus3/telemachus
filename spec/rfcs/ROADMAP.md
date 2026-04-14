@@ -1,4 +1,8 @@
 
+> **Sub-roadmap Telemachus spec (RFCs).** For the cross-project commercial deployment
+> view, see [`../../ROADMAP.md`](../../ROADMAP.md). For IP/publication
+> logic, see [`../../WORKFLOW.md`](../../WORKFLOW.md).
+
 # Telemachus RFC Roadmap (2024)
 
 This roadmap presents the structured development of Telemachus as a data modeling and interoperability specification. It is organized into four major tracks: Core Specification, Interoperability & Tooling, Research & Extended Applications, and Governance & Future Track. The RFCs listed here reflect the current, consolidated scope—datasets, fieldgroups, adapters, validation, RS3, and governance. Protocol-level RFCs are out of scope for Telemachus.

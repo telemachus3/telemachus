@@ -77,15 +77,16 @@ Datasets evaluated against the Telemachus format schema (RFC-0013) for adapter d
 |-------|-------|
 | Country | **Austria (Graz)** |
 | Carto required | OSRM extract: europe/austria-latest.osm.pbf |
-| GPS | Yes (GPS sensor) |
-| IMU | accel 3-axis + **gyro 3-axis** + OBD2/CAN |
+| GPS | lat, lon, altitude (NMEA DDMM.MMMM) — **1-5 Hz** (21 trips à 5Hz, 14 à 1Hz). Original probablement 24Hz, downsampleé avant Zenodo |
+| IMU | accel 3-axis (G-force, ×9.80665) + **gyro 3-axis (deg/s, ×π/180)** — **24 Hz** |
+| OBD | **PID 0D = vitesse véhicule** (2.6 Hz), RPM, throttle, temp — **119k pts** |
 | Labels | None |
-| Format | CSV in ZIP |
+| Format | CSV in ZIP (6 fichiers) |
 | Download | **37 MB** |
 | License | CC BY 4.0 |
 | Link | zenodo.org/records/820576 |
-| Adapter | Not yet implemented |
-| Notes | 35 trips, 1 driver, 1 vehicle. Small and clean. |
+| Adapter | `telemachus adapt --source aegis` (ATTENTION : n'inclut PAS la vitesse OBD) |
+| Notes | 35 trips, 1 driver, 1 vehicle. Small and clean. **Vitesse OBD dans obdData.csv ignorée par l'adaptateur — à corriger.** Heading GPS absent, recalculé par atan2. Yaw device ≈ 2° (petit). |
 
 ### Harnessing Smartphone Sensors (Figshare / Nature Scientific Data)
 
