@@ -5,6 +5,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.8] - 2026-04-15 (Draft)
+### Added
+- **RFC-0014** : Dataset Manifest — Canonical File-Level Metadata. Promotes the de-facto `manifest.yaml` sidecar format to normative spec. Formalizes `device_id`/`trip_id`/`acc_periods`/`trip_carrier_states` inheritance from manifest to per-row (RFC-0014 §4).
+- `schemas/telemachus_manifest_v0.8.json` — JSON Schema Draft-07 implementing RFC-0014. Validated against several production manifests in adapter projects.
+
+### Notes
+- No breaking change vs. 0.7. Existing per-row `device_id`/`trip_id` columns remain valid; the manifest becomes the authoritative source when those columns are absent.
+- RFC-0013 §3.6 (AccPeriod) and §3.7 (CarrierState) remain the normative definitions; RFC-0014 hoists their declaration syntax to the dataset manifest.
+
+---
+
 ## [0.2] - 2025-10-13
 ### Added
 - Introduction of the **RFC governance model** (RFC-0001 to RFC-0011).
