@@ -1,16 +1,17 @@
 # Valider un fichier
 
-Un dataset Telemachus a deux niveaux de validité :
+Un dataset Telemachus se valide sur deux plans, qu'on peut
+enchaîner ou séparer :
 
-1. **Le signal** (parquet) respecte le contrat colonnes D0 (RFC-0013).
-2. **Le manifest** (`manifest.yaml`) respecte le schéma de manifest dataset (RFC-0014).
+1. **Le signal** (parquet) respecte le contrat de colonnes D0 (RFC-0013).
+2. **Le manifest** (`manifest.yaml`) respecte le schéma du manifest dataset (RFC-0014).
 
-Les deux contrôles sont indépendants et peuvent être lancés séparément.
+Les deux contrôles sont indépendants.
 
 ## Valider un payload Core (JSON par message)
 
-Utilisez le JSON Schema avec n'importe quel validateur compatible
-Draft-07 (`ajv` ici) :
+On utilise le JSON Schema avec n'importe quel validateur Draft-07.
+Ici `ajv` :
 
 ```bash
 ajv validate \
@@ -18,14 +19,14 @@ ajv validate \
   -d "vos_payloads/*.json"
 ```
 
-Ce qui est attrapé :
+Ce que la validation attrape :
 
 - Clés requises manquantes (`timestamp`, `vehicle_id`, `position`)
-- Valeurs hors-bornes (lat hors ±90°, vitesse négative)
-- Clés top-level inconnues (le schéma est `additionalProperties: false`)
-- Énumérations invalides (ex. `fix_type` inconnu)
+- Valeurs hors bornes (lat en dehors de ±90°, vitesse négative)
+- Clés inconnues au top level (le schéma est `additionalProperties: false`)
+- Énumérations invalides (ex : `fix_type` inconnu)
 
-## Valider un manifest dataset (RFC-0014)
+## Valider un manifest de dataset (RFC-0014)
 
 ```bash
 ajv validate \
@@ -33,24 +34,24 @@ ajv validate \
   -d datasets/votre-dataset/manifest.yaml
 ```
 
-!!! tip "YAML vs JSON"
-    `ajv` lit nativement JSON. Pour valider un manifest YAML, soit
-    pré-convertir (`yq -o=json . manifest.yaml | ajv ...`), soit
-    utiliser un validateur Python qui lit YAML directement
+!!! tip "YAML ou JSON ?"
+    `ajv` lit nativement JSON. Pour un manifest YAML, soit on
+    pré-convertit (`yq -o=json . manifest.yaml | ajv ...`), soit on
+    passe par un validateur Python qui accepte YAML directement
     (`jsonschema` + `pyyaml`).
 
-Alternative Python :
+En Python, la variante qu'on utilise dans nos tests :
 
 ```python
 import json, yaml, jsonschema
+from datetime import datetime, date
 
 with open("spec/schemas/telemachus_manifest_v0.8.json") as f:
     schema = json.load(f)
 with open("datasets/votre-dataset/manifest.yaml") as f:
     manifest = yaml.safe_load(f)
 
-# Coercion datetime → str (ISO-8601)
-from datetime import datetime, date
+# Coercion datetime → str ISO-8601 (YAML auto-parse les dates)
 def coerce(v):
     if isinstance(v, dict): return {k: coerce(x) for k,x in v.items()}
     if isinstance(v, list): return [coerce(x) for x in v]
@@ -61,10 +62,10 @@ jsonschema.validate(coerce(manifest), schema)
 print("OK")
 ```
 
-## Valider le parquet contre D0
+## Valider le parquet contre le contrat D0
 
-Il n'y a pas encore de CLI canonique (prévue dans la suite de
-conformité 1.0). Les contrôles minimaux à la main :
+Pas encore de CLI canonique (c'est prévu dans la suite de conformité
+1.0). Les contrôles minimaux à la main :
 
 ```python
 import pandas as pd
@@ -75,17 +76,18 @@ REQUIS = ["ts", "lat", "lon", "speed_mps",
 manquants = [c for c in REQUIS if c not in df.columns]
 assert not manquants, f"colonnes manquantes : {manquants}"
 
-assert df["ts"].is_monotonic_increasing, "ts doit être monotone"
+assert df["ts"].is_monotonic_increasing, "ts doit être croissant"
 assert df["lat"].dropna().between(-90, 90).all()
 assert df["lon"].dropna().between(-180, 180).all()
 ```
 
-Pour les contrôles gravité par AccPeriod (RFC-0013 §6 règle 3), voir
-[Concepts → AccPeriod](../concepts.md#accperiod-le-referentiel-de-laccelerometre).
+Pour les contrôles de gravité par AccPeriod (RFC-0013 §6 règle 3),
+voir [Concepts → AccPeriod](../concepts.md#accperiod-le-referentiel-de-laccelerometre).
 
 ## Strict vs tolérant
 
-Les schémas actuels sont **stricts** : champ requis manquant → rejet.
-Le tooling futur proposera un mode `--lenient` qui dégradera les
-violations en warnings, utile pour découvrir quels fichiers legacy ne
-sont pas conformes sans casser le pipeline.
+Les schémas actuels fonctionnent en mode **strict** : champ requis
+absent = rejet immédiat. Le tooling futur proposera un mode
+`--lenient` qui rétrograde les violations en warnings, utile pour
+identifier quels fichiers legacy ne sont pas conformes sans bloquer
+le pipeline.

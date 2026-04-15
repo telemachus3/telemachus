@@ -56,6 +56,44 @@ datasets all speak the same language.
 - **Reproducible** — every dataset ships with a normative `manifest.yaml` (RFC-0014).
 - **Open** — MIT-licensed schemas, reference adapters and Python tools.
 
+## Where Telemachus fits in the telematics stack
+
+Telemetry providers split roughly in two tiers:
+
+| Provider type | Examples | What they emit |
+|---------------|----------|----------------|
+| **Hardware vendors** (black boxes on the vehicle) | Danlaw, Teltonika, Queclink | Raw device output → natural **D0** |
+| **Service providers** (SaaS on top of one or more boxes) | Geotab, Samsara, Webfleet, Verizon Connect | Cleaned & enriched data → natural **D1** / **D2** |
+
+Telemachus is the **common language** between those tiers. A
+hardware vendor can publish an adapter that maps its feed to D0. A
+service provider can publish adapters that map to D1/D2 — or consume
+D0 from any vendor and emit its own D1/D2. No one has to learn
+another format to integrate.
+
+## Who is this for?
+
+<div class="grid cards" markdown>
+
+-   :material-chart-line:{ .lg .middle } **Data scientists & researchers**
+
+    ---
+
+    Working on logs that already exist. You want a consistent schema
+    so your pandas/DuckDB pipeline doesn't need to be rewritten for
+    each vendor. You want a shared understanding of what "speed" or
+    "acceleration" means across sources.
+
+-   :material-memory:{ .lg .middle } **Datalogger designers**
+
+    ---
+
+    Building a device (or firmware) that will produce logs. You want
+    a target format that's already accepted downstream — and has a
+    validator and a test suite.
+
+</div>
+
 ## At a glance
 
 | Artifact | Version |

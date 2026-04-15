@@ -1,6 +1,6 @@
 # Lire des données D0
 
-Un dataset D0 Telemachus, sur disque :
+Sur disque, un dataset D0 Telemachus ressemble à ça :
 
 ```
 mon-dataset/
@@ -10,10 +10,9 @@ mon-dataset/
 └── …
 ```
 
-Le parquet de signal est « pur » — uniquement les colonnes définies
-par RFC-0013 §3 (`ts`, `lat`, `lon`, `speed_mps`, `ax/ay/az_mps2`,
-optionnels `gx/gy/gz_rad_s`, recommandés `heading_deg`, `hdop`,
-`n_satellites`).
+Le parquet de signal est volontairement « pur » : uniquement les
+colonnes définies par RFC-0013 §3 (`ts`, `lat`, `lon`, `speed_mps`,
+`ax/ay/az_mps2`, gyro optionnel, GNSS metadata recommandés).
 
 Tout le reste vit dans le manifest.
 
@@ -32,13 +31,14 @@ df = pd.concat(
     ignore_index=True,
 ).sort_values("ts").reset_index(drop=True)
 
-# Hériter device_id du manifest si absent (RFC-0014 §4.1)
+# Hériter le device_id depuis le manifest si la colonne manque
+# (inheritance rule, RFC-0014 §4.1)
 if "device_id" not in df.columns:
     devices = manifest.get("hardware", {}).get("devices", [])
     if len(devices) == 1:
         df["device_id"] = devices[0]["name"]
 
-# Tagger chaque ligne avec son frame accéléromètre (RFC-0014 §4.2)
+# Tagger chaque ligne avec son frame accéléromètre (§4.2)
 def frame_for(ts):
     for p in manifest.get("acc_periods", []):
         if pd.Timestamp(p["start"]) <= ts <= pd.Timestamp(p["end"]):
@@ -50,7 +50,7 @@ df["acc_frame"] = pd.to_datetime(df["ts"]).apply(frame_for)
 
 ## Avec DuckDB
 
-DuckDB lit le parquet nativement et excelle pour l'exploration
+DuckDB lit le parquet nativement et brille pour l'exploration
 ad-hoc :
 
 ```python
@@ -60,38 +60,39 @@ con.sql("SELECT * FROM 'mon-dataset/d0_*.parquet' LIMIT 5").show()
 con.sql("""
     SELECT
         date_trunc('minute', ts) AS minute,
-        AVG(speed_mps) AS v,
+        AVG(speed_mps) AS v_moy,
         COUNT(*) AS n
     FROM 'mon-dataset/d0_*.parquet'
     GROUP BY 1 ORDER BY 1
 """).show()
 ```
 
-## Piège multi-rate
+## Piège du multi-rate
 
-Les fichiers D0 sont timestampés au **rythme IMU** (typiquement
-10 Hz). Les colonnes GNSS (`lat`, `lon`, `speed_mps`, `heading_deg`)
-contiennent `NaN` sur les lignes sans fix GNSS.
+Les fichiers D0 sont timestampés au **rythme IMU** (souvent 10 Hz).
+Les colonnes GNSS (`lat`, `lon`, `speed_mps`, `heading_deg`) valent
+`NaN` sur les lignes sans fix GPS.
 
-Pour calculer des métriques per-row, droppez explicitement les NaN :
+Pour calculer des métriques ligne à ligne, il faut donc enlever les
+NaN explicitement :
 
 ```python
 gnss = df.dropna(subset=["lat", "lon"])
 imu = df  # toutes les lignes ont l'IMU
 ```
 
-Voir [Concepts → Multi-rate](../concepts.md#multi-rate-imu-vs-gnss).
+Plus de détails dans [Concepts → Multi-rate](../concepts.md#multi-rate-imu-gnss).
 
-## Itération par trip
+## Itérer par trip
 
-Si votre manifest déclare `trip_carrier_states`, vous pouvez itérer
-les trips et filtrer sur `is_vehicle_data` :
+Si le manifest déclare `trip_carrier_states`, on peut boucler sur
+les trips en filtrant sur `is_vehicle_data` :
 
 ```python
 for trip in manifest.get("trip_carrier_states", []):
-    state = trip["carrier_state"]
-    if state not in ("mounted_driving", "mounted_idle"):
-        continue  # skip desk/handheld/etc.
+    etat = trip["carrier_state"]
+    if etat not in ("mounted_driving", "mounted_idle"):
+        continue  # on saute desk / handheld / etc.
     sub = df[df["trip_id"] == trip["trip_id"]]
-    # ... vos analytics
+    # … votre analyse ici
 ```

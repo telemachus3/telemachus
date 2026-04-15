@@ -14,7 +14,7 @@ pip install -e .
 #### Validate
 Validate a JSON/JSONL file or directory:
 ```bash
-telemachus validate examples/geotab.json
+telemachus validate examples/geotab_example_synthetic.json
 ```
 
 #### Convert to Parquet
@@ -32,7 +32,7 @@ telemachus tcs out.parquet
 ### Docker Usage
 ```bash
 docker build -t telemachus-cli .
-docker run -v $(pwd):/data telemachus-cli validate /data/examples/geotab.json
+docker run -v $(pwd):/data telemachus-cli validate /data/examples/geotab_example_synthetic.json
 docker run -v $(pwd):/data telemachus-cli to-parquet /data/examples -o /data/out.parquet
 docker run -v $(pwd):/data telemachus-cli tcs /data/out.parquet
 ```

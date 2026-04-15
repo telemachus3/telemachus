@@ -1,10 +1,10 @@
 # Démarrage rapide
 
-De zéro à un dataset Telemachus validé en quelques minutes.
+De zéro à un dataset Telemachus validé, en quelques minutes.
 
-## Installer
+## Installation
 
-Vous avez besoin de Python 3.10+ et `git`.
+Il vous faut Python 3.10+ et `git`.
 
 ```bash
 git clone https://github.com/telemachus3/telemachus
@@ -13,8 +13,8 @@ pip install -e python-sdk
 pip install -e python-cli
 ```
 
-La CLI requiert aussi [`ajv`](https://ajv.js.org/) pour la validation
-JSON Schema :
+La CLI s'appuie aussi sur [`ajv`](https://ajv.js.org/) pour la
+validation JSON Schema :
 
 ```bash
 npm install -g ajv-cli
@@ -22,9 +22,9 @@ npm install -g ajv-cli
 
 ## Valider un payload contre le schéma cœur
 
-Un payload Telemachus est un objet JSON décrivant une trame de
-télémétrie (GNSS + IMU + motion + qualité + contexte optionnel). Des
-exemples vivent sous `spec/examples/` :
+Un payload Telemachus, c'est un objet JSON qui décrit une trame de
+télémétrie (GNSS + IMU + mouvement + qualité + contexte optionnel).
+Des exemples vivent sous `spec/examples/` :
 
 ```bash
 ajv validate \
@@ -32,11 +32,11 @@ ajv validate \
   -d "spec/examples/*.json"
 ```
 
-## Valider un manifest dataset (v0.8 brouillon)
+## Valider un manifest de dataset (v0.8 brouillon)
 
-Un *dataset* est une collection cohérente de fichiers parquet D0 plus
-un `manifest.yaml` sidecar (RFC-0014). Le manifest est la source
-canonique pour `device_id`, `trip_id`, `acc_periods` et
+Un *dataset*, ce sont un ou plusieurs fichiers parquet D0 accompagnés
+d'un `manifest.yaml` sidecar (RFC-0014). Le manifest est la source
+d'autorité pour `device_id`, `trip_id`, `acc_periods` et
 `trip_carrier_states`.
 
 ```bash
@@ -57,13 +57,13 @@ print(df.columns.tolist())
 #  'ax_mps2', 'ay_mps2', 'az_mps2', ...]
 ```
 
-Pour un workflow lecture/manifest complet, voir
+Pour un workflow complet (lecture + manifest + héritage), voir
 [Lire des données D0](guide/reading-d0.md).
 
-## Étapes suivantes
+## Et ensuite ?
 
 - [Valider un fichier](guide/validating.md) — modes strict et tolérant
 - [Lire des données D0](guide/reading-d0.md) — Python, DuckDB, pandas
-- [Écrire un adapter](guide/writing-adapter.md) — convertir un format X → Telemachus
-- [FAQ Manifest](guide/manifest-faq.md) — ce que RFC-0014 change
-- [Concepts](concepts.md) — le modèle en couches
+- [Écrire un adapter](guide/writing-adapter.md) — convertir un format X vers Telemachus
+- [FAQ Manifest](guide/manifest-faq.md) — ce que RFC-0014 apporte concrètement
+- [Concepts](concepts.md) — le modèle en couches et les groupes fonctionnels

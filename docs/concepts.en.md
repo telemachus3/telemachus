@@ -1,6 +1,55 @@
 # Concepts
 
-The four ideas you need to grok to read Telemachus data correctly.
+The five ideas you need to grok to read Telemachus data correctly.
+
+## D0 — functional groups
+
+D0 is a **flat parquet** (the schema is columnar, not nested), but
+mentally it splits into five functional groups. Knowing these groups
+makes it much easier to remember why each column is there.
+
+```
+D0 = datetime       ts
+   + GPS            lat, lon, speed_mps, heading_deg,
+                    altitude_gps_m, hdop, n_satellites
+   + IMU
+       ├── accel    ax_mps2, ay_mps2, az_mps2
+       ├── gyro     gx_rad_s, gy_rad_s, gz_rad_s   (optional)
+       └── magneto  mx_uT,    my_uT,    mz_uT      (optional)
+   + OBD / CAN      ignition, odometer_m, rpm,
+                    speed_obd_mps, fuel_*, …       (optional)
+   + extra          x_<source>_<field>             (vendor-specific)
+```
+
+| Group | What it tells you | Rate (typical) |
+|-------|-------------------|----------------|
+| **datetime** | *When* the sample was captured | IMU rate (10 Hz) |
+| **GPS** | *Where* the vehicle is and how fast | 1 Hz (NaN between fixes) |
+| **IMU** | *How* the vehicle moves (acc/rot/field) | 10–100 Hz |
+| **OBD/CAN** | *What the vehicle reports* (bus data) | 1 Hz (varies) |
+| **extra** | Anything vendor-specific that doesn't fit the above | varies |
+
+!!! note "Why flat columns, not nested structs?"
+    Parquet handles flat columns best (projection pushdown, fast
+    scans). Nesting `imu.accel.x_mps2` looks tidy but costs perf and
+    tooling compatibility. The *mental model* is nested; the *schema*
+    is flat.
+
+### Vendor-specific `extra` fields
+
+When a vendor exposes a field that has no standard Telemachus
+equivalent (a proprietary counter, a device-internal flag, …), use
+the **`x_<source>_<field>`** naming convention:
+
+| Column | Meaning |
+|--------|---------|
+| `x_teltonika_ext_voltage_v` | Teltonika external power voltage reading |
+| `x_geotab_geofence_id` | Geotab-specific geofence identifier |
+| `x_danlaw_codec_id` | Danlaw firmware codec tag |
+
+The `x_` prefix signals "not part of the normative D0 contract,
+consumer may safely ignore it". The `<source>` segment keeps names
+unambiguous across datasets that merge multiple vendors.
 
 ## D0 → D1 → D2 — the layered model
 

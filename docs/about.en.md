@@ -24,6 +24,27 @@ These belong to the consumer.
 For applied science (papers, methods, benchmarks), see the **research
 companion site**: [research.roadsimulator3.fr](https://research.roadsimulator3.fr).
 
+## Technical formats — one spec, three encodings
+
+The same Telemachus data can live in three encodings, each suited to
+a different tool family:
+
+| Encoding | Use case | Tools |
+|----------|----------|-------|
+| **Parquet** (columnar) | Bulk analytics, ad-hoc SQL, cold storage | pandas, DuckDB, Spark, Athena |
+| **JSON / JSONL** (document) | Streaming ingestion, API payloads, message queues | MongoDB, Kafka, REST |
+| **NumPy / Arrow** (in-memory) | Python ML pipelines, zero-copy processing | numpy, pyarrow, PyTorch |
+
+All three are **equivalent in content** — the JSON Schema
+(`telemachus_core_v0.2.json`) describes per-message payloads; Parquet
+is the bulk encoding of the same payloads; NumPy/Arrow is how pandas
+& DuckDB materialise them in-memory. Choose per tool, not per
+semantics.
+
+The **dataset manifest** (`manifest.yaml`, RFC-0014) is always YAML
+(or JSON equivalent) regardless of the signal encoding, because
+manifests are human-read and small.
+
 ## Typology of related projects
 
 | Project | Role | Repo / site |
