@@ -1,0 +1,47 @@
+site_name: Telemachus Core Spec
+site_description: Open pivot specification for B2B telematics (GNSS, IMU, CAN, Events, Context)
+site_author: Telemachus Project
+site_url: https://telemachus3.github.io/telemachus-spec/
+
+repo_name: telemachus3/telemachus-spec
+repo_url: https://github.com/telemachus3/telemachus-spec
+edit_uri: blob/main/
+
+nav:
+  - Home: index.md
+  - Introduction: 01_introduction.md
+  - State of the Art: 02_state_of_the_art.md
+  - Core Specification: 03_spec_core.md
+  - Examples: 04_examples.md
+  - Provider Mappings: 05_provider_mappings.md
+  - Completeness Score: 06_tcs.md
+  - Context Extensions: 07_contexts.md
+  - Versioning Policy: 08_versioning.md
+  - Glossary: 09_glossary.md
+  - Roadmap: 10_roadmap.md
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - tables
+  - codehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_div_format
+
+plugins:
+  - search
+
+extra_javascript:
+  - https://unpkg.com/mermaid@10/dist/mermaid.min.js
+  - javascripts/mermaid-init.js
