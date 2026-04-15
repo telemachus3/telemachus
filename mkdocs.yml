@@ -96,13 +96,6 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/telemachus3/telemachus
-  alternate:
-    - name: English
-      link: /
-      lang: en
-    - name: Français
-      link: /fr/
-      lang: fr
 
 nav:
   - Home: index.md
