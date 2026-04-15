@@ -1,0 +1,117 @@
+site_name: Telemachus
+site_url: https://telemachus3.org
+site_description: Open RFC-driven pivot standard for high-frequency mobility and telematics data.
+site_author: Sébastien Edet
+copyright: "© 2025-2026 Telemachus Authors — MIT License"
+repo_url: https://github.com/telemachus3/telemachus
+repo_name: telemachus3/telemachus
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+
+theme:
+  name: material
+  language: en
+  logo: assets/logo.svg
+  favicon: assets/favicon.svg
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.tracking
+    - navigation.indexes
+    - toc.follow
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - search.suggest
+    - search.highlight
+    - search.share
+
+plugins:
+  - search:
+      lang:
+        - en
+        - fr
+  - i18n:
+      docs_structure: suffix
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+        - locale: fr
+          name: Français
+          build: true
+          nav_translations:
+            Home: Accueil
+            Quickstart: Démarrage rapide
+            Guide: Guide
+            Validating files: Valider un fichier
+            Reading Telemachus data: Lire des données D0
+            Writing an adapter: Écrire un adapter
+            Manifest FAQ: FAQ Manifest
+            Concepts: Concepts
+            RFCs: RFCs
+            About & further reading: À propos & pour aller plus loin
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - footnotes
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/telemachus3/telemachus
+  alternate:
+    - name: English
+      link: /
+      lang: en
+    - name: Français
+      link: /fr/
+      lang: fr
+
+nav:
+  - Home: index.md
+  - Quickstart: quickstart.md
+  - Guide:
+      - Validating files: guide/validating.md
+      - Reading Telemachus data: guide/reading-d0.md
+      - Writing an adapter: guide/writing-adapter.md
+      - Manifest FAQ: guide/manifest-faq.md
+  - Concepts: concepts.md
+  - RFCs: rfcs.md
+  - About & further reading: about.md

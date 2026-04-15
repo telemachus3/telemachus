@@ -1,0 +1,69 @@
+# Démarrage rapide
+
+De zéro à un dataset Telemachus validé en quelques minutes.
+
+## Installer
+
+Vous avez besoin de Python 3.10+ et `git`.
+
+```bash
+git clone https://github.com/telemachus3/telemachus
+cd telemachus
+pip install -e python-sdk
+pip install -e python-cli
+```
+
+La CLI requiert aussi [`ajv`](https://ajv.js.org/) pour la validation
+JSON Schema :
+
+```bash
+npm install -g ajv-cli
+```
+
+## Valider un payload contre le schéma cœur
+
+Un payload Telemachus est un objet JSON décrivant une trame de
+télémétrie (GNSS + IMU + motion + qualité + contexte optionnel). Des
+exemples vivent sous `spec/examples/` :
+
+```bash
+ajv validate \
+  -s spec/schemas/telemachus_core_v0.2.json \
+  -d "spec/examples/*.json"
+```
+
+## Valider un manifest dataset (v0.8 brouillon)
+
+Un *dataset* est une collection cohérente de fichiers parquet D0 plus
+un `manifest.yaml` sidecar (RFC-0014). Le manifest est la source
+canonique pour `device_id`, `trip_id`, `acc_periods` et
+`trip_carrier_states`.
+
+```bash
+ajv validate \
+  -s spec/schemas/telemachus_manifest_v0.8.json \
+  -d chemin/vers/votre/manifest.yaml
+```
+
+## Lire un fichier D0 en Python
+
+```python
+import pandas as pd
+
+df = pd.read_parquet("chemin/vers/d0.parquet")
+print(df.head())
+print(df.columns.tolist())
+# ['ts', 'lat', 'lon', 'speed_mps',
+#  'ax_mps2', 'ay_mps2', 'az_mps2', ...]
+```
+
+Pour un workflow lecture/manifest complet, voir
+[Lire des données D0](guide/reading-d0.md).
+
+## Étapes suivantes
+
+- [Valider un fichier](guide/validating.md) — modes strict et tolérant
+- [Lire des données D0](guide/reading-d0.md) — Python, DuckDB, pandas
+- [Écrire un adapter](guide/writing-adapter.md) — convertir un format X → Telemachus
+- [FAQ Manifest](guide/manifest-faq.md) — ce que RFC-0014 change
+- [Concepts](concepts.md) — le modèle en couches
