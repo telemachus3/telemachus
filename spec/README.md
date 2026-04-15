@@ -59,7 +59,7 @@ Zenodo. https://doi.org/10.5281/zenodo.17228092
 ## CLI Examples
 ```bash
 # Validate a file
-telemachus validate examples/geotab.json
+telemachus validate examples/geotab_example_synthetic.json
 
 # Convert JSON/JSONL directory to Parquet
 telemachus to-parquet examples/ -o fleet.parquet

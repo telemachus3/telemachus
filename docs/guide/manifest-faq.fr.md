@@ -1,16 +1,17 @@
 # FAQ Manifest
 
-Questions courantes sur le **Dataset Manifest** (RFC-0014, v0.8 brouillon).
+Questions courantes autour du **Dataset Manifest** (RFC-0014, v0.8 brouillon).
 
 ## Pourquoi un manifest ?
 
 Le contrat D0 (RFC-0013 §3.1) déclare `device_id`, `trip_id`,
-`acc_periods` et `trip_carrier_states` comme **par-fichier** plutôt
-que par-ligne. Ces infos doivent vivre quelque part. Avant RFC-0014,
-les producteurs les émettaient ad-hoc (variable d'env, config,
-sidecar JSON…). Le manifest formalise ce sidecar.
+`acc_periods` et `trip_carrier_states` comme des champs
+**par-fichier**, pas par-ligne. Il faut bien qu'ils vivent quelque
+part. Avant RFC-0014, les producteurs les mettaient un peu où ils
+voulaient (variable d'env, fichier de config, sidecar JSON ad-hoc…).
+Le manifest normalise ce sidecar.
 
-## Où est le manifest ?
+## Où se trouve le manifest ?
 
 À côté des parquet :
 
@@ -21,57 +22,57 @@ mon-dataset/
 └── d0_yyy.parquet
 ```
 
-YAML est préféré (lisible). JSON avec le même schéma est aussi
-accepté par les validators.
+On préfère YAML (plus lisible). JSON avec le même schéma marche
+aussi.
 
-## Héritage — quelles colonnes puis-je omettre du parquet ?
+## Quelles colonnes peut-on omettre du parquet ?
 
-Si le manifest les déclare, vous pouvez omettre :
+Si le manifest les déclare, on peut les omettre :
 
-| Colonne | Source manifest |
-|---------|-----------------|
+| Colonne | Source dans le manifest |
+|---------|--------------------------|
 | `device_id` | `hardware.devices[0].name` (dataset mono-device) |
-| `trip_id`   | suffixe nom de fichier parquet ou `source.campaign + basename` |
-| `carrier_state` | matché par `trip_id` depuis `trip_carrier_states` |
+| `trip_id` | Suffixe du nom de parquet, ou `source.campaign + basename` |
+| `carrier_state` | Matché sur le `trip_id` via `trip_carrier_states` |
 
-Pour les datasets multi-devices, `device_id` DOIT être soit
-par-ligne, soit encodé dans le nom de fichier
-(`d0_<device>_*.parquet`). Voir RFC-0014 §4.1.
+Pour un dataset multi-devices, `device_id` **doit** être soit
+présent par ligne, soit encodé dans le nom de fichier
+(`d0_<device>_*.parquet`). Détails en RFC-0014 §4.1.
 
-## Comment le frame accéléromètre est appliqué ?
+## Comment le frame accéléromètre est-il appliqué ?
 
-Pour chaque ligne au timestamp `ts`, le consommateur trouve la
-première entrée `acc_periods` où `start ≤ ts ≤ end` et utilise son
-`frame` (`raw`, `compensated` ou `partial`). Si pas de `acc_periods`
-déclaré, le défaut est `raw` (RFC-0013 §3.6).
+Pour chaque ligne au timestamp `ts`, le consommateur cherche la
+première entrée `acc_periods` qui satisfait `start ≤ ts ≤ end` et
+utilise son `frame` (`raw`, `compensated` ou `partial`). Si
+`acc_periods` n'est pas déclaré, le défaut est `raw` (RFC-0013 §3.6).
 
 ## Licences dataset
 
-Le manifest porte `license` (chaîne libre style SPDX) et un
-`license_warning` optionnel. Cas courants :
+Le manifest porte un champ `license` (chaîne libre façon SPDX) et,
+optionnellement, un `license_warning`. Les cas typiques :
 
-| Licence | Republier modifié | Indice manifest |
-|---------|--------------------|-----------------|
+| Licence | Republier modifié | Exemple manifest |
+|---------|---------------------|------------------|
 | CC-BY-4.0 | ✅ avec attribution | `license: "CC-BY-4.0"` |
-| CC-BY-NC-ND-4.0 | ❌ ND interdit dérivés | `license: "CC-BY-NC-ND-4.0"`, `license_warning: "Non-commercial, no derivatives"` |
-| CC0 | ✅ tout | `license: "CC0-1.0"` |
+| CC-BY-NC-ND-4.0 | ❌ ND interdit les dérivés | `license: "CC-BY-NC-ND-4.0"`, `license_warning: "Non-commercial, no derivatives"` |
+| CC0 | ✅ tout est permis | `license: "CC0-1.0"` |
 | Interne / propriétaire | ❌ | `license: "internal"` |
 
-Le tooling futur ajoutera un champ `license_republish_derivative:
-{allowed,forbidden,academic}` plus un linter CI qui refuse de
-committer du parquet converti sous une source `forbidden`. Pour
-l'instant, c'est appliqué par convention — voir [Écrire un adapter →
-Piège licence](writing-adapter.md#piege-licence).
+Le tooling à venir ajoutera un champ
+`license_republish_derivative: {allowed,forbidden,academic}` plus un
+linter CI qui refuse de committer un parquet converti sous une
+source `forbidden`. En attendant, c'est appliqué par convention —
+voir [Écrire un adapter → Piège licence](writing-adapter.md#piege-licence).
 
 ## Et les métadonnées par-ligne qui varient ?
 
-Tout ce qui varie réellement par ligne reste par-ligne dans le
-parquet (ex. `lat`, `ax_mps2`). Le manifest est pour les métadonnées
-**par-fichier** qui ne varient pas, OU pour les métadonnées
-segmentées dans le temps (`acc_periods`, historique config) qui
-varient sur des bornes grossières.
+Tout ce qui varie réellement ligne à ligne reste dans le parquet
+(`lat`, `ax_mps2`…). Le manifest ne sert qu'aux métadonnées
+**par-fichier** qui ne varient pas, ou aux métadonnées segmentées
+dans le temps (`acc_periods`, historique de config) qui ne changent
+qu'à des bornes grossières.
 
-## Mon manifest échoue à la validation — où regarder ?
+## Mon manifest échoue la validation — où regarder ?
 
 Lancer le validator avec sortie verbose :
 
@@ -80,9 +81,13 @@ ajv validate -s spec/schemas/telemachus_manifest_v0.8.json \
              -d manifest.yaml --errors=text --all-errors
 ```
 
-Pièges courants :
+Les pièges classiques :
 
-- `start: 2025-01-01` (YAML auto-parse en date) → quoter : `"2025-01-01T00:00:00Z"`
-- `n_trips: null` est OK — la plupart des compteurs acceptent null pour "inconnu"
-- Énumération inconnue pour `hardware.class` (`research|commercial|consumer|prototype|smartphone`)
-- Bloc requis manquant : `dataset_id`, `schema_version`, `source`
+- `start: 2025-01-01` (YAML l'auto-parse en date Python) → mettre
+  des guillemets : `"2025-01-01T00:00:00Z"`
+- `n_trips: null` est accepté — la plupart des compteurs tolèrent
+  `null` pour dire « inconnu »
+- Énumération invalide pour `hardware.class`
+  (valeurs autorisées : `research`, `commercial`, `consumer`,
+  `prototype`, `smartphone`)
+- Bloc requis absent : `dataset_id`, `schema_version`, ou `source`

@@ -1,29 +1,79 @@
 # Concepts
 
-Les quatre idées à comprendre pour lire correctement des données Telemachus.
+Les cinq idées à avoir en tête pour lire correctement des données Telemachus.
 
-## D0 → D1 → D2 — le modèle en couches
+## D0, vu comme cinq groupes fonctionnels
 
-| Couche | Nom | Entrée | Sortie |
-|--------|-----|--------|--------|
+Le schéma D0 est **plat** (parquet colonnaire, pas de structure
+imbriquée), mais mentalement il se décompose en cinq groupes
+fonctionnels. Les connaître, c'est retenir plus facilement pourquoi
+chaque colonne existe.
+
+```
+D0 = datetime       ts
+   + GPS            lat, lon, speed_mps, heading_deg,
+                    altitude_gps_m, hdop, n_satellites
+   + IMU
+       ├── accel    ax_mps2, ay_mps2, az_mps2
+       ├── gyro     gx_rad_s, gy_rad_s, gz_rad_s   (optionnel)
+       └── magneto  mx_uT,    my_uT,    mz_uT      (optionnel)
+   + OBD / CAN      ignition, odometer_m, rpm,
+                    speed_obd_mps, fuel_*, …       (optionnel)
+   + extra          x_<source>_<field>             (spécifique fabricant)
+```
+
+| Groupe | Ce qu'il vous dit | Cadence typique |
+|--------|--------------------|-----------------|
+| **datetime** | *Quand* la mesure a été prise | Cadence IMU (10 Hz) |
+| **GPS** | *Où* se trouve le véhicule et à quelle vitesse | 1 Hz (NaN entre les fix) |
+| **IMU** | *Comment* le véhicule bouge (accélérations, rotations, champ) | 10 à 100 Hz |
+| **OBD/CAN** | *Ce que dit le véhicule lui-même* (données bus) | 1 Hz (variable) |
+| **extra** | Tout ce qui est propre à un fabricant et ne rentre pas ailleurs | variable |
+
+!!! note "Pourquoi colonnes plates et pas de structures imbriquées ?"
+    Parquet est optimisé pour les colonnes plates (pushdown des
+    projections, scans rapides). Imbriquer `imu.accel.x_mps2`, c'est
+    visuellement propre mais coûteux en perf et compatibilité. Le
+    *modèle mental* est imbriqué ; le *schéma* reste plat.
+
+### Champs `extra` spécifiques fabricant
+
+Quand un fabricant expose un champ qui n'a pas d'équivalent standard
+Telemachus (un compteur propriétaire, un flag interne device, etc.),
+on utilise la convention **`x_<source>_<field>`** :
+
+| Colonne | Sens |
+|---------|------|
+| `x_teltonika_ext_voltage_v` | Tension d'alim externe Teltonika |
+| `x_geotab_geofence_id` | Identifiant geofence propre à Geotab |
+| `x_danlaw_codec_id` | Tag codec firmware Danlaw |
+
+Le préfixe `x_` signale « hors contrat D0 normatif, le consommateur
+peut l'ignorer sans risque ». Le segment `<source>` lève toute
+ambiguïté si plusieurs fabricants sont mélangés dans un même dataset.
+
+## Le modèle en couches D0 → D1 → D2
+
+| Couche | Rôle | Entrée | Sortie |
+|--------|------|--------|--------|
 | **D0** | Device | Matériel | Parquet brut — uniquement ce que le device mesure |
-| **D1** | Nettoyé & contextualisé | D0 | D0 enrichi + map matching, DEM, calibration IMU, qualité signal |
-| **D2** | Événements & situations | D1 | D1 + colonne event + table d'événements (freinage, nid-de-poule, virage…) |
+| **D1** | Nettoyé et contextualisé | D0 | D0 enrichi : map matching, DEM, calibration IMU, score de qualité |
+| **D2** | Événements et situations | D1 | D1 + colonne `event` + table d'événements (freinages, nids-de-poule, virages…) |
 
 La spec Telemachus est **normative sur D0** (RFC-0013). Les contrats
-colonnes D1 et D2 sont documentés en RFC-0013 §4 mais leurs
-*algorithmes* sont intentionnellement hors scope — différents
-consommateurs peuvent calculer D1/D2 différemment tant qu'ils
-émettent des colonnes conformes.
+de colonnes D1 et D2 sont documentés en RFC-0013 §4, mais leurs
+*algorithmes* restent volontairement hors scope — deux consommateurs
+peuvent calculer un D1 différemment tant que le schéma de sortie reste
+conforme.
 
 **Règle d'or** : une colonne dérivée de données externes (cartes,
-DEM, sortie algorithmique) appartient à D1 ou supérieur, jamais D0.
+DEM, sortie d'un algo) appartient à D1 ou au-dessus, jamais à D0.
 
-## Multi-rate IMU vs GNSS
+## Multi-rate IMU ↔ GNSS
 
 La plupart des devices streamment l'IMU à 10 Hz et le GNSS à 1 Hz.
-D0 est timestampé au **rythme IMU**, avec les colonnes GNSS
-contenant `NaN` entre les fix :
+D0 est timestampé au **rythme IMU**, avec les colonnes GNSS qui
+valent `NaN` entre les fix :
 
 ```
 ts                    lat      lon       speed_mps  ax_mps2  ay_mps2  az_mps2
@@ -34,30 +84,32 @@ ts                    lat      lon       speed_mps  ax_mps2  ay_mps2  az_mps2
 2025-01-01T08:00:01.0 49.3348  1.3831    5.3        0.13     0.01     9.81
 ```
 
-Pour des métriques GNSS seules (distance, vitesse moyenne), droppez
-explicitement les NaN. Pour des métriques IMU seules (jerk,
-vibration), utilisez toutes les lignes.
+Pour vos métriques GNSS seules (distance, vitesse moyenne), enlevez
+les NaN explicitement. Pour vos métriques IMU seules (jerk,
+vibration), prenez toutes les lignes.
 
-Le manifest `sensors.{gps,accelerometer}.rate_hz` déclare les
-fréquences attendues pour que les consommateurs pré-allouent les
-buffers et choisissent les stratégies d'interpolation.
+Le manifest déclare `sensors.gps.rate_hz` et
+`sensors.accelerometer.rate_hz` précisément pour que vous puissiez
+pré-allouer vos buffers et choisir une stratégie d'interpolation
+adaptée.
 
-## AccPeriod — le référentiel de l'accéléromètre
+## AccPeriod : le référentiel de l'accéléromètre
 
-Le même accéléromètre physique peut émettre des données dans
-différents **référentiels** selon l'état du firmware :
+Un même accéléromètre physique peut émettre dans plusieurs
+**référentiels** selon l'état du firmware :
 
 | Frame | Au repos | Comportement |
 |-------|----------|--------------|
-| `raw` | `\|a\|` ≈ 9.81 m/s² | Sortie capteur non traitée |
-| `compensated` | `\|a\|` ≈ 0 m/s² | Firmware a soustrait la gravité |
+| `raw` | `\|a\|` ≈ 9.81 m/s² | Sortie capteur brute |
+| `compensated` | `\|a\|` ≈ 0 m/s² | Firmware a retiré la gravité |
 | `partial` | `0 < \|a\| < g` | Compensation imparfaite |
 
-Ça compte parce que les stages aval (calibration IMU, détection
-d'événements) doivent savoir si la gravité est dans le signal.
+L'information compte : les traitements aval (calibration IMU,
+détection d'événements) ont besoin de savoir si la gravité est
+présente ou non dans le signal.
 
-Le manifest déclare un ou plusieurs segments `acc_periods` — chacun
-une plage temporelle contiguë avec un frame cohérent :
+Le manifest déclare un ou plusieurs segments `acc_periods`, chacun
+couvrant une plage temporelle avec un frame cohérent :
 
 ```yaml
 acc_periods:
@@ -71,33 +123,33 @@ acc_periods:
     detection_method: profile_change
 ```
 
-Défaut si absent : une seule période implicite `frame: "raw"`. Voir
-RFC-0013 §3.6 pour la définition normative complète.
+Par défaut (si le manifest ne déclare rien) : une seule période
+implicite avec `frame: "raw"`. La définition normative complète se
+trouve dans RFC-0013 §3.6.
 
-## CarrierState — ce trip est-il vraiment de la conduite ?
+## CarrierState : ce trip, c'est vraiment de la conduite ?
 
 Un device télématique enregistre en continu, mais **toutes ces
-données ne viennent pas d'un contexte de conduite réel**. Un device
-laissé sur un établi, manipulé à la main pendant des tests, ou
-temporairement débranché émet quand même des messages.
+données ne correspondent pas à de la conduite réelle**. Un boîtier
+laissé sur un établi, manipulé à la main pendant un test, ou
+temporairement débranché émet tout de même des messages.
 
-Le `carrier_state` au niveau trip classe chaque trip dans l'un des
-six contextes :
+Le `carrier_state` classe chaque trip dans l'un des six contextes :
 
-| État | Description | Véhicule ? | Pour analytics ? |
-|------|-------------|------------|-------------------|
+| État | Description | Véhicule ? | Utilisable en analytique ? |
+|------|-------------|------------|------------------------------|
 | `mounted_driving` | Installé, véhicule en mouvement | Oui | Oui |
-| `mounted_idle` | Installé, véhicule stationnaire | Oui | Oui (ZUPT) |
-| `unplugged` | Alimentation externe perdue | Inconnu | Optionnel |
-| `desk` | Surface stable, hors véhicule | Non | Non |
-| `handheld` | En mouvement à la main | Non | Non |
+| `mounted_idle` | Installé, véhicule à l'arrêt | Oui | Oui (ZUPT) |
+| `unplugged` | Alim externe perdue | Inconnu | Optionnel |
+| `desk` | Sur une surface stable, hors véhicule | Non | Non |
+| `handheld` | Manipulé à la main | Non | Non |
 | `unknown` | Signaux insuffisants | Inconnu | Non |
 
-La classification combine 4 signaux : tension d'alim externe,
-vitesse GPS, variance norme accéléromètre, dérive position GPS.
-Voir RFC-0013 §3.7 pour l'arbre de décision.
+La classification combine quatre indicateurs : tension d'alim
+externe, vitesse GPS, variance de la norme accéléromètre, dérive de
+position GPS. L'arbre de décision complet est en RFC-0013 §3.7.
 
-Dans le manifest, déclarez via `trip_carrier_states` :
+Dans le manifest, on déclare les états via `trip_carrier_states` :
 
 ```yaml
 trip_carrier_states:
@@ -106,6 +158,6 @@ trip_carrier_states:
     confidence: "high"
 ```
 
-Les stages aval DOIVENT filtrer sur `is_vehicle_data == True` (i.e.
-`carrier_state ∈ {mounted_driving, mounted_idle}`) pour toute
-analytique qui présuppose un contexte véhicule.
+En aval, tout traitement qui présuppose un contexte véhicule
+**doit** filtrer sur `is_vehicle_data == True` (autrement dit,
+`carrier_state` ∈ {`mounted_driving`, `mounted_idle`}).

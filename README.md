@@ -55,7 +55,7 @@ pip install -e python-cli
 
 ```bash
 # Validate a file
-telemachus validate examples/geotab.json
+telemachus validate examples/geotab_example_synthetic.json
 
 # Convert JSON/JSONL directory to Parquet
 telemachus to-parquet examples/ -o fleet.parquet
