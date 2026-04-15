@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <circle cx="32" cy="32" r="28" stroke="white" stroke-width="3" fill="none"/>
+  <path d="M32 8 L32 56 M8 32 L56 32" stroke="white" stroke-width="2" opacity="0.4"/>
+  <path d="M14 14 L50 50 M50 14 L14 50" stroke="white" stroke-width="1" opacity="0.25"/>
+  <circle cx="32" cy="32" r="3.5" fill="white"/>
+  <circle cx="32" cy="32" r="14" stroke="white" stroke-width="2" fill="none" opacity="0.7"/>
+  <text x="32" y="60" text-anchor="middle" font-family="monospace" font-size="6" fill="white" opacity="0.9">τ</text>
+</svg>

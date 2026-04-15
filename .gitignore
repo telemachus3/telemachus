@@ -17,3 +17,4 @@ build/
 
 # Docs build
 site/
+_site/
