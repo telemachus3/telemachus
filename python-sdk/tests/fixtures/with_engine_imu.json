@@ -1,0 +1,27 @@
+{
+  "timestamp": "2025-01-01T12:34:56Z",
+  "vehicle_id": "CAR-123",
+  "position": {"lat": 48.85, "lon": 2.35, "altitude_m": 35.0, "heading_deg": 182.0},
+  "motion": {"speed_kph": 52.4, "bearing_deg": 181.5},
+  "quality": {"hdop": 0.8, "vdop": 1.2, "pdop": 1.6, "num_satellites": 12, "fix_type": "3d"},
+  "imu": {
+    "accel": {"x_ms2": 0.01, "y_ms2": -0.02, "z_ms2": 9.80},
+    "gyro": {"x_rads": 0.001, "y_rads": 0.002, "z_rads": -0.001},
+    "mag": {"x_ut": 22.1, "y_ut": -5.3, "z_ut": 41.7}
+  },
+  "engine": {
+    "rpm": 2200,
+    "odometer_km": 12345.67,
+    "fuel_pct": 0.56,
+    "battery_voltage_v": 12.4,
+    "throttle_pct": 0.18
+  },
+  "events": [
+    {"type": "harsh_brake", "severity": "medium", "start": "2025-01-01T12:35:01Z", "end": "2025-01-01T12:35:02Z"}
+  ],
+  "context": {
+    "weather": {"temp_c": 7.4, "precip_mm": 0.0},
+    "topography": {"slope_deg": -1.2}
+  },
+  "source": {"provider": "rs3-sim", "device_id": "SIM-001", "ingest_timestamp": "2025-01-01T12:35:05Z"}
+}
