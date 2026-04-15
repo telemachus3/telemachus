@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+title: "Telemachus Specification v0.2"
+message: "Please cite this project (v0.2) using the following metadata."
+authors:
+  - family-names: "Edet"
+    given-names: "Sébastien"
+keywords:
+  - telematics
+  - interoperability
+  - open standard
+  - mobility
+  - fleet management
+  - data standardization
+  - RFC
+  - governance
+  - open data
+  - simulation
+  - RS3
+license: MIT
+version: 0.2
+date-released: 2025-10-13
+repository-code: "https://github.com/telemachus3/telemachus-spec"
+abstract: >
+  Telemachus v0.2 defines an open, RFC-driven standard for high-frequency mobility and telematics data.
+  It provides a unified schema across simulated (RS3) and real-world fleet datasets (Webfleet, Samsara, Geotab, Teltonika),
+  supporting time-series consistency, semantic validation, and contextual enrichments.
+  The specification evolves through public RFCs and open governance under the MIT License.
+doi: 10.5281/zenodo.xxxxx
