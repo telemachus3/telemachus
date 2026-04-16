@@ -28,7 +28,7 @@ et vos datasets de référence parlent enfin la même langue.
 
     ---
 
-    Articles pratiques pour valider, lire et adapter des données D0.
+    Articles pratiques pour valider, lire et adapter des données Telemachus.
 
     [:octicons-arrow-right-24: Lire le guide](guide/validating.md)
 
@@ -36,7 +36,7 @@ et vos datasets de référence parlent enfin la même langue.
 
     ---
 
-    Le modèle en couches D0 → D1 → D2, AccPeriod, CarrierState, multi-rate.
+    Le modèle en couches Telemachus record format, AccPeriod, CarrierState, multi-rate.
 
     [:octicons-arrow-right-24: Comprendre](concepts.md)
 
@@ -53,8 +53,8 @@ et vos datasets de référence parlent enfin la même langue.
 ## Ce que Telemachus apporte
 
 - **Neutralité fabricant** : un seul schéma pour l'IMU, le GNSS, le mouvement, l'OBD et les événements.
-- **Modèle en couches** : D0 (sortie device brute) → D1 (nettoyé et contextualisé) → D2 (événements).
-- **Reproductibilité** : chaque dataset embarque un `manifest.yaml` normatif (RFC-0014).
+- **Modèle en couches** : Telemachus (sortie device brute) → enriched (nettoyé et contextualisé) → events layer (événements).
+- **Reproductibilité** : chaque dataset embarque un `manifest.yaml` normatif (SPEC-02).
 - **Ouverture** : schémas, adapters de référence et outils Python sous licence MIT.
 
 ## Où Telemachus se place dans l'écosystème télématique
@@ -63,13 +63,13 @@ Les fournisseurs se répartissent grossièrement en deux familles :
 
 | Type de fournisseur | Exemples | Ce qu'ils émettent |
 |---------------------|----------|---------------------|
-| **Fabricants de boîtiers** (installés dans le véhicule) | Danlaw, Teltonika, Queclink | Sortie device brute → naturellement **D0** |
-| **Fournisseurs de services** (SaaS au-dessus d'un ou plusieurs boîtiers) | Geotab, Samsara, Webfleet, Verizon Connect | Données nettoyées et enrichies → naturellement **D1** / **D2** |
+| **Fabricants de boîtiers** (installés dans le véhicule) | Danlaw, Teltonika, Queclink | Sortie device brute → naturellement **Telemachus** |
+| **Fournisseurs de services** (SaaS au-dessus d'un ou plusieurs boîtiers) | Geotab, Samsara, Webfleet, Verizon Connect | Données nettoyées et enrichies → naturellement **enriched** / **events layer** |
 
 Telemachus est la **langue commune** entre ces deux familles. Un
-constructeur peut publier un adapter qui projette son flux en D0. Un
-opérateur de services peut soit consommer du D0 (et émettre son
-propre D1/D2), soit publier directement ses adapters vers D1/D2.
+constructeur peut publier un adapter qui projette son flux en Telemachus. Un
+opérateur de services peut soit consommer du Telemachus (et émettre son
+propre enriched/events layer), soit publier directement ses adapters vers enriched/events layer.
 Personne n'a besoin d'apprendre un énième format pour intégrer.
 
 ## Pour qui ?
@@ -101,7 +101,7 @@ Personne n'a besoin d'apprendre un énième format pour intégrer.
 | Artefact | Version |
 |----------|---------|
 | Dernière spec publiée | **v0.2** (2025-10-13) — schéma cœur stable |
-| Dernier brouillon | **v0.8** — Telemachus Device Format (RFC-0013) + Dataset Manifest (RFC-0014) |
+| Dernier brouillon | **v0.8** — Telemachus Record Format (SPEC-01) + Dataset Manifest (SPEC-02) |
 
 Telemachus est hébergé dans un unique [monorepo GitHub](https://github.com/telemachus3/telemachus).
 Les 4 anciens dépôts (`telemachus-spec`, `telemachus-py`,

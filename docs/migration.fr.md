@@ -6,9 +6,9 @@ elle doit — pas de semver strict, pas de revue publique multi-semaines
 pour l'instant. Vous upgradez votre code consommateur quand vous
 voulez les nouveautés.
 
-## 0.8 brouillon — RFC-0014 Dataset Manifest
+## 0.8 brouillon — SPEC-02 Dataset Manifest
 
-Non cassant. Ajoute le sidecar normatif `manifest.yaml` (RFC-0014)
+Non cassant. Ajoute le sidecar normatif `manifest.yaml` (SPEC-02)
 avec des règles d'héritage qui vous permettent de sortir `device_id`,
 `trip_id`, `acc_periods` et `trip_carrier_states` du parquet signal.
 
@@ -24,9 +24,9 @@ Convention ajoutée : colonnes spécifiques fabricant préfixées
 `x_<source>_<field>` (par exemple `x_teltonika_ext_voltage_v`). Les
 consommateurs peuvent les ignorer sans risque.
 
-## 0.7 — RFC-0013 Telemachus Device Format
+## 0.7 — SPEC-01 Telemachus Device Format
 
-Introduit le modèle en couches D0 / D1 / D2. Formalise AccPeriod
+Introduit le modèle en couches Telemachus / enriched / events layer. Formalise AccPeriod
 (suivi du référentiel accéléromètre) et CarrierState (classification
 du contexte par trip).
 

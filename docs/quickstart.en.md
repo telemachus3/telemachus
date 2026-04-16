@@ -35,7 +35,7 @@ ajv validate \
 ## Validate a dataset manifest (v0.8 Draft)
 
 A *dataset* is a coherent collection of Telemachus parquet files plus a
-sidecar `manifest.yaml` (RFC-0014). The manifest is the canonical
+sidecar `manifest.yaml` (SPEC-02). The manifest is the canonical
 source for `device_id`, `trip_id`, `acc_periods` and
 `trip_carrier_states`.
 
@@ -57,12 +57,12 @@ print(df.columns.tolist())
 #  'ax_mps2', 'ay_mps2', 'az_mps2', ...]
 ```
 
-For a full read/manifest workflow see [Reading Telemachus data](guide/reading-d0.md).
+For a full read/manifest workflow see [Reading Telemachus data](guide/reading-data.md).
 
 ## Next steps
 
 - [Validating files](guide/validating.md) — strict and lenient modes
-- [Reading Telemachus data](guide/reading-d0.md) — Python, DuckDB, pandas
+- [Reading Telemachus data](guide/reading-data.md) — Python, DuckDB, pandas
 - [Writing an adapter](guide/writing-adapter.md) — convert vendor X → Telemachus
-- [Manifest FAQ](guide/manifest-faq.md) — what RFC-0014 changes
+- [Manifest FAQ](guide/manifest-faq.md) — what SPEC-02 changes
 - [Concepts](concepts.md) — the layered model

@@ -1,4 +1,4 @@
-# Sources Open — matrice de couverture D0
+# Sources Open — matrice de couverture Telemachus
 
 Quels datasets publics sont déjà mappés vers Telemachus format, et ce
 que chacun expose. Utilisez ce tableau pour choisir le dataset qui

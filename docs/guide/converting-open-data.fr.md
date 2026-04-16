@@ -3,7 +3,7 @@
 Il arrive qu'on tombe sur un dataset public intéressant (Zenodo,
 Kaggle, Figshare…) qui n'a pas encore d'entrée dédiée sous
 `datasets/` dans le monorepo. Voici le chemin manuel pour en tirer
-un dataset D0 Telemachus valide.
+un dataset Telemachus Telemachus valide.
 
 ## 0. Vérifier la licence avant tout
 
@@ -18,7 +18,7 @@ locale pour votre propre usage.
 Ouvrez les fichiers bruts et identifiez, colonne par colonne, ce
 que chaque flux contient vraiment :
 
-| Colonne source | Unité | Cadence | Correspond à D0 |
+| Colonne source | Unité | Cadence | Correspond à Telemachus |
 |----------------|-------|---------|-----------------|
 | `timestamp_ms` | ms depuis epoch | — | `ts` (convertir en datetime UTC) |
 | `latitude` | deg | 1 Hz | `lat` |
@@ -30,12 +30,12 @@ que chaque flux contient vraiment :
 | `gyro_x_dps` | deg/s | 100 Hz | `gx_rad_s` (× π/180) |
 | … | | | |
 
-Si une colonne D0 attendue manque, décidez tout de suite comment la
+Si une colonne Telemachus attendue manque, décidez tout de suite comment la
 gérer :
 
-- **Colonnes GPS absentes** au rythme IMU → laisser en `NaN` (convention multi-rate, RFC-0013 §3.5)
+- **Colonnes GPS absentes** au rythme IMU → laisser en `NaN` (convention multi-rate, SPEC-01 §3.5)
 - **Heading manquant** → le recalculer depuis deux points GPS consécutifs (bearing Haversine)
-- **Gyro absent** → laisser les colonnes gyro absentes (RFC-0013 §3.3 : absentes ou full-NaN, jamais remplies avec des zéros)
+- **Gyro absent** → laisser les colonnes gyro absentes (SPEC-01 §3.3 : absentes ou full-NaN, jamais remplies avec des zéros)
 
 ## 2. Télécharger et décompresser
 
@@ -62,9 +62,9 @@ Le template complet est sur [Écrire un adapter](writing-adapter.md).
 Le minimum à faire :
 
 1. Lire les fichiers bruts (CSV / Parquet / format vendor).
-2. Renommer et convertir les colonnes (attention aux unités !) vers les noms D0.
+2. Renommer et convertir les colonnes (attention aux unités !) vers les noms Telemachus.
 3. Trier par `ts`, s'assurer de la monotonie, dédupliquer si besoin.
-4. Écrire le parquet D0.
+4. Écrire le parquet Telemachus.
 5. Produire un `manifest.yaml` qui déclare `hardware`,
    `sensors.*.rate_hz`, `acc_periods` (start/end/frame), le bloc
    `source` et la `license`.
@@ -115,7 +115,7 @@ ajv validate \
   -s spec/schemas/telemachus_manifest_v0.8.json \
   -d datasets/xx_my_source/manifest.yaml
 
-# Sanity D0 (pas encore de CLI canonique)
+# Sanity Telemachus (pas encore de CLI canonique)
 python -c "
 import pandas as pd
 df = pd.read_parquet('datasets/xx_my_source/d0.parquet')

@@ -3,8 +3,8 @@
 Un dataset Telemachus se valide sur deux plans, qu'on peut
 enchaîner ou séparer :
 
-1. **Le signal** (parquet) respecte le contrat de colonnes D0 (RFC-0013).
-2. **Le manifest** (`manifest.yaml`) respecte le schéma du manifest dataset (RFC-0014).
+1. **Le signal** (parquet) respecte le contrat de colonnes Telemachus (SPEC-01).
+2. **Le manifest** (`manifest.yaml`) respecte le schéma du manifest dataset (SPEC-02).
 
 Les deux contrôles sont indépendants.
 
@@ -26,7 +26,7 @@ Ce que la validation attrape :
 - Clés inconnues au top level (le schéma est `additionalProperties: false`)
 - Énumérations invalides (ex : `fix_type` inconnu)
 
-## Valider un manifest de dataset (RFC-0014)
+## Valider un manifest de dataset (SPEC-02)
 
 ```bash
 ajv validate \
@@ -62,7 +62,7 @@ jsonschema.validate(coerce(manifest), schema)
 print("OK")
 ```
 
-## Valider le parquet contre le contrat D0
+## Valider le parquet contre le contrat Telemachus
 
 Pas encore de CLI canonique (c'est prévu dans la suite de conformité
 1.0). Les contrôles minimaux à la main :
@@ -81,7 +81,7 @@ assert df["lat"].dropna().between(-90, 90).all()
 assert df["lon"].dropna().between(-180, 180).all()
 ```
 
-Pour les contrôles de gravité par AccPeriod (RFC-0013 §6 règle 3),
+Pour les contrôles de gravité par AccPeriod (SPEC-01 §6 règle 3),
 voir [Concepts → AccPeriod](../concepts.md#accperiod-le-referentiel-de-laccelerometre).
 
 ## Strict vs tolérant

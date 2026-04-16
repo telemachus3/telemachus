@@ -2,14 +2,14 @@
 
 The five ideas you need to grok to read Telemachus data correctly.
 
-## D0 — functional groups
+## Telemachus — functional groups
 
-D0 is a **flat parquet** (the schema is columnar, not nested), but
+Telemachus is a **flat parquet** (the schema is columnar, not nested), but
 mentally it splits into five functional groups. Knowing these groups
 makes it much easier to remember why each column is there.
 
 ```
-D0 = datetime       ts
+Telemachus = datetime       ts
    + GPS            lat, lon, speed_mps, heading_deg,
                     altitude_gps_m, hdop, n_satellites
    + IMU
@@ -47,29 +47,29 @@ the **`x_<source>_<field>`** naming convention:
 | `x_geotab_geofence_id` | Geotab-specific geofence identifier |
 | `x_danlaw_codec_id` | Danlaw firmware codec tag |
 
-The `x_` prefix signals "not part of the normative D0 contract,
+The `x_` prefix signals "not part of the normative Telemachus contract,
 consumer may safely ignore it". The `<source>` segment keeps names
 unambiguous across datasets that merge multiple vendors.
 
-## D0 → D1 → D2 — the layered model
+## Telemachus record format — the layered model
 
 | Layer | Name | Input | Output |
 |-------|------|-------|--------|
-| **D0** | Device | Hardware | Raw parquet — only what the device measures |
-| **D1** | Cleaned & Contextualised | D0 | Enriched D0 + map matching, DEM, IMU calibration, signal quality |
-| **D2** | Events & Situations | D1 | D1 + event column + event table (harsh brake, pothole, curve, …) |
+| **Telemachus** | Device | Hardware | Raw parquet — only what the device measures |
+| **enriched** | Cleaned & Contextualised | Telemachus | Enriched Telemachus + map matching, DEM, IMU calibration, signal quality |
+| **events layer** | Events & Situations | enriched | enriched + event column + event table (harsh brake, pothole, curve, …) |
 
-The Telemachus spec is **normative on D0** (RFC-0013). D1 and D2
-column contracts are documented in RFC-0013 §4 but their *algorithms*
-are intentionally out of scope — different consumers can compute D1/D2
+The Telemachus spec is **normative on Telemachus** (SPEC-01). enriched and events layer
+column contracts are documented in SPEC-01 §4 but their *algorithms*
+are intentionally out of scope — different consumers can compute enriched/events layer
 differently as long as they emit conformant columns.
 
 **Rule of thumb**: a column derived from external data (maps, DEM,
-algorithm output) belongs to D1 or higher, never D0.
+algorithm output) belongs to enriched format or higher, never Telemachus.
 
 ## Multi-rate IMU vs GNSS
 
-Most devices stream IMU at 10 Hz and GNSS at 1 Hz. D0 is timestamped
+Most devices stream IMU at 10 Hz and GNSS at 1 Hz. Telemachus is timestamped
 at the **IMU rate**, with GNSS columns containing `NaN` between fixes:
 
 ```
@@ -119,7 +119,7 @@ acc_periods:
 ```
 
 Default if absent: a single implicit period with `frame: "raw"`. See
-RFC-0013 §3.6 for the full normative definition.
+SPEC-01 §3.6 for the full normative definition.
 
 ## CarrierState — is this trip real driving?
 
@@ -142,7 +142,7 @@ contexts:
 
 Classification combines four signals: external power voltage, GPS
 speed, accelerometer norm variance, GPS position drift. See
-RFC-0013 §3.7 for the decision tree.
+SPEC-01 §3.7 for the decision tree.
 
 In the manifest, declare them via `trip_carrier_states`:
 

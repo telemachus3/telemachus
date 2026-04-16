@@ -8,7 +8,7 @@ vers un dataset Telemachus format (parquet + manifest).
 
 ```
 mon-adapter/
-├── adapter.py        ← lit le format source, émet du D0
+├── adapter.py        ← lit le format source, émet du Telemachus
 ├── manifest.yaml     ← décrit le dataset produit
 ├── README.md         ← ce que fait l'adapter, licence, usage
 └── tests/
@@ -29,7 +29,7 @@ from pathlib import Path
 def adapt(input_csv: Path, output_dir: Path) -> None:
     df = pd.read_csv(input_csv)
 
-    # Mapper les colonnes vendor vers les noms + unités D0 (RFC-0013 §3)
+    # Mapper les colonnes vendor vers les noms + unités Telemachus (SPEC-01 §3)
     d0 = pd.DataFrame({
         "ts":         pd.to_datetime(df["timestamp"], utc=True),
         "lat":        df["latitude"],
@@ -77,12 +77,12 @@ def adapt(input_csv: Path, output_dir: Path) -> None:
 
 ## Check-list à cocher
 
-- [ ] Toutes les colonnes obligatoires RFC-0013 §3.1 sont là (ou NaN si le cas est autorisé)
+- [ ] Toutes les colonnes obligatoires SPEC-01 §3.1 sont là (ou NaN si le cas est autorisé)
 - [ ] Les unités sont en SI (`m/s²`, `rad/s`, `m/s`, degrés WGS84)
 - [ ] `ts` est croissant strictement, en UTC
 - [ ] `acc_periods` reflète la réalité (`raw` si la gravité est présente dans le signal, `compensated` si le firmware l'a retirée)
 - [ ] Le manifest passe la validation contre `telemachus_manifest_v0.8.json`
-- [ ] Le parquet produit passe les contrôles D0 (voir [Valider](validating.md))
+- [ ] Le parquet produit passe les contrôles Telemachus (voir [Valider](validating.md))
 
 ## Piège licence
 
