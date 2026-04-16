@@ -240,8 +240,8 @@ Where `<source>` identifies the data provider or processing origin, and
 | `x_pvs_temp_dashboard_c` | PVS dataset | Sensor temperature at dashboard placement |
 | `x_stride_orientation_qw` | STRIDE dataset | Android orientation quaternion W |
 | `x_stride_gravity_x_mps2` | STRIDE dataset | Android-derived gravity vector X |
-| `x_teltonika_movement_status` | Teltonika | Firmware movement detection flag |
-| `x_flespi_server_timestamp` | Flespi | Server-side receive timestamp |
+| `x_rs3_road_type` | RoadSimulator3 | Simulation ground truth road classification |
+| `x_vendor_firmware_flag` | Any vendor | Device-specific firmware status field |
 
 **Rules:**
 - Validators MUST ignore columns matching `x_*` (never reject them)
@@ -375,7 +375,7 @@ graph LR
 
     subgraph STAGES["D1 Processing Stages"]
         S1["GPS Upsampling\n(linear/kinematic)"]
-        S2["IMU Calibration\n([REDACTED_METHOD] [REDACTED_METHOD])"]
+        S2["IMU Calibration\n(orientation alignment)"]
         S3["Map Matching\n(OSRM)"]
         S4["DEM Enrichment\n(SRTM/IGN)"]
         S5["Signal Quality\nScoring"]
@@ -428,20 +428,17 @@ D2 preserves ALL D0 + D1 columns unchanged.
 ```mermaid
 graph TD
     subgraph DETECT["D2 Event Detection"]
-        AX["ax_mps2\n(calibrated D1)"] --> BRAKE["HARSH_BRAKE\nax < -3.0 m/s²"]
-        AX --> ACCEL["HARSH_ACCEL\nax > +2.5 m/s²"]
-        AY["ay_mps2"] --> TURN["SHARP_TURN\nay > 5.0 m/s²"]
-        AZ["az_mps2"] --> BUMP["SPEED_BUMP\nΔaz 3.0–5.0 m/s²"]
-        AZ --> POTHOLE["POTHOLE\nΔaz > 5.0 m/s²"]
-        SPD["speed_mps"] --> STOP["STOP\n< 0.3 m/s for ≥ 5s"]
+        AX["ax_mps2\n(calibrated D1)"] --> BRAKE["HARSH_BRAKE"]
+        AX --> ACCEL["HARSH_ACCEL"]
+        AY["ay_mps2"] --> TURN["SHARP_TURN"]
+        AZ["az_mps2"] --> BUMP["SPEED_BUMP"]
+        AZ --> POTHOLE["POTHOLE"]
+        SPD["speed_mps"] --> STOP["STOP"]
     end
 
     subgraph CURVE["Curve Classification"]
         HEAD["heading_deg\n(D1 enriched)"] --> RADIUS["curve_radius_m"]
-        RADIUS --> HAIRPIN["hairpin < 30m"]
-        RADIUS --> SHARP["sharp 30–75m"]
-        RADIUS --> MODERATE["moderate 75–200m"]
-        RADIUS --> GENTLE["gentle > 200m"]
+        RADIUS --> CLASS["hairpin / sharp /\nmoderate / gentle /\nstraight"]
     end
 
     style DETECT fill:#fff3e0,stroke:#e65100
@@ -458,15 +455,18 @@ graph TD
 
 ### 5.2 Event Types
 
-| Code | Signal | Default Threshold | Category |
-|------|--------|-------------------|----------|
-| `HARSH_BRAKE` | ax | < -3.0 m/s² | Driving |
-| `HARSH_ACCEL` | ax | > +2.5 m/s² | Driving |
-| `SHARP_TURN` | gz or ay | > 0.3 rad/s or > 5.0 m/s² | Driving |
-| `SPEED_BUMP` | az_delta | 3.0–5.0 m/s² | Infrastructure |
-| `POTHOLE` | az_delta | > 5.0 m/s² | Infrastructure |
-| `CURB` | ay + az | ay > 2.5 and az_delta > 3.0 | Infrastructure |
-| `STOP` | speed | < 0.3 m/s for >= 5 s | Kinematic |
+D2 defines the following **event categories**. Thresholds are
+implementation-specific and configurable per deployment.
+
+| Code | Signal(s) | Category |
+|------|-----------|----------|
+| `HARSH_BRAKE` | ax | Driving |
+| `HARSH_ACCEL` | ax | Driving |
+| `SHARP_TURN` | gz or ay | Driving |
+| `SPEED_BUMP` | az_delta | Infrastructure |
+| `POTHOLE` | az_delta | Infrastructure |
+| `CURB` | ay + az | Infrastructure |
+| `STOP` | speed | Kinematic |
 
 ### 5.3 D3/D4 — Out of Scope
 
@@ -482,13 +482,7 @@ the data format up to D2.
 
 ```mermaid
 graph TD
-    subgraph COMMERCIAL["Commercial Devices"]
-        TELTO["Teltonika FMC880\n(Europe)"]
-        TELTM["Teltonika FMM880\n(Americas)"]
-        PROTO["Telematics Prototype\n(experimental)"]
-    end
-
-    subgraph RESEARCH["Research Platforms"]
+    subgraph RESEARCH["Open Research Datasets"]
         AEGIS["AEGIS\n(BeagleBone, Austria)"]
         PVS["PVS\n(MPU-9250 ×3, Brazil)"]
         STRIDE["STRIDE\n(POCO X2, Bangladesh)"]
@@ -498,48 +492,30 @@ graph TD
         RS3["RoadSimulator3\n(synthetic)"]
     end
 
-    subgraph TIERS["Sensor Coverage"]
-        T1["GPS + Accel"]
+    subgraph TIERS["Sensor Coverage Tiers"]
         T2["GPS + Accel + Gyro"]
         T3["GPS + Accel + Gyro + Magneto"]
         T4["GPS + Accel + OBD"]
     end
 
-    TELTO --> T1
-    TELTM --> T1
-    PROTO --> T1
     AEGIS --> T4
     PVS --> T3
     STRIDE --> T3
     RS3 --> T2
 
-    style COMMERCIAL fill:#fce4ec,stroke:#c62828
     style RESEARCH fill:#e8f5e9,stroke:#2e7d32
     style SIM fill:#e3f2fd,stroke:#1565c0
     style TIERS fill:#fff9c4,stroke:#f9a825
 ```
 
-### 6.2 Detailed Column Mapping
+> **Commercial devices** (GPS + Accel, with optional Vehicle I/O) are
+> supported via private adapters documented outside this specification.
 
-#### Teltonika FMC880 / FMM880 (via Flespi)
+### 6.2 Detailed Column Mapping — Open Datasets
 
-| Flespi JSON Key | D0 Column | Conversion |
-|-----------------|-----------|------------|
-| `timestamp` | `ts` | epoch sec → UTC datetime |
-| `position.latitude` | `lat` | direct (decimal degrees) |
-| `position.longitude` | `lon` | direct |
-| `position.speed` | `speed_mps` | km/h ÷ 3.6 |
-| `position.direction` | `heading_deg` | direct (0–360°) |
-| `position.altitude` | `altitude_gps_m` | direct (meters) |
-| `position.hdop` | `hdop` | direct |
-| `position.satellites` | `n_satellites` | direct |
-| `x.acceleration` | `ax_mps2` | g × 9.80665 |
-| `y.acceleration` | `ay_mps2` | g × 9.80665 |
-| `z.acceleration` | `az_mps2` | g × 9.80665 |
-| `engine.ignition.status` | `ignition` | direct (bool) |
-| `external.powersource.voltage` | `vehicle_voltage_v` | direct (V) |
-| `vehicle.mileage` | `odometer_m` | km × 1000 |
-| `ident` | `device_id` | IMEI string |
+> **Note:** Column mappings for commercial/proprietary devices are
+> documented in their respective private adapter modules, not in this
+> public specification.
 
 #### AEGIS (Zenodo 820576, Austria)
 
