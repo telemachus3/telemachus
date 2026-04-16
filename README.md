@@ -28,9 +28,9 @@ single source of truth.
 |----------|---------|
 | **Current spec** | **v0.8** (2026-04-16) — consolidated into 4 SPEC pillars |
 
-The v0.8 specification introduces the layered Telemachus processing layers data model,
-AccPeriod frame tracking, CarrierState classification, burst sampling,
-magnetometer support, and the normative **Dataset Manifest** sidecar.
+The v0.8 specification defines the Telemachus record format (column
+contracts, AccPeriod frame tracking, CarrierState classification, burst
+sampling, magnetometer support) and the normative **Dataset Manifest**.
 
 ## Quickstart
 
@@ -50,17 +50,17 @@ print(tele.sensor_profile(df))  # → "gps+imu+gyro"
 
 ### Validate
 ```bash
-# Validate a dataset (Telemachus parquet + manifest)
+# Validate a dataset (parquet + manifest)
 tele validate path/to/dataset/ --level full
 
-# Quick D0 check on a parquet file
+# Quick check on a parquet file
 tele validate path/to/d0.parquet --level d0
 
 # Dataset info
 tele info path/to/manifest.yaml
 ```
 
-### Convert an Open dataset to D0
+### Convert an Open dataset to Telemachus
 ```bash
 # Download AEGIS from Zenodo, then convert to Telemachus format
 tele convert aegis /path/to/aegis/csvs --outdir datasets/aegis/

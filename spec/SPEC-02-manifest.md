@@ -23,7 +23,7 @@ Specification v0.2) and RFC-0014 (Dataset Manifest v0.8).
 
 - **One manifest per dataset.** The manifest is authoritative for file-level metadata.
 - **YAML preferred.** JSON with identical schema is also accepted.
-- **No duplication with Telemachus columns.** Metadata that doesn't change per-row (device, frame, carrier state) lives in the manifest, not in columns.
+- **No duplication with record columns.** Metadata that doesn't change per-row (device, frame, carrier state) lives in the manifest, not in columns.
 - **Inheritance.** Row-level columns MAY omit fields declared at manifest level; consumers resolve by falling back to the manifest.
 
 ### 1.2 Manifest Structure Overview
@@ -63,8 +63,8 @@ graph TD
 ```
 <dataset_slug>/
 ├── manifest.yaml          # This specification
-├── d0_device1.parquet     # Telemachus data file(s)
-├── d0_device2.parquet     # (one per device or one combined)
+├── device1.parquet        # Telemachus data file(s)
+├── device2.parquet     # (one per device or one combined)
 └── README.md              # Optional human-readable description
 ```
 
@@ -195,7 +195,7 @@ sensors:
     rate_native_hz: 50              # native hardware rate (if burst mode)
     range_g: 16
     has_gyroscope: false
-    unit: "m/s^2"                   # canonical D0 unit (for documentation)
+    unit: "m/s^2"                   # canonical Telemachus unit (for documentation)
     sampling_mode: continuous       # continuous | burst
     burst_size: 10                  # frames per burst (if burst mode)
     burst_rate_hz: 50               # intra-burst rate (if burst mode)
@@ -284,7 +284,7 @@ timeline
 
 Carrier state classifies each **trip** (not each sample) to determine
 whether data comes from a real driving context. This metadata lives
-exclusively in the manifest — not as Telemachus columns.
+exclusively in the manifest — not as record columns.
 
 ```yaml
 carrier_state_summary:
@@ -364,7 +364,7 @@ data_files:
     format: parquet
     size_mb: 31
     description: "device_1, all trips"
-  - path: "d0_device2.parquet"
+  - path: "device2.parquet"
     format: parquet
     size_mb: 12
 ```
@@ -402,7 +402,7 @@ config_history:
 
 ### 4.1 Per-Row Fields Derivable from Manifest
 
-When D0 per-row columns are **absent** from a parquet file, consumers
+When per-row columns are **absent** from a parquet file, consumers
 MUST resolve them as follows:
 
 | Column | Manifest source | Fallback |

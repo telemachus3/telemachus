@@ -1,5 +1,5 @@
 ---
-title: "SPEC-01: Telemachus Record Format — Telemetry Format"
+title: "SPEC-01: Telemachus Record Format — Open Telematics Data"
 status: Draft
 version: "0.8"
 author: Sébastien Edet
@@ -7,63 +7,50 @@ created: 2026-04-16
 supersedes: RFC-0001, RFC-0004, RFC-0013
 ---
 
-# SPEC-01: Telemachus Record Format — Telemetry Format
+# SPEC-01: Telemachus Record Format
 
 ## 1. Introduction
 
-Telemachus defines a **layered data model** for mobility telemetry. Each
-layer has an explicit column contract separating raw device output from
-pipeline-enriched data.
+Telemachus defines an **open pivot format** for high-frequency mobility
+and telematics data. A Telemachus dataset captures what a telematics
+device physically measures and transmits: GNSS position, inertial
+measurements, and optionally vehicle bus data.
 
 This specification consolidates and supersedes RFC-0001 (Core v0.2),
-RFC-0004 (Extended FieldGroups), and RFC-0013 (Telemachus Device Format v0.7).
+RFC-0004 (Extended FieldGroups), and RFC-0013 (Device Layer v0.7).
 
 ### 1.1 Design Principles
 
-- **D0 = raw device output.** No enrichment, no interpretation, no external data.
+- **Raw device output only.** No enrichment, no interpretation, no external data.
 - **Columns are flat.** No nested JSON objects — every field is a top-level column.
 - **Units are SI.** m/s, m/s², rad/s, degrees WGS84, UTC nanoseconds.
 - **Multi-rate is native.** GNSS and IMU may sample at different frequencies.
 - **Vendor extensions welcome.** Extra columns use `x_<source>_<field>` convention.
 
-### 1.2 Layer Overview
+### 1.2 Record Overview
+
+A Telemachus record is a timestamped row containing measurements from
+up to five functional groups:
 
 ```mermaid
-graph TD
-    subgraph D0["D0 — Device (Raw)"]
+graph LR
+    subgraph RECORD["Telemachus Record"]
         GPS[GNSS: lat, lon, speed, heading]
         IMU[IMU: accel, gyro, magneto]
         VIO[Vehicle I/O: ignition, OBD, voltage]
         EXTRA[Vendor-specific: x_source_field]
     end
 
-    subgraph D1["D1 — Cleaned & Contextualized"]
-        INTERP[GPS interpolation & map matching]
-        CAL[IMU calibration & gravity alignment]
-        DEM[DEM altitude & slope]
-        SQS[Signal Quality Score]
-    end
-
-    subgraph D2["D2 — Events & Situations"]
-        EVT[Driving events: brake, accel, turn]
-        CURVE[Curve classification]
-        INFRA[Infrastructure: bumps, potholes]
-    end
-
-    D0 --> D1 --> D2
-
-    style D0 fill:#e8f5e9,stroke:#2e7d32
-    style D1 fill:#e3f2fd,stroke:#1565c0
-    style D2 fill:#fff3e0,stroke:#e65100
+    style RECORD fill:#e8f5e9,stroke:#2e7d32
 ```
 
 ---
 
-## 2. D0 — Device Layer
+## 2. Column Specification
 
 ### 2.1 Functional Groups
 
-Telemachus columns are organized into **five functional groups**. All columns are
+Columns are organized into **five functional groups**. All columns are
 flat (no nesting). The grouping is conceptual, for documentation only.
 
 ```mermaid
@@ -127,7 +114,7 @@ Every Telemachus-compliant file MUST contain these columns:
 
 | Column | Type | Unit | Source | Description |
 |--------|------|------|--------|-------------|
-| `ts` | datetime64[ns, UTC] | UTC | Device clock | Timestamp at IMU rate |
+| `ts` | datetime64[ns, UTC] | UTC | Device clock | Timestamp at highest sensor rate |
 | `lat` | float64 | degrees WGS84 | GNSS | Latitude. NaN between GNSS ticks |
 | `lon` | float64 | degrees WGS84 | GNSS | Longitude. NaN between GNSS ticks |
 | `speed_mps` | float32 | m/s | GNSS Doppler | Ground speed. NaN between GNSS ticks |
@@ -194,36 +181,32 @@ vehicle electrical system.
 | `ignition` | bool | — | Vehicle ignition state (digital input) |
 | `odometer_m` | float64 | m | Odometer reading (CAN/OBD) |
 | `speed_obd_mps` | float32 | m/s | Vehicle speed from OBD PID 0x0D. Independent of GNSS speed |
-| `vehicle_voltage_v` | float32 | V | External power source voltage (12 V / 24 V system). Key signal for carrier state detection |
+| `vehicle_voltage_v` | float32 | V | External power source voltage (12 V / 24 V system) |
 | `rpm` | float32 | rev/min | Engine RPM (CAN/OBD PID 0x0C) |
 
 > **Two speed fields**: `speed_mps` (GNSS, mandatory) and `speed_obd_mps`
 > (OBD, optional) are intentionally separate. GPS speed degrades below
 > ~5 km/h and requires a fix; OBD speed is accurate at all speeds but
-> requires CAN wiring. The comparison GPS vs OBD is a quality indicator.
+> requires CAN wiring.
 
 ```mermaid
 graph LR
     subgraph SPEED["Speed Sources"]
-        GPS_S["speed_mps\n(GNSS Doppler)\nMandatory D0"]
-        OBD_S["speed_obd_mps\n(OBD PID 0x0D)\nOptional D0 §3.4"]
+        GPS_S["speed_mps\n(GNSS Doppler)\nMandatory"]
+        OBD_S["speed_obd_mps\n(OBD PID 0x0D)\nOptional §2.5"]
     end
-
-    GPS_S -- "compare" --> SQS["Signal Quality\nScore (D1)"]
-    OBD_S -- "compare" --> SQS
 
     GPS_S -- "NaN at low speed" --> NOTE1["Degraded < 5 km/h\nNaN without fix"]
     OBD_S -- "accurate always" --> NOTE2["Requires CAN wiring\nNaN if no OBD"]
 
     style GPS_S fill:#e8f5e9,stroke:#2e7d32
     style OBD_S fill:#fce4ec,stroke:#c62828
-    style SQS fill:#e3f2fd,stroke:#1565c0
 ```
 
 ### 2.6 Vendor-Specific Extra Fields
 
-Telemachus files MAY contain additional columns not defined in this specification.
-These columns MUST follow the naming convention:
+Telemachus files MAY contain additional columns not defined in this
+specification. These columns MUST follow the naming convention:
 
 ```
 x_<source>_<field>
@@ -258,25 +241,25 @@ NaN on rows where no measurement is available.
 sequenceDiagram
     participant IMU as IMU (10 Hz)
     participant GPS as GNSS (1 Hz)
-    participant D0 as D0 Row
+    participant REC as Record Row
 
-    Note over IMU,D0: t = 0.0s
-    IMU->>D0: ax=0.12, ay=0.03, az=9.81
-    GPS->>D0: lat=49.33, lon=1.38, speed=5.2
+    Note over IMU,REC: t = 0.0s
+    IMU->>REC: ax=0.12, ay=0.03, az=9.81
+    GPS->>REC: lat=49.33, lon=1.38, speed=5.2
 
-    Note over IMU,D0: t = 0.1s
-    IMU->>D0: ax=0.15, ay=-0.01, az=9.80
-    GPS--xD0: NaN (no fix this tick)
+    Note over IMU,REC: t = 0.1s
+    IMU->>REC: ax=0.15, ay=-0.01, az=9.80
+    GPS--xREC: NaN (no fix this tick)
 
-    Note over IMU,D0: t = 0.2s
-    IMU->>D0: ax=0.11, ay=0.02, az=9.82
-    GPS--xD0: NaN
+    Note over IMU,REC: t = 0.2s
+    IMU->>REC: ax=0.11, ay=0.02, az=9.82
+    GPS--xREC: NaN
 
-    Note over IMU,D0: ...
+    Note over IMU,REC: ...
 
-    Note over IMU,D0: t = 1.0s
-    IMU->>D0: ax=0.13, ay=0.01, az=9.81
-    GPS->>D0: lat=49.34, lon=1.38, speed=5.3
+    Note over IMU,REC: t = 1.0s
+    IMU->>REC: ax=0.13, ay=0.01, az=9.81
+    GPS->>REC: lat=49.34, lon=1.38, speed=5.3
 ```
 
 ### 2.8 AccPeriod — Accelerometer Frame Reference
@@ -323,25 +306,26 @@ graph TD
     style PART fill:#fff3e0,stroke:#e65100
 ```
 
-### 2.9 What D0 MUST NOT Contain
+### 2.9 Excluded Columns
 
-The following columns are **explicitly excluded** from D0:
+The following columns MUST NOT appear in a Telemachus dataset. They
+represent **enriched or derived data** that is outside the scope of this
+format:
 
-| Column | Correct Layer | Reason |
-|--------|--------------|--------|
-| `road_type` | D1 | Requires map data |
-| `speed_limit_kmh` | D1 | Requires map data |
-| `altitude_dem_m` | D1 | Requires external DEM |
-| `slope_pct` | D1 | Derived from DEM |
-| `event` | D2 | Algorithmic output |
-| `sqs_global` | D1 | Computed metric |
-| `lat_matched` | D1 | Requires OSRM map matching |
-| `carrier_state` | Manifest | Per-trip metadata, not per-row (see SPEC-02) |
-| `is_vehicle_data` | Manifest | Derived from carrier_state |
+| Column | Reason |
+|--------|--------|
+| `road_type` | Requires external map data |
+| `speed_limit_kmh` | Requires external map data |
+| `altitude_dem_m` | Requires external DEM |
+| `slope_pct` | Derived from external DEM |
+| `event` | Algorithmic output, not raw measurement |
+| `lat_matched` | Requires map matching engine |
+| `carrier_state` | Per-trip metadata — belongs in manifest (see SPEC-02) |
+| `is_vehicle_data` | Derived from carrier_state |
 
 ---
 
-## 3. D0 Validation Rules
+## 3. Validation Rules
 
 A Telemachus file is valid if:
 
@@ -352,133 +336,16 @@ A Telemachus file is valid if:
    - `compensated`: ≈ 0 ± 1.0 m/s²
    - `partial`: ≈ `residual_g` ± 0.05 g
 4. `lat` / `lon` are within [-90, 90] / [-180, 180] when not NaN
-5. No enrichment columns from §2.9 are present
+5. No excluded columns from §2.9 are present
 6. All extra columns follow the `x_<source>_<field>` convention
-7. `speed_mps` ≥ 0 when not NaN
+7. `speed_mps` >= 0 when not NaN
 8. Gyro/magneto columns are either all present or all absent (no partial group)
 
 ---
 
-## 4. D1 — Cleaned & Contextualized Layer
+## 4. Hardware Mapping
 
-D1 adds enrichment columns derived from external sources (maps, DEM) or
-signal processing (interpolation, calibration). D1 preserves ALL D0
-columns unchanged.
-
-```mermaid
-graph LR
-    subgraph INPUT["D0 Input"]
-        D0_GPS["lat, lon (NaN gaps)"]
-        D0_IMU["ax, ay, az"]
-        D0_SPD["speed_mps"]
-    end
-
-    subgraph STAGES["D1 Processing Stages"]
-        S1["GPS Upsampling\n(linear/kinematic)"]
-        S2["IMU Calibration\n(orientation alignment)"]
-        S3["Map Matching\n(OSRM)"]
-        S4["DEM Enrichment\n(SRTM/IGN)"]
-        S5["Signal Quality\nScoring"]
-    end
-
-    subgraph OUTPUT["D1 Added Columns"]
-        C1["interpolated (bool)"]
-        C2["dist_m"]
-        C3["lat_matched, lon_matched"]
-        C4["road_type, speed_limit_kmh, urban"]
-        C5["altitude_dem_m, slope_pct"]
-        C6["sqs_global (0-1)"]
-    end
-
-    D0_GPS --> S1 --> C1
-    D0_GPS --> S1 --> C2
-    D0_GPS --> S3 --> C3
-    S3 --> C4
-    D0_GPS --> S4 --> C5
-    D0_IMU --> S2
-    D0_SPD --> S5 --> C6
-
-    style INPUT fill:#e8f5e9,stroke:#2e7d32
-    style STAGES fill:#e3f2fd,stroke:#1565c0
-    style OUTPUT fill:#bbdefb,stroke:#1565c0
-```
-
-### 4.1 D1 Columns Added
-
-| Column | Stage | Type | Description |
-|--------|-------|------|-------------|
-| `interpolated` | GPS Upsampling | bool | True if this row was interpolated (not a real GNSS fix) |
-| `dist_m` | GPS Cleaning | float64 | Incremental haversine distance from previous fix |
-| `lat_matched` | Map Matching | float64 | OSRM-snapped latitude |
-| `lon_matched` | Map Matching | float64 | OSRM-snapped longitude |
-| `road_type` | Road Context | string | OSM road classification |
-| `speed_limit_kmh` | Road Context | float32 | Regulatory speed limit |
-| `urban` | Road Context | bool | Urban zone flag |
-| `altitude_dem_m` | DEM Enrichment | float32 | SRTM/IGN altitude |
-| `slope_pct` | DEM Enrichment | float32 | Road grade (%) |
-| `sqs_global` | Signal Quality | float32 | Score 0–1 (composite quality metric) |
-
----
-
-## 5. D2 — Events & Situations Layer
-
-D2 adds driving events and road classification detected from D1 signals.
-D2 preserves ALL D0 + D1 columns unchanged.
-
-```mermaid
-graph TD
-    subgraph DETECT["D2 Event Detection"]
-        AX["ax_mps2\n(calibrated D1)"] --> BRAKE["HARSH_BRAKE"]
-        AX --> ACCEL["HARSH_ACCEL"]
-        AY["ay_mps2"] --> TURN["SHARP_TURN"]
-        AZ["az_mps2"] --> BUMP["SPEED_BUMP"]
-        AZ --> POTHOLE["POTHOLE"]
-        SPD["speed_mps"] --> STOP["STOP"]
-    end
-
-    subgraph CURVE["Curve Classification"]
-        HEAD["heading_deg\n(D1 enriched)"] --> RADIUS["curve_radius_m"]
-        RADIUS --> CLASS["hairpin / sharp /\nmoderate / gentle /\nstraight"]
-    end
-
-    style DETECT fill:#fff3e0,stroke:#e65100
-    style CURVE fill:#fce4ec,stroke:#c62828
-```
-
-### 5.1 D2 Columns Added
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `event` | string | Event type per row (empty if none) |
-| `curve_radius_m` | float32 | Instantaneous curve radius |
-| `curve_class` | string | hairpin / sharp / moderate / gentle / straight |
-
-### 5.2 Event Types
-
-D2 defines the following **event categories**. Thresholds are
-implementation-specific and configurable per deployment.
-
-| Code | Signal(s) | Category |
-|------|-----------|----------|
-| `HARSH_BRAKE` | ax | Driving |
-| `HARSH_ACCEL` | ax | Driving |
-| `SHARP_TURN` | gz or ay | Driving |
-| `SPEED_BUMP` | az_delta | Infrastructure |
-| `POTHOLE` | az_delta | Infrastructure |
-| `CURB` | ay + az | Infrastructure |
-| `STOP` | speed | Kinematic |
-
-### 5.3 D3/D4 — Out of Scope
-
-D3 (indicators, scoring) and D4 (fleet aggregation) are **application-level
-concerns** outside the scope of this specification. Telemachus standardizes
-the data format up to D2.
-
----
-
-## 6. Hardware Mapping
-
-### 6.1 Source Coverage Matrix
+### 4.1 Source Coverage Matrix
 
 ```mermaid
 graph TD
@@ -511,7 +378,7 @@ graph TD
 > **Commercial devices** (GPS + Accel, with optional Vehicle I/O) are
 > supported via private adapters documented outside this specification.
 
-### 6.2 Detailed Column Mapping — Open Datasets
+### 4.2 Detailed Column Mapping — Open Datasets
 
 > **Note:** Column mappings for commercial/proprietary devices are
 > documented in their respective private adapter modules, not in this
@@ -519,8 +386,8 @@ graph TD
 
 #### AEGIS (Zenodo 820576, Austria)
 
-| Raw CSV Column | D0 Column | Conversion |
-|----------------|-----------|------------|
+| Raw CSV Column | Telemachus Column | Conversion |
+|----------------|-------------------|------------|
 | `timestamp` (accelerations.csv) | `ts` | ISO string → UTC datetime |
 | `x_value` (accelerations.csv) | `ax_mps2` | **G-force × 9.80665** |
 | `y_value` | `ay_mps2` | G-force × 9.80665 |
@@ -537,8 +404,8 @@ graph TD
 
 #### PVS (Kaggle, Curitiba)
 
-| Raw CSV Column | D0 Column | Conversion |
-|----------------|-----------|------------|
+| Raw CSV Column | Telemachus Column | Conversion |
+|----------------|-------------------|------------|
 | `timestamp` | `ts` | Unix seconds → UTC datetime |
 | `acc_x_{placement}` | `ax_mps2` | direct (already m/s²) |
 | `acc_y_{placement}` | `ay_mps2` | direct |
@@ -558,8 +425,8 @@ graph TD
 
 #### STRIDE (Figshare, Rajshahi)
 
-| Raw CSV Column | D0 Column | Conversion |
-|----------------|-----------|------------|
+| Raw CSV Column | Telemachus Column | Conversion |
+|----------------|-------------------|------------|
 | `time` (TotalAcceleration.csv) | `ts` | **ns epoch → UTC datetime** |
 | `x` (TotalAcceleration.csv) | `ax_mps2` | direct (already m/s²) |
 | `y` | `ay_mps2` | direct |
@@ -579,8 +446,8 @@ graph TD
 
 #### RoadSimulator3 (Synthetic)
 
-| RS3 Field | D0 Column | Conversion |
-|-----------|-----------|------------|
+| RS3 Field | Telemachus Column | Conversion |
+|-----------|-------------------|------------|
 | `timestamp` | `ts` | direct (10 Hz uniform UTC) |
 | `lat`, `lon` | `lat`, `lon` | direct |
 | `speed` | `speed_mps` | direct |
@@ -589,17 +456,18 @@ graph TD
 | `gyro_x/y/z` | `gx/gy/gz_rad_s` | direct (NaN if disabled) |
 
 > **Note:** RS3 also exports `road_type`, `event`, `target_speed` — these
-> are **ground truth metadata** for validation, NOT part of D0. They should
-> be stored as `x_rs3_*` extra columns or in a sidecar file.
+> are **ground truth metadata** for validation, NOT part of a Telemachus
+> record. They should be stored as `x_rs3_*` extra columns or in a
+> sidecar file.
 
 ---
 
-## 7. Unit Conversion Reference
+## 5. Unit Conversion Reference
 
 Adapters MUST convert raw device units to Telemachus canonical units:
 
-| Quantity | D0 Unit | Common Raw Units | Conversion |
-|----------|---------|-----------------|------------|
+| Quantity | Telemachus Unit | Common Raw Units | Conversion |
+|----------|-----------------|-----------------|------------|
 | Speed | m/s | km/h | ÷ 3.6 |
 | Acceleration | m/s² | G-force | × 9.80665 |
 | Gyroscope | rad/s | deg/s | × π / 180 |
@@ -614,12 +482,12 @@ Adapters MUST convert raw device units to Telemachus canonical units:
 
 ---
 
-## 8. Python API — Sensor Introspection
+## 6. Python API — Sensor Introspection
 
 The `telemachus-py` library provides introspection helpers for consumers
 to discover what data is available without loading the full dataset:
 
-### 8.1 Manifest-Level (fast, no data loaded)
+### 6.1 Manifest-Level (fast, no data loaded)
 
 ```python
 ds = tele.Dataset.from_manifest("manifest.yaml")
@@ -628,7 +496,7 @@ ds.has_declared_gyro()   # → True / False
 ds.acc_frame()           # → "raw" | "compensated" | "partial"
 ```
 
-### 8.2 Data-Level (loads parquet, checks actual content)
+### 6.2 Data-Level (loads parquet, checks actual content)
 
 ```python
 df = tele.read("manifest.yaml")
@@ -644,11 +512,11 @@ tele.is_full_imu(df)     # → accel + gyro available
 
 ---
 
-## 9. References
+## 7. References
 
 - **SPEC-02**: Dataset Manifest — canonical file-level metadata
 - **SPEC-03**: Adapters & Validation — tooling and conformance testing
-- **Superseded RFCs**: RFC-0001 (Core v0.2), RFC-0004 (Extended FieldGroups), RFC-0013 (Telemachus Device Format v0.7)
+- **Superseded RFCs**: RFC-0001 (Core v0.2), RFC-0004 (Extended FieldGroups), RFC-0013 (Device Layer v0.7)
 
 ### Dataset References
 
