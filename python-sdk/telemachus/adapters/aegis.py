@@ -125,6 +125,7 @@ def load(
         speed = dist / dt
     speed[0] = np.nan
     speed[~np.isfinite(speed)] = np.nan
+    speed = np.clip(speed, 0, 80)  # cap at 80 m/s (~288 km/h)
     df["speed_mps"] = speed.astype("float32")
 
     # --- Device ID from trips table ---
