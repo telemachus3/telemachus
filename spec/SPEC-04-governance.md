@@ -96,13 +96,13 @@ When external contributors join:
 |---------|---------|-----------|
 | `telemachus3/telemachus` (GitHub) | Format specification + telemachus-py | Public, Tier 1 |
 | `research.roadsimulator3.fr` | Papers, benchmarks, scientific results | Public, Tier 1 + Tier 2 post-eSoleau |
-| `[PRIVATE]` (Gitea) | Pipeline implementation, IP methods | Private, Tier 2 |
+| Private pipeline (Gitea) | Pipeline implementation, processing methods | Private, Tier 2 |
 
 ### 5.2 Golden Rule
 
 > The spec describes **what columns exist and what they mean** — never
-> **how to compute derived values**. Any protected method ([REDACTED_METHOD], [REDACTED_METHOD],
-> calibrators) stays in [PRIVATE], not in the public monorepo.
+> **how to compute derived values**. Processing methods and calibration
+> algorithms are implementation-specific and not part of this spec.
 
 ---
 

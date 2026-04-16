@@ -30,10 +30,10 @@ graph LR
         IO["I/O layer\nread/write parquet, JSON"]
     end
 
-    subgraph PRIVATE["[PRIVATE] (Private)"]
-        A_PROP["Adapters: Proprietary\ncommercial devices\nvia Flespi/MQTT"]
+    subgraph PRIVATE["Private Pipeline"]
+        A_PROP["Adapters: Proprietary\ncommercial devices"]
         PIPE["Pipeline stages\nTelemachus processing layers→D3"]
-        METHODS["IP methods\n[REDACTED_METHOD], [REDACTED_METHOD], [REDACTED_METHOD]..."]
+        METHODS["Processing methods\n(implementation-specific)"]
     end
 
     subgraph PRODUCT["Production Pipeline"]
@@ -115,12 +115,12 @@ telemachus/
     └── uah.py               # UAH DriveSet (Spain)
 ```
 
-Proprietary adapters live in **[PRIVATE]**, not telemachus-py:
+Proprietary adapters live in a **private pipeline module**, not telemachus-py:
 
 ```
-[PRIVATE]/
+private-pipeline/
 └── adapters/
-    ├── flespi.py            # Teltonika via Flespi
+    ├── commercial.py        # Commercial device adapters
     ├── prototype.py         # Experimental prototypes
     └── ...
 ```
@@ -132,7 +132,7 @@ graph TD
     subgraph FETCH["1. Fetch / Read"]
         CSV["CSV files\n(AEGIS, PVS)"]
         SENSOR["Sensor Logger\n(STRIDE)"]
-        MQTT["MQTT/REST\n(Flespi)"]
+        MQTT["MQTT/REST\n(IoT gateway)"]
         SIM["Simulator\n(RS3)"]
     end
 
@@ -372,27 +372,28 @@ choose the right dataset for their use case.
 
 ---
 
-## Appendix A — Industrial API Mapping (from RFC-0002)
+## Appendix A — Industrial API Mapping
 
-Cross-reference of Telemachus columns with major industrial telematics APIs.
-This table guides future adapter development.
+Cross-reference of Telemachus columns with major industrial telematics APIs
+(based on their public documentation). This table guides future adapter
+development.
 
-| D0 Column | Samsara | Webfleet | Geotab | Teltonika (Flespi) |
-|-----------|---------|----------|--------|-------------------|
-| `ts` | `time` | `gpstime` | `dateTime` | `timestamp` |
-| `lat` | `latitude` | `lat` | `latitude` | `position.latitude` |
-| `lon` | `longitude` | `lon` | `longitude` | `position.longitude` |
-| `speed_mps` | `speed` (km/h) | `speed` (km/h) | `speed` (km/h) | `position.speed` (km/h) |
-| `heading_deg` | `bearingDeg` | `heading` | `bearing` | `position.direction` |
-| `ax_mps2` | — | — | — | `x.acceleration` (g) |
-| `ignition` | `engineState` | `ignition` | `ignition` | `engine.ignition.status` |
-| `odometer_m` | `odometerMeters` | `mileage` (km) | `odometer` | `vehicle.mileage` (km) |
-| `vehicle_voltage_v` | — | — | — | `external.powersource.voltage` |
-| `rpm` | `engineRpm` | — | `engineRpm` | AVL ID 10 |
+| D0 Column | Samsara | Webfleet (TomTom) | Geotab |
+|-----------|---------|-------------------|--------|
+| `ts` | `time` | `gpstime` | `dateTime` |
+| `lat` | `latitude` | `lat` | `latitude` |
+| `lon` | `longitude` | `lon` | `longitude` |
+| `speed_mps` | `speed` (km/h) | `speed` (km/h) | `speed` (km/h) |
+| `heading_deg` | `bearingDeg` | `heading` | `bearing` |
+| `ignition` | `engineState` | `ignition` | `ignition` |
+| `odometer_m` | `odometerMeters` | `mileage` (km) | `odometer` |
+| `rpm` | `engineRpm` | — | `engineRpm` |
 
-> **Note:** Samsara, Webfleet, and Geotab typically provide **D1-level**
+> **Note:** These fleet management APIs typically provide **D1-level**
 > data (enriched, aggregated). They rarely expose raw IMU. Adapters for
-> these providers would produce GPS+Vehicle I/O datasets without accel.
+> these providers would produce GPS + Vehicle I/O datasets without
+> accelerometer data. Other commercial device adapters are documented
+> in their respective private modules.
 
 ---
 

@@ -363,7 +363,7 @@ v0.7 adds the `carrier_state` field (§3.7). Existing v0.6 files remain valid; c
 ## 9. References
 
 - Telemachus Core v0.2 (RFC-0001)
-- [REDACTED_METHOD] — IMU Rectification Without Gyroscope (Edet, 2026)
+- IMU Rectification Without Gyroscope (gyro-free orientation alignment)
 - P014 — Ground Truth Validation (Edet, 2026)
 - Teltonika FMC880 Technical Specification
 - NMEA 0183 Standard (GGA, RMC sentences)

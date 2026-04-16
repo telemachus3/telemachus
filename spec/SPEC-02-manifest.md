@@ -515,7 +515,7 @@ source:
   adapter_status: production
 ```
 
-### 6.2 Commercial Fleet (Teltonika via Flespi)
+### 6.2 Commercial Fleet (generic example)
 
 ```yaml
 dataset_id: xx_fleet_fmc880_2025
