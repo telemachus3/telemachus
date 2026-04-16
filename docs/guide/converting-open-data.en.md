@@ -19,7 +19,7 @@ for your analysis.
 Open the raw files and identify, column by column, what each sensor
 stream actually contains:
 
-| Source column | Unit | Rate | Maps to D0 |
+| Source column | Unit | Rate | Maps to Telemachus format |
 |---------------|------|------|------------|
 | `timestamp_ms` | ms since epoch | — | `ts` (convert to UTC datetime) |
 | `latitude` | deg | 1 Hz | `lat` |
@@ -33,9 +33,9 @@ stream actually contains:
 
 If any expected Telemachus column is missing, plan how you'll handle it:
 
-- **GPS columns absent** at IMU rate → leave as `NaN` (multi-rate convention, RFC-0013 §3.5)
+- **GPS columns absent** at IMU rate → leave as `NaN` (multi-rate convention, SPEC-01 §3.5)
 - **Heading missing** → recompute from consecutive GPS points (Haversine bearing)
-- **Gyro missing** → simply leave the gyro columns absent (RFC-0013 §3.3: must be absent OR all-NaN, never zero-filled)
+- **Gyro missing** → simply leave the gyro columns absent (SPEC-01 §3.3: must be absent OR all-NaN, never zero-filled)
 
 ## 2. Fetch & unpack
 
@@ -62,7 +62,7 @@ See the full template in [Writing an adapter](writing-adapter.md).
 The minimum your adapter must do:
 
 1. Read the raw files (CSV / Parquet / whatever).
-2. Rename & convert columns (units!) to the D0 names.
+2. Rename & convert columns (units!) to the Telemachus names.
 3. Sort by `ts`, ensure monotonicity, drop or fix duplicates.
 4. Write the Telemachus parquet.
 5. Emit a `manifest.yaml` declaring `hardware`, `sensors.*.rate_hz`,
@@ -113,7 +113,7 @@ ajv validate \
   -s spec/schemas/telemachus_manifest_v0.8.json \
   -d datasets/xx_my_source/manifest.yaml
 
-# D0 sanity (no canonical CLI yet)
+# Telemachus sanity (no canonical CLI yet)
 python -c "
 import pandas as pd
 df = pd.read_parquet('datasets/xx_my_source/d0.parquet')

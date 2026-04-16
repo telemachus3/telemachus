@@ -4,12 +4,12 @@
 
 A small, open, vendor-agnostic data format for high-frequency mobility
 and telematics. It does **one thing well**: define how raw device
-output (D0) and its enriched downstream layers (D1, D2) are encoded,
+output (Telemachus) and its enriched downstream layers (enriched, events layer) are encoded,
 so that pipelines, datasets and tooling can interoperate.
 
 It does **not** define:
 
-- Which algorithm computes D1/D2 columns
+- Which algorithm computes enriched/events layer columns
 - Which metrics constitute "good driving"
 - Which business decisions to make from the data
 
@@ -41,7 +41,7 @@ is the bulk encoding of the same payloads; NumPy/Arrow is how pandas
 & DuckDB materialise them in-memory. Choose per tool, not per
 semantics.
 
-The **dataset manifest** (`manifest.yaml`, RFC-0014) is always YAML
+The **dataset manifest** (`manifest.yaml`, SPEC-02) is always YAML
 (or JSON equivalent) regardless of the signal encoding, because
 manifests are human-read and small.
 
@@ -50,7 +50,7 @@ manifests are human-read and small.
 | Project | Role | Repo / site |
 |---------|------|-------------|
 | **Telemachus** | Open data format & SDK & CLI | this site / [GitHub](https://github.com/telemachus3/telemachus) |
-| **RoadSimulator3** | Synthetic D0 generator (simulation) | [github.com/SebE585/RoadSimulator3](https://github.com/SebE585/RoadSimulator3) |
+| **RoadSimulator3** | Synthetic Telemachus generator (simulation) | [github.com/SebE585/RoadSimulator3](https://github.com/SebE585/RoadSimulator3) |
 | **Research vitrine** | Papers, methods, benchmarks | [research.roadsimulator3.fr](https://research.roadsimulator3.fr) |
 
 ## Citation

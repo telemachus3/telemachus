@@ -2,15 +2,15 @@
 
 Les cinq idées à avoir en tête pour lire correctement des données Telemachus.
 
-## D0, vu comme cinq groupes fonctionnels
+## Telemachus, vu comme cinq groupes fonctionnels
 
-Le schéma D0 est **plat** (parquet colonnaire, pas de structure
+Le schéma Telemachus est **plat** (parquet colonnaire, pas de structure
 imbriquée), mais mentalement il se décompose en cinq groupes
 fonctionnels. Les connaître, c'est retenir plus facilement pourquoi
 chaque colonne existe.
 
 ```
-D0 = datetime       ts
+Telemachus = datetime       ts
    + GPS            lat, lon, speed_mps, heading_deg,
                     altitude_gps_m, hdop, n_satellites
    + IMU
@@ -48,31 +48,31 @@ on utilise la convention **`x_<source>_<field>`** :
 | `x_geotab_geofence_id` | Identifiant geofence propre à Geotab |
 | `x_danlaw_codec_id` | Tag codec firmware Danlaw |
 
-Le préfixe `x_` signale « hors contrat D0 normatif, le consommateur
+Le préfixe `x_` signale « hors contrat Telemachus normatif, le consommateur
 peut l'ignorer sans risque ». Le segment `<source>` lève toute
 ambiguïté si plusieurs fabricants sont mélangés dans un même dataset.
 
-## Le modèle en couches D0 → D1 → D2
+## Le modèle en couches Telemachus record format
 
 | Couche | Rôle | Entrée | Sortie |
 |--------|------|--------|--------|
-| **D0** | Device | Matériel | Parquet brut — uniquement ce que le device mesure |
-| **D1** | Nettoyé et contextualisé | D0 | D0 enrichi : map matching, DEM, calibration IMU, score de qualité |
-| **D2** | Événements et situations | D1 | D1 + colonne `event` + table d'événements (freinages, nids-de-poule, virages…) |
+| **Telemachus** | Device | Matériel | Parquet brut — uniquement ce que le device mesure |
+| **enriched** | Nettoyé et contextualisé | Telemachus | Telemachus enrichi : map matching, DEM, calibration IMU, score de qualité |
+| **events layer** | Événements et situations | enriched | enriched + colonne `event` + table d'événements (freinages, nids-de-poule, virages…) |
 
-La spec Telemachus est **normative sur D0** (RFC-0013). Les contrats
-de colonnes D1 et D2 sont documentés en RFC-0013 §4, mais leurs
+La spec Telemachus est **normative sur Telemachus** (SPEC-01). Les contrats
+de colonnes enriched et events layer sont documentés en SPEC-01 §4, mais leurs
 *algorithmes* restent volontairement hors scope — deux consommateurs
-peuvent calculer un D1 différemment tant que le schéma de sortie reste
+peuvent calculer un enriched différemment tant que le schéma de sortie reste
 conforme.
 
 **Règle d'or** : une colonne dérivée de données externes (cartes,
-DEM, sortie d'un algo) appartient à D1 ou au-dessus, jamais à D0.
+DEM, sortie d'un algo) appartient à enriched ou au-dessus, jamais à Telemachus.
 
 ## Multi-rate IMU ↔ GNSS
 
 La plupart des devices streamment l'IMU à 10 Hz et le GNSS à 1 Hz.
-D0 est timestampé au **rythme IMU**, avec les colonnes GNSS qui
+Telemachus est timestampé au **rythme IMU**, avec les colonnes GNSS qui
 valent `NaN` entre les fix :
 
 ```
@@ -125,7 +125,7 @@ acc_periods:
 
 Par défaut (si le manifest ne déclare rien) : une seule période
 implicite avec `frame: "raw"`. La définition normative complète se
-trouve dans RFC-0013 §3.6.
+trouve dans SPEC-01 §3.6.
 
 ## CarrierState : ce trip, c'est vraiment de la conduite ?
 
@@ -147,7 +147,7 @@ Le `carrier_state` classe chaque trip dans l'un des six contextes :
 
 La classification combine quatre indicateurs : tension d'alim
 externe, vitesse GPS, variance de la norme accéléromètre, dérive de
-position GPS. L'arbre de décision complet est en RFC-0013 §3.7.
+position GPS. L'arbre de décision complet est en SPEC-01 §3.7.
 
 Dans le manifest, on déclare les états via `trip_carrier_states` :
 

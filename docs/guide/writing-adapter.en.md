@@ -8,7 +8,7 @@ Samsara, Teltonika via Flespi, etc.) into a Telemachus Telemachus dataset
 
 ```
 my-adapter/
-├── adapter.py        ← reads source format, emits D0
+├── adapter.py        ← reads source format, emits Telemachus
 ├── manifest.yaml     ← describes the resulting dataset
 ├── README.md         ← what the adapter does, license, usage
 └── tests/
@@ -29,7 +29,7 @@ from pathlib import Path
 def adapt(input_csv: Path, output_dir: Path) -> None:
     df = pd.read_csv(input_csv)
 
-    # Map vendor columns → Telemachus column names + units (RFC-0013 §3)
+    # Map vendor columns → Telemachus column names + units (SPEC-01 §3)
     d0 = pd.DataFrame({
         "ts":         pd.to_datetime(df["timestamp"], utc=True),
         "lat":        df["latitude"],
@@ -77,12 +77,12 @@ def adapt(input_csv: Path, output_dir: Path) -> None:
 
 ## Checklist
 
-- [ ] All RFC-0013 §3.1 mandatory columns present (or NaN where allowed)
+- [ ] All SPEC-01 §3.1 mandatory columns present (or NaN where allowed)
 - [ ] Units converted to SI (`m/s²`, `rad/s`, `m/s`, degrees WGS84)
 - [ ] `ts` monotonically increasing, UTC
 - [ ] `acc_periods` declared correctly (`raw` if device emits gravity, `compensated` if firmware-stripped)
 - [ ] Manifest validates against `telemachus_manifest_v0.8.json`
-- [ ] Resulting parquet validates against D0 contract (see [Validating](validating.md))
+- [ ] Resulting parquet validates against Telemachus contract (see [Validating](validating.md))
 
 ## Licensing pitfall
 

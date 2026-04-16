@@ -6,12 +6,12 @@ hide:
 
 # Telemachus
 
-**Open RFC-driven pivot standard for high-frequency mobility and telematics data.**
+**Open, Parquet-native pivot format for high-frequency telematics data.**
 
-Telemachus bridges simulated data (RoadSimulator3) and real-world fleet
-sources (Webfleet, Samsara, Geotab, Teltonika) under a unified, open
-schema — so analytics pipelines, calibration tools and reference
-datasets all speak the same language.
+Telemachus bridges the rigor of scientific kinematics (multi-rate
+GNSS+IMU at 10-100 Hz, accelerometer gravity frame tracking) and
+scalable fleet analytics (OBD, trip metadata, carrier state) in a
+single format -- instantly queryable in Pandas, Spark, DuckDB, or Athena.
 
 <div class="grid cards" markdown>
 
@@ -19,7 +19,7 @@ datasets all speak the same language.
 
     ---
 
-    Install, validate your first file, ingest a sample dataset.
+    Install, validate your first file, convert an Open dataset.
 
     [:octicons-arrow-right-24: Get started](quickstart.md)
 
@@ -27,7 +27,7 @@ datasets all speak the same language.
 
     ---
 
-    How-to articles for validating, reading and adapting Telemachus data.
+    How-to articles for validating, reading, and converting data.
 
     [:octicons-arrow-right-24: Read the guide](guide/validating.md)
 
@@ -35,41 +35,37 @@ datasets all speak the same language.
 
     ---
 
-    The layered D0 → D1 → D2 model, AccPeriod, CarrierState, multi-rate.
+    Record format, AccPeriod, CarrierState, multi-rate, profiles.
 
     [:octicons-arrow-right-24: Learn the concepts](concepts.md)
 
--   :material-file-document-multiple:{ .lg .middle } **RFCs**
+-   :material-file-document-multiple:{ .lg .middle } **Specifications**
 
     ---
 
-    The normative specification — versioned, peer-reviewed, MIT.
+    The normative spec -- 4 pillars, peer-reviewed, MIT.
 
-    [:octicons-arrow-right-24: Browse RFCs](rfcs.md)
+    [:octicons-arrow-right-24: Browse SPECs](rfcs.md)
 
 </div>
 
 ## Why Telemachus?
 
-- **Vendor-agnostic** — one schema for IMU, GNSS, motion, OBD, events.
-- **Layered** — D0 (raw device) → D1 (cleaned + contextualised) → D2 (events).
-- **Reproducible** — every dataset ships with a normative `manifest.yaml` (RFC-0014).
-- **Open** — MIT-licensed schemas, reference adapters and Python tools.
+- **Vendor-agnostic** -- one schema for GNSS, IMU, OBD, I/O, CAN.
+- **Profile-based** -- `core` (GPS only), `imu` (+ accelerometer), `full` (+ gyroscope). Not one-size-fits-all.
+- **Parquet-native** -- flat columns, SI units, instantly queryable.
+- **Reproducible** -- every dataset ships with a normative `manifest.yaml`.
+- **Open** -- MIT-licensed schemas, reference adapters and Python tools.
 
-## Where Telemachus fits in the telematics stack
+## Why not an existing standard?
 
-Telemetry providers split roughly in two tiers:
-
-| Provider type | Examples | What they emit |
-|---------------|----------|----------------|
-| **Hardware vendors** (black boxes on the vehicle) | Danlaw, Teltonika, Queclink | Raw device output → natural **D0** |
-| **Service providers** (SaaS on top of one or more boxes) | Geotab, Samsara, Webfleet, Verizon Connect | Cleaned & enriched data → natural **D1** / **D2** |
-
-Telemachus is the **common language** between those tiers. A
-hardware vendor can publish an adapter that maps its feed to D0. A
-service provider can publish adapters that map to D1/D2 — or consume
-D0 from any vendor and emit its own D1/D2. No one has to learn
-another format to integrate.
+| Standard | Raw IMU? | Parquet? | Fleet metadata? | Gap |
+|----------|:---:|:---:|:---:|-----|
+| **ROS bags** (MCAP) | Yes | No (message stream) | No | Not columnar |
+| **Fleet APIs** (Geotab, Samsara) | No | No (JSON REST) | Yes | No raw sensors |
+| **IoT** (MQTT, SensorThings) | Transport only | No | No | Protocol, not format |
+| **GTFS / MDS** | No | No | Macro only | Scheduling, not kinematics |
+| **Telemachus** | **Yes** | **Yes** | **Yes** | -- |
 
 ## Who is this for?
 
@@ -79,18 +75,15 @@ another format to integrate.
 
     ---
 
-    Working on logs that already exist. You want a consistent schema
-    so your pandas/DuckDB pipeline doesn't need to be rewritten for
-    each vendor. You want a shared understanding of what "speed" or
-    "acceleration" means across sources.
+    Working on existing telematics logs. You want a consistent schema
+    so your Pandas/DuckDB pipeline doesn't need rewriting per vendor.
 
 -   :material-memory:{ .lg .middle } **Datalogger designers**
 
     ---
 
-    Building a device (or firmware) that will produce logs. You want
-    a target format that's already accepted downstream — and has a
-    validator and a test suite.
+    Building a device or firmware that produces logs. You want a
+    target format accepted downstream -- with a validator and test suite.
 
 </div>
 
@@ -98,11 +91,8 @@ another format to integrate.
 
 | Artifact | Version |
 |----------|---------|
-| Latest released spec | **v0.2** (2025-10-13) — stable core schema |
-| Latest draft | **v0.8** — Telemachus Device Format (RFC-0013) + Dataset Manifest (RFC-0014) |
+| **Current spec** | **v0.8** (2026-04-16) -- 4 SPEC pillars |
+| **Python SDK** | **v0.8.0** -- read, validate, convert, introspect |
+| **Adapters** | AEGIS, PVS, STRIDE (Open datasets) |
 
 Telemachus is hosted as a single [monorepo on GitHub](https://github.com/telemachus3/telemachus).
-The four legacy repositories (`telemachus-spec`, `telemachus-py`,
-`telemachus-cli`, `telemachus-datasets`) have been consolidated and
-archived; their full git history is preserved under `spec/`,
-`python-sdk/`, `python-cli/` and `datasets/` respectively.

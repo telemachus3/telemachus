@@ -34,8 +34,8 @@ ajv validate \
 
 ## Valider un manifest de dataset (v0.8 brouillon)
 
-Un *dataset*, ce sont un ou plusieurs fichiers parquet D0 accompagnés
-d'un `manifest.yaml` sidecar (RFC-0014). Le manifest est la source
+Un *dataset*, ce sont un ou plusieurs fichiers parquet Telemachus accompagnés
+d'un `manifest.yaml` sidecar (SPEC-02). Le manifest est la source
 d'autorité pour `device_id`, `trip_id`, `acc_periods` et
 `trip_carrier_states`.
 
@@ -45,7 +45,7 @@ ajv validate \
   -d chemin/vers/votre/manifest.yaml
 ```
 
-## Lire un fichier D0 en Python
+## Lire un fichier Telemachus en Python
 
 ```python
 import pandas as pd
@@ -58,12 +58,12 @@ print(df.columns.tolist())
 ```
 
 Pour un workflow complet (lecture + manifest + héritage), voir
-[Lire des données D0](guide/reading-d0.md).
+[Lire des données Telemachus](guide/reading-data.md).
 
 ## Et ensuite ?
 
 - [Valider un fichier](guide/validating.md) — modes strict et tolérant
-- [Lire des données D0](guide/reading-d0.md) — Python, DuckDB, pandas
+- [Lire des données Telemachus](guide/reading-data.md) — Python, DuckDB, pandas
 - [Écrire un adapter](guide/writing-adapter.md) — convertir un format X vers Telemachus
-- [FAQ Manifest](guide/manifest-faq.md) — ce que RFC-0014 apporte concrètement
+- [FAQ Manifest](guide/manifest-faq.md) — ce que SPEC-02 apporte concrètement
 - [Concepts](concepts.md) — le modèle en couches et les groupes fonctionnels

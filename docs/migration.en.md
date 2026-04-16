@@ -5,9 +5,9 @@ Telemachus is still pre-1.0 and the spec evolves where it needs to —
 no strict semver promises, no multi-week review cycles yet. Bump
 your consumer code when you want to pick up new features.
 
-## 0.8 Draft — RFC-0014 Dataset Manifest
+## 0.8 Draft — SPEC-02 Dataset Manifest
 
-Non-breaking. Adds the normative `manifest.yaml` sidecar (RFC-0014)
+Non-breaking. Adds the normative `manifest.yaml` sidecar (SPEC-02)
 with inheritance rules so you can keep `device_id` / `trip_id` /
 `acc_periods` / `trip_carrier_states` out of the parquet signal.
 
@@ -23,9 +23,9 @@ Convention added: vendor-specific columns prefixed
 `x_<source>_<field>` (e.g. `x_teltonika_ext_voltage_v`). Consumers
 ignore them safely.
 
-## 0.7 — RFC-0013 Telemachus Device Format
+## 0.7 — SPEC-01 Telemachus Device Format
 
-Introduces the layered D0 / D1 / D2 data model. Formalises AccPeriod
+Introduces the Telemachus / enriched / events layer data model. Formalises AccPeriod
 (accelerometer frame tracking) and CarrierState (context
 classification per trip).
 

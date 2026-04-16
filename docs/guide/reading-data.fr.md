@@ -1,17 +1,17 @@
-# Lire des données D0
+# Lire des données Telemachus
 
-Sur disque, un dataset D0 Telemachus ressemble à ça :
+Sur disque, un dataset Telemachus Telemachus ressemble à ça :
 
 ```
 mon-dataset/
-├── manifest.yaml          ← RFC-0014 : device, trip, sensors, acc_periods…
+├── manifest.yaml          ← SPEC-02 : device, trip, sensors, acc_periods…
 ├── d0_<id_1>.parquet      ← signal, colonnaire
 ├── d0_<id_2>.parquet
 └── …
 ```
 
 Le parquet de signal est volontairement « pur » : uniquement les
-colonnes définies par RFC-0013 §3 (`ts`, `lat`, `lon`, `speed_mps`,
+colonnes définies par SPEC-01 §3 (`ts`, `lat`, `lon`, `speed_mps`,
 `ax/ay/az_mps2`, gyro optionnel, GNSS metadata recommandés).
 
 Tout le reste vit dans le manifest.
@@ -32,7 +32,7 @@ df = pd.concat(
 ).sort_values("ts").reset_index(drop=True)
 
 # Hériter le device_id depuis le manifest si la colonne manque
-# (inheritance rule, RFC-0014 §4.1)
+# (inheritance rule, SPEC-02 §4.1)
 if "device_id" not in df.columns:
     devices = manifest.get("hardware", {}).get("devices", [])
     if len(devices) == 1:
@@ -69,7 +69,7 @@ con.sql("""
 
 ## Piège du multi-rate
 
-Les fichiers D0 sont timestampés au **rythme IMU** (souvent 10 Hz).
+Les fichiers Telemachus sont timestampés au **rythme IMU** (souvent 10 Hz).
 Les colonnes GNSS (`lat`, `lon`, `speed_mps`, `heading_deg`) valent
 `NaN` sur les lignes sans fix GPS.
 

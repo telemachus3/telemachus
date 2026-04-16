@@ -4,13 +4,13 @@
 
 Un format de données petit, ouvert, indépendant du fabricant, pour
 la mobilité et la télématique haute fréquence. Il fait **une chose,
-bien** : définir l'encodage des couches D0 (brute device) puis D1 et
-D2 (enrichies), pour que pipelines, datasets et outils parlent la
+bien** : définir l'encodage des couches Telemachus (brute device) puis enriched et
+events layer (enrichies), pour que pipelines, datasets et outils parlent la
 même langue.
 
 Il ne définit **pas** :
 
-- Quel algorithme calcule les colonnes D1 ou D2
+- Quel algorithme calcule les colonnes enriched ou events layer
 - Quelles métriques constituent une « bonne conduite »
 - Quelles décisions business tirer des données
 
@@ -33,7 +33,7 @@ Parquet encode les mêmes payloads en bulk, NumPy/Arrow est la
 représentation en mémoire qu'adoptent pandas et DuckDB. On choisit
 selon l'outil, pas selon la sémantique.
 
-Le **manifest dataset** (`manifest.yaml`, RFC-0014) reste toujours
+Le **manifest dataset** (`manifest.yaml`, SPEC-02) reste toujours
 en YAML (ou JSON équivalent) indépendamment de l'encodage du signal,
 parce qu'il est fait pour être lu par un humain et qu'il est petit.
 
@@ -52,7 +52,7 @@ le **site recherche compagnon** :
 | Projet | Rôle | Repo / site |
 |--------|------|-------------|
 | **Telemachus** | Format ouvert + SDK + CLI | ce site / [GitHub](https://github.com/telemachus3/telemachus) |
-| **RoadSimulator3** | Générateur D0 synthétique | [github.com/SebE585/RoadSimulator3](https://github.com/SebE585/RoadSimulator3) |
+| **RoadSimulator3** | Générateur Telemachus synthétique | [github.com/SebE585/RoadSimulator3](https://github.com/SebE585/RoadSimulator3) |
 | **Vitrine recherche** | Papers, méthodes, benchmarks | [research.roadsimulator3.fr](https://research.roadsimulator3.fr) |
 
 ## Citation

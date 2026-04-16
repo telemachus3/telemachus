@@ -1,4 +1,4 @@
-# Open sources — D0 coverage matrix
+# Open sources — Telemachus coverage matrix
 
 Which public datasets are mapped to Telemachus format, and what each one
 exposes. Use this to pick the right dataset for your experiment, or

@@ -64,13 +64,13 @@ plugins:
             Quickstart: Démarrage rapide
             Guide: Guide
             Validating files: Valider un fichier
-            Reading Telemachus data: Lire des données D0
+            Reading Telemachus data: Lire des données Telemachus
             Writing an adapter: Écrire un adapter
             Manifest FAQ: FAQ Manifest
             Converting Open data: Convertir un dataset Open
             Open sources matrix: Matrice des sources Open
             Concepts: Concepts
-            RFCs: RFCs
+            Specifications: Specifications
             What's new: Quoi de neuf
             About & further reading: À propos & pour aller plus loin
 
@@ -105,12 +105,12 @@ nav:
   - Quickstart: quickstart.md
   - Guide:
       - Validating files: guide/validating.md
-      - Reading Telemachus data: guide/reading-d0.md
+      - Reading Telemachus data: guide/reading-data.md
       - Writing an adapter: guide/writing-adapter.md
       - Manifest FAQ: guide/manifest-faq.md
       - Converting Open data: guide/converting-open-data.md
       - Open sources matrix: guide/open-sources-matrix.md
   - Concepts: concepts.md
-  - RFCs: rfcs.md
+  - Specifications: rfcs.md
   - What's new: migration.md
   - About & further reading: about.md

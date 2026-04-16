@@ -1,12 +1,12 @@
 # Manifest FAQ
 
-Common questions about the **Dataset Manifest** (RFC-0014, v0.8 Draft).
+Common questions about the **Dataset Manifest** (SPEC-02, v0.8 Draft).
 
 ## Why a manifest?
 
-The D0 contract (RFC-0013 §3.1) declares `device_id`, `trip_id`,
+The Telemachus contract (SPEC-01 §3.1) declares `device_id`, `trip_id`,
 `acc_periods` and `trip_carrier_states` as **per-file** rather than
-per-row. They have to live somewhere. Before RFC-0014, producers
+per-row. They have to live somewhere. Before SPEC-02, producers
 emitted them ad-hoc (env var, config, sidecar JSON…). The manifest
 formalises that sidecar.
 
@@ -35,14 +35,14 @@ If the manifest declares them, you can omit:
 | `carrier_state` | matched per `trip_id` from `trip_carrier_states` |
 
 For multi-device datasets, `device_id` MUST be either per-row or
-encoded in the filename (`d0_<device>_*.parquet`). See RFC-0014 §4.1.
+encoded in the filename (`d0_<device>_*.parquet`). See SPEC-02 §4.1.
 
 ## How is the accelerometer frame applied?
 
 For each row at timestamp `ts`, the consumer finds the first
 `acc_periods` entry where `start ≤ ts ≤ end` and uses its `frame`
 (`raw`, `compensated` or `partial`). If no `acc_periods` declared,
-the default is `raw` (RFC-0013 §3.6).
+the default is `raw` (SPEC-01 §3.6).
 
 ## Dataset licenses
 

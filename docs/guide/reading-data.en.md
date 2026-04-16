@@ -4,13 +4,13 @@ A Telemachus Telemachus dataset is, on disk:
 
 ```
 my-dataset/
-├── manifest.yaml          ← RFC-0014: device, trip, sensors, acc_periods…
+├── manifest.yaml          ← SPEC-02: device, trip, sensors, acc_periods…
 ├── d0_<id_1>.parquet      ← signal, columnar
 ├── d0_<id_2>.parquet
 └── …
 ```
 
-The signal parquet is "pure" — only the columns defined by RFC-0013
+The signal parquet is "pure" — only the columns defined by SPEC-01
 §3 (`ts`, `lat`, `lon`, `speed_mps`, `ax/ay/az_mps2`, optional `gx/gy/gz_rad_s`,
 recommended `heading_deg`, `hdop`, `n_satellites`).
 
@@ -31,13 +31,13 @@ df = pd.concat(
     ignore_index=True,
 ).sort_values("ts").reset_index(drop=True)
 
-# Inherit device_id from manifest if absent (RFC-0014 §4.1)
+# Inherit device_id from manifest if absent (SPEC-02 §4.1)
 if "device_id" not in df.columns:
     devices = manifest.get("hardware", {}).get("devices", [])
     if len(devices) == 1:
         df["device_id"] = devices[0]["name"]
 
-# Tag each row with its accelerometer frame (RFC-0014 §4.2)
+# Tag each row with its accelerometer frame (SPEC-02 §4.2)
 def frame_for(ts):
     for p in manifest.get("acc_periods", []):
         if pd.Timestamp(p["start"]) <= ts <= pd.Timestamp(p["end"]):

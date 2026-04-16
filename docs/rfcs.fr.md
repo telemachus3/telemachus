@@ -14,8 +14,8 @@ La spécification normative vit sous [`spec/rfcs/`](https://github.com/telemachu
 | [RFC-0007](https://github.com/telemachus3/telemachus/blob/main/spec/rfcs/RFC-0007-validation-framework-and-cli-rules.md) | Validation Framework & CLI Rules | Publié |
 | [RFC-0009](https://github.com/telemachus3/telemachus/blob/main/spec/rfcs/RFC-0009-rs3-integration-pipeline.md) | RoadSimulator3 Integration Pipeline | Publié |
 | [RFC-0011](https://github.com/telemachus3/telemachus/blob/main/spec/rfcs/RFC-0011-versioning-and-governance-policy.md) | Versioning & Governance Policy | Publié |
-| [RFC-0013](https://github.com/telemachus3/telemachus/blob/main/spec/rfcs/RFC-0013-d0-device-layer.md) | Telemachus Device Format (v0.7) | Publié |
-| [RFC-0014](https://github.com/telemachus3/telemachus/blob/main/spec/rfcs/RFC-0014-dataset-manifest-0.8.md) | Dataset Manifest (v0.8) | **Brouillon** |
+| [SPEC-01](https://github.com/telemachus3/telemachus/blob/main/spec/rfcs/SPEC-01-d0-device-layer.md) | Telemachus Device Format (v0.7) | Publié |
+| [SPEC-02](https://github.com/telemachus3/telemachus/blob/main/spec/rfcs/SPEC-02-dataset-manifest-0.8.md) | Dataset Manifest (v0.8) | **Brouillon** |
 
 ## Proposer une nouvelle RFC
 

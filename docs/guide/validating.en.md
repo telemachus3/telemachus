@@ -2,8 +2,8 @@
 
 A Telemachus dataset has two layers of validity:
 
-1. **The signal** (parquet) conforms to the Telemachus column contract (RFC-0013).
-2. **The manifest** (`manifest.yaml`) conforms to the dataset manifest schema (RFC-0014).
+1. **The signal** (parquet) conforms to the Telemachus column contract (SPEC-01).
+2. **The manifest** (`manifest.yaml`) conforms to the dataset manifest schema (SPEC-02).
 
 Both checks are independent and you can run them separately.
 
@@ -24,7 +24,7 @@ What this catches:
 - Unknown top-level keys (the schema is `additionalProperties: false`)
 - Invalid enum values (e.g. unknown `fix_type`)
 
-## Validating a dataset manifest (RFC-0014)
+## Validating a dataset manifest (SPEC-02)
 
 ```bash
 ajv validate \
@@ -59,7 +59,7 @@ jsonschema.validate(coerce(manifest), schema)
 print("OK")
 ```
 
-## Validating the parquet against D0
+## Validating the parquet against Telemachus
 
 There is no canonical CLI yet (planned in the 1.0 conformance suite).
 The minimum hand-rolled checks:
@@ -78,7 +78,7 @@ assert df["lat"].dropna().between(-90, 90).all()
 assert df["lon"].dropna().between(-180, 180).all()
 ```
 
-For per-AccPeriod gravity checks (RFC-0013 §6 rule 3), see
+For per-AccPeriod gravity checks (SPEC-01 §6 rule 3), see
 [Concepts → AccPeriod](../concepts.md#accperiod-the-accelerometer-frame).
 
 ## Strict vs lenient
