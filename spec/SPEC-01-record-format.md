@@ -225,11 +225,11 @@ These fields SHOULD be present when the hardware provides them:
 > `h_accuracy_m` (68th percentile radius in meters). Both may coexist; a
 > dataset typically has one or the other, rarely both.
 
-### 2.6 Optional Fields — Extended IMU
+### 2.6 Extended IMU Fields
 
-Present only if the device has the corresponding sensor. Columns MUST be
-absent or all-NaN when the sensor is not available — they MUST NOT be
-filled with zeros.
+These columns are **mandatory for the `full` profile**, optional for
+`imu`, and absent for `core`. When a sensor is not available, columns
+MUST be absent or all-NaN — they MUST NOT be filled with zeros.
 
 | Column | Type | Unit | Description |
 |--------|------|------|-------------|
@@ -481,13 +481,16 @@ A Telemachus file is valid if:
    - `raw`: ≈ 9.81 ± 1.0 m/s²
    - `compensated`: ≈ 0 ± 1.0 m/s²
    - `partial`: ≈ `residual_g` ± 0.05 g
+   - **"At rest" heuristic**: rows where `speed_mps < 0.5 m/s` (when GPS available) OR where `accel_norm_std < 0.3 m/s²` over a 2-second sliding window. Implementations MAY use different thresholds but MUST document them
 4. `lat` / `lon` are within [-90, 90] / [-180, 180] when not NaN
-5. No excluded columns from §2.13 are present (columns with `x_` prefix are always allowed)
-6. All extra columns follow the `x_<source>_<field>` convention
-7. `speed_mps` >= 0 when not NaN
-8. Gyro columns are either all present or all absent (no partial group)
-9. Magneto columns are either all present or all absent (no partial group)
-10. If `device_id` / `trip_id` are absent from columns, they MUST be resolvable from the manifest (SPEC-02 §4.1)
+5. `heading_deg` is within [0, 360) when not NaN
+6. `speed_mps` >= 0 when not NaN; `speed_obd_mps` >= 0 when not NaN
+7. No excluded columns from §2.13 are present (columns with `x_` prefix are always allowed)
+8. All extra columns follow the `x_<source>_<field>` convention
+9. **All present columns** (mandatory, recommended, and optional) MUST have correct data types as specified in §2. Type checking is not limited to mandatory columns
+10. If gyro columns are present, all three (`gx`, `gy`, `gz`) MUST be present (no partial group). For profile `full`, they are mandatory
+11. If magneto columns are present, all three (`mx`, `my`, `mz`) MUST be present (no partial group)
+12. If `device_id` / `trip_id` are absent from columns, they MUST be resolvable from the manifest (SPEC-02 §4.1)
 
 ---
 

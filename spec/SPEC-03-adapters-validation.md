@@ -57,7 +57,7 @@ graph LR
 An adapter converts raw data from a specific provider into a
 Telemachus-conformant pandas DataFrame with:
 - Correct column names (SPEC-01 §2)
-- Correct units (SPEC-01 §7)
+- Correct units (SPEC-01 §5)
 - A valid `manifest.yaml` (SPEC-02)
 
 ```mermaid
@@ -220,7 +220,7 @@ graph TD
 | Level | Checks | Use Case |
 |-------|--------|----------|
 | `basic` | Mandatory columns for declared profile present, correct types, value ranges (lat/lon bounds, speed >= 0) | Quick conformance |
-| `strict` | All of `basic` + monotonic ts, no NaN in mandatory fields, AccPeriod gravity check (profiles `imu`/`full`) | Research-grade |
+| `strict` | All of `basic` + monotonic ts, AccPeriod gravity check (profiles `imu`/`full`). NaN is allowed in GNSS columns between ticks (multi-rate convention) but at least one non-NaN GPS fix MUST exist | Research-grade |
 | `manifest` | SPEC-02 §5 rules (required fields, acc_periods consistency, sensor config) | Manifest-only check |
 | `full` | `strict` + `manifest` + cross-validation (manifest vs parquet agreement) | Publication-ready |
 
