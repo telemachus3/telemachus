@@ -13,7 +13,7 @@ Use the JSON Schema and any Draft-07 compatible validator (`ajv` shown):
 
 ```bash
 ajv validate \
-  -s spec/schemas/telemachus_core_v0.2.json \
+  -s spec/schemas/telemachus_manifest_v0.8.json \
   -d "your_payloads/*.json"
 ```
 
