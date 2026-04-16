@@ -13,7 +13,7 @@ supersedes: RFC-0002, RFC-0005, RFC-0007, RFC-0009
 
 Telemachus data originates from heterogeneous sources — commercial
 telematics devices, research platforms, smartphones, and simulators.
-**Adapters** transform raw provider data into D0-conformant parquet files.
+**Adapters** transform raw provider data into Telemachus-conformant parquet files.
 **Validators** verify that the output conforms to SPEC-01 and SPEC-02.
 
 This specification consolidates RFC-0005 (Adapter Architecture), RFC-0007
@@ -32,7 +32,7 @@ graph LR
 
     subgraph PRIVATE["Private Pipeline"]
         A_PROP["Adapters: Proprietary\ncommercial devices"]
-        PIPE["Pipeline stages\nTelemachus processing layers→D3"]
+        PIPE["Processing pipeline\n(implementation-specific)"]
         METHODS["Processing methods\n(implementation-specific)"]
     end
 
@@ -55,7 +55,7 @@ graph LR
 ### 2.1 What an Adapter Does
 
 An adapter converts raw data from a specific provider into a
-D0-conformant pandas DataFrame with:
+Telemachus-conformant pandas DataFrame with:
 - Correct column names (SPEC-01 §2)
 - Correct units (SPEC-01 §7)
 - A valid `manifest.yaml` (SPEC-02)
@@ -82,7 +82,7 @@ interface is intentionally simple:
 ```python
 def load(source_path: Path, **kwargs) -> pd.DataFrame:
     """
-    Load raw data and return a D0-conformant DataFrame.
+    Load raw data and return a Telemachus-conformant DataFrame.
 
     The returned DataFrame has columns from SPEC-01 §2
     with correct SI units. Extra provider-specific columns
@@ -137,7 +137,7 @@ graph TD
     end
 
     subgraph PARSE["2. Parse & Rename"]
-        COL["Map raw columns\n→ D0 names"]
+        COL["Map raw columns\n→ Telemachus names"]
     end
 
     subgraph CONVERT["3. Unit Conversion"]
@@ -251,7 +251,7 @@ tele validate path/to/dataset/ --level full
 # Validate manifest only
 tele validate path/to/manifest.yaml --manifest-only
 
-# Quick D0 check on a parquet file
+# Quick check on a parquet file
 tele validate path/to/d0.parquet --level d0
 
 # Output as JSON (for CI pipelines)
@@ -272,7 +272,7 @@ graph TD
         M1["ts monotonically\nincreasing?"]
         M2["No NaN in\nmandatory fields?"]
         M3["Gyro/magneto\nall-or-nothing?"]
-        M4["No D1/D2 columns\nin Telemachus file?"]
+        M4["No excluded columns\nin file?"]
     end
 
     subgraph PHYSICS["Physics Checks"]
@@ -378,7 +378,7 @@ Cross-reference of Telemachus columns with major industrial telematics APIs
 (based on their public documentation). This table guides future adapter
 development.
 
-| D0 Column | Samsara | Webfleet (TomTom) | Geotab |
+| Telemachus Column | Samsara | Webfleet (TomTom) | Geotab |
 |-----------|---------|-------------------|--------|
 | `ts` | `time` | `gpstime` | `dateTime` |
 | `lat` | `latitude` | `lat` | `latitude` |
@@ -389,8 +389,8 @@ development.
 | `odometer_m` | `odometerMeters` | `mileage` (km) | `odometer` |
 | `rpm` | `engineRpm` | — | `engineRpm` |
 
-> **Note:** These fleet management APIs typically provide **D1-level**
-> data (enriched, aggregated). They rarely expose raw IMU. Adapters for
+> **Note:** These fleet management APIs typically provide **enriched**
+> data (aggregated, post-processed). They rarely expose raw IMU. Adapters for
 > these providers would produce GPS + Vehicle I/O datasets without
 > accelerometer data. Other commercial device adapters are documented
 > in their respective private modules.
