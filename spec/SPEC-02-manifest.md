@@ -238,7 +238,7 @@ graph LR
 ### 3.7 AccPeriods (Accelerometer Frame)
 
 Declares one or more time ranges with a coherent accelerometer frame
-(see SPEC-01 §2.8 for definitions).
+(see SPEC-01 §2.11 for definitions).
 
 ```yaml
 acc_periods:
