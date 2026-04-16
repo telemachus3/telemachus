@@ -70,8 +70,9 @@ def validate_manifest(manifest_path: str) -> tuple[bool, str]:
     base = os.path.dirname(os.path.abspath(manifest_path))
     missing = []
     unreadable = []
-    for t in manifest.tables:
-        table_path = os.path.join(base, t.path)
+    for t in (manifest.tables or []):
+        t_path = t["path"] if isinstance(t, dict) else t.path
+        table_path = os.path.join(base, t_path)
         if not os.path.exists(table_path):
             missing.append(table_path)
             continue
@@ -105,19 +106,22 @@ def summarize_dataset(manifest_path: str) -> str:
     except Exception as e:
         return f"❌ Manifest semantic validation failed: {e}"
 
-    lines = [f"Dataset: {m.dataset_id} — freq={m.frequency_hz}Hz"]
-    for t in m.tables:
-        p = os.path.join(base, t.path)
+    freq = m.frequency_hz or "?"
+    lines = [f"Dataset: {m.dataset_id} — freq={freq}Hz"]
+    for t in (m.tables or []):
+        t_path = t["path"] if isinstance(t, dict) else t.path
+        t_name = t["name"] if isinstance(t, dict) else t.name
+        p = os.path.join(base, t_path)
         if not os.path.exists(p):
-            lines.append(f"- {t.name}: MISSING ({p})")
+            lines.append(f"- {t_name}: MISSING ({p})")
             continue
         try:
             pf = pq.ParquetFile(p)
             rows = pf.metadata.num_rows
             cols = pf.schema_arrow.names
-            lines.append(f"- {t.name}: {rows} rows, cols={list(cols)}")
+            lines.append(f"- {t_name}: {rows} rows, cols={list(cols)}")
         except Exception as e:
-            lines.append(f"- {t.name}: ERROR reading ({e})")
+            lines.append(f"- {t_name}: ERROR reading ({e})")
     return "\n".join(lines)
 
 

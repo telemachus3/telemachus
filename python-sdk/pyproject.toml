@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "telemachus-py"
-version = "0.1.2"
-description = "Telemachus: an open telematics pivot format (manifest YAML + Parquet tables) with Python tools to export, validate and read datasets."
+version = "0.8.0"
+description = "Telemachus: open Parquet-native format for high-frequency telematics data (GNSS+IMU). Read, validate, and convert datasets."
 readme = { file = "README.md", content-type = "text/markdown" }
 authors = [{name = "Telemachus Project", email = "sebastien.edet@gmail.com"}]
 license = "AGPL-3.0-only"
