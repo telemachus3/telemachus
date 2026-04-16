@@ -25,23 +25,36 @@ RFC-0004 (Extended FieldGroups), and RFC-0013 (Device Layer v0.7).
 - **Columns are flat.** No nested JSON objects — every field is a top-level column.
 - **Units are SI.** m/s, m/s², rad/s, degrees WGS84, UTC nanoseconds.
 - **Multi-rate is native.** GNSS and IMU may sample at different frequencies.
+- **One group per sensor.** Each functional group maps to a physical sensor or bus.
 - **Vendor extensions welcome.** Extra columns use `x_<source>_<field>` convention.
 
 ### 1.2 Record Overview
 
 A Telemachus record is a timestamped row containing measurements from
-up to five functional groups:
+up to seven functional groups, each mapping to a distinct sensor or bus:
 
 ```mermaid
 graph LR
     subgraph RECORD["Telemachus Record"]
-        GPS[GNSS: lat, lon, speed, heading]
-        IMU[IMU: accel, gyro, magneto]
-        VIO[Vehicle I/O: ignition, OBD, voltage]
-        EXTRA[Vendor-specific: x_source_field]
+        DT["Datetime"]
+        GPS["GNSS"]
+        IMU["IMU"]
+        OBD["OBD"]
+        CAN["CAN (future)"]
+        IO["I/O"]
+        EXTRA["Extra"]
     end
 
+    DT --- GPS --- IMU --- OBD --- CAN --- IO --- EXTRA
+
     style RECORD fill:#e8f5e9,stroke:#2e7d32
+    style DT fill:#fff9c4,stroke:#f9a825
+    style GPS fill:#e8f5e9,stroke:#2e7d32
+    style IMU fill:#e3f2fd,stroke:#1565c0
+    style OBD fill:#dcedc8,stroke:#558b2f
+    style CAN fill:#f0f4c3,stroke:#9e9d24
+    style IO fill:#fce4ec,stroke:#c62828
+    style EXTRA fill:#f3e5f5,stroke:#6a1b9a
 ```
 
 ---
@@ -50,16 +63,17 @@ graph LR
 
 ### 2.1 Functional Groups
 
-Columns are organized into **five functional groups**. All columns are
-flat (no nesting). The grouping is conceptual, for documentation only.
+Columns are organized into **seven functional groups**, each mapping to
+a physical sensor, bus, or signal type. All columns are flat (no
+nesting). The grouping is conceptual, for documentation only.
 
 ```mermaid
 graph LR
-    subgraph DT["Datetime"]
+    subgraph DT["1 — Datetime"]
         ts["ts (UTC)"]
     end
 
-    subgraph GNSS["GNSS"]
+    subgraph GNSS["2 — GNSS Receiver"]
         lat & lon
         speed_mps
         heading_deg
@@ -68,7 +82,7 @@ graph LR
         n_satellites
     end
 
-    subgraph IMU_G["IMU"]
+    subgraph IMU_G["3 — IMU"]
         direction TB
         subgraph ACCEL["Accelerometer"]
             ax["ax_mps2"]
@@ -87,44 +101,66 @@ graph LR
         end
     end
 
-    subgraph VEH["Vehicle I/O (opt.)"]
-        ign["ignition"]
-        odo["odometer_m"]
+    subgraph OBD_G["4 — OBD-II"]
         spd_obd["speed_obd_mps"]
-        volt["vehicle_voltage_v"]
         rpm_f["rpm"]
+        odo["odometer_m"]
     end
 
-    subgraph XTR["Extra (opt.)"]
+    subgraph CAN_G["5 — CAN (future)"]
+        can_f["x_can_&lt;signal&gt;"]
+    end
+
+    subgraph IO_G["6 — I/O"]
+        ign["ignition"]
+        volt["vehicle_voltage_v"]
+    end
+
+    subgraph XTR["7 — Extra"]
         x_f["x_&lt;source&gt;_&lt;field&gt;"]
     end
 
-    DT --- GNSS --- IMU_G --- VEH --- XTR
+    DT --- GNSS --- IMU_G --- OBD_G --- CAN_G --- IO_G --- XTR
 
     style DT fill:#fff9c4,stroke:#f9a825
     style GNSS fill:#e8f5e9,stroke:#2e7d32
     style IMU_G fill:#e3f2fd,stroke:#1565c0
-    style VEH fill:#fce4ec,stroke:#c62828
+    style OBD_G fill:#dcedc8,stroke:#558b2f
+    style CAN_G fill:#f0f4c3,stroke:#9e9d24
+    style IO_G fill:#fce4ec,stroke:#c62828
     style XTR fill:#f3e5f5,stroke:#6a1b9a
 ```
 
 ### 2.2 Mandatory Fields
 
-Every Telemachus-compliant file MUST contain these columns:
+Every Telemachus-compliant file MUST contain these columns. These are
+the physical measurements that every GNSS+IMU device produces:
 
-| Column | Type | Unit | Source | Description |
-|--------|------|------|--------|-------------|
-| `ts` | datetime64[ns, UTC] | UTC | Device clock | Timestamp at highest sensor rate |
+| Column | Type | Unit | Group | Description |
+|--------|------|------|-------|-------------|
+| `ts` | datetime64[ns, UTC] | UTC | Datetime | Timestamp at highest sensor rate |
 | `lat` | float64 | degrees WGS84 | GNSS | Latitude. NaN between GNSS ticks |
 | `lon` | float64 | degrees WGS84 | GNSS | Longitude. NaN between GNSS ticks |
-| `speed_mps` | float32 | m/s | GNSS Doppler | Ground speed. NaN between GNSS ticks |
-| `ax_mps2` | float32 | m/s² | IMU accel | Longitudinal acceleration (+ = forward) |
-| `ay_mps2` | float32 | m/s² | IMU accel | Lateral acceleration (+ = left) |
-| `az_mps2` | float32 | m/s² | IMU accel | Vertical acceleration (~9.81 at rest if raw) |
-| `device_id` | string | — | Config | Unique device identifier |
-| `trip_id` | string | — | Config | Unique trip identifier |
+| `speed_mps` | float32 | m/s | GNSS | Ground speed (Doppler). NaN between GNSS ticks |
+| `ax_mps2` | float32 | m/s² | IMU | Longitudinal acceleration (+ = forward) |
+| `ay_mps2` | float32 | m/s² | IMU | Lateral acceleration (+ = left) |
+| `az_mps2` | float32 | m/s² | IMU | Vertical acceleration (~9.81 at rest if raw) |
 
-### 2.3 Recommended Fields — GNSS Metadata
+### 2.3 Recommended Fields — Identification
+
+These fields SHOULD be present per-row OR inherited from the manifest
+(see SPEC-02 §4.1). They are metadata, not physical measurements:
+
+| Column | Type | Group | Description | Fallback |
+|--------|------|-------|-------------|----------|
+| `device_id` | string | Metadata | Unique device identifier | Manifest `hardware.devices[0].name` |
+| `trip_id` | string | Metadata | Unique trip identifier | Manifest or filename convention |
+
+> If a file omits `device_id` / `trip_id`, consumers MUST resolve them
+> from the manifest. If the manifest declares multiple devices and the
+> file omits `device_id`, validation MUST fail.
+
+### 2.4 Recommended Fields — GNSS Metadata
 
 These fields SHOULD be present when the hardware provides them:
 
@@ -141,7 +177,7 @@ These fields SHOULD be present when the hardware provides them:
 > `h_accuracy_m` (68th percentile radius in meters). Both may coexist; a
 > dataset typically has one or the other, rarely both.
 
-### 2.4 Optional Fields — Extended IMU
+### 2.5 Optional Fields — Extended IMU
 
 Present only if the device has the corresponding sensor. Columns MUST be
 absent or all-NaN when the sensor is not available — they MUST NOT be
@@ -171,39 +207,93 @@ graph TD
     style T3 fill:#bbdefb,stroke:#1565c0
 ```
 
-### 2.5 Optional Fields — Vehicle I/O
+### 2.6 Optional Fields — OBD-II
 
-Raw vehicle bus data (CAN/OBD) when the device is connected to the
-vehicle electrical system.
+Standardized vehicle data from the OBD-II diagnostic port (ISO 15031,
+SAE J1979). These PIDs are universal across OBD-II compliant vehicles.
 
-| Column | Type | Unit | Description |
-|--------|------|------|-------------|
-| `ignition` | bool | — | Vehicle ignition state (digital input) |
-| `odometer_m` | float64 | m | Odometer reading (CAN/OBD) |
-| `speed_obd_mps` | float32 | m/s | Vehicle speed from OBD PID 0x0D. Independent of GNSS speed |
-| `vehicle_voltage_v` | float32 | V | External power source voltage (12 V / 24 V system) |
-| `rpm` | float32 | rev/min | Engine RPM (CAN/OBD PID 0x0C) |
+| Column | Type | Unit | OBD PID | Description |
+|--------|------|------|---------|-------------|
+| `speed_obd_mps` | float32 | m/s | 0x0D | Vehicle speed. Independent of GNSS speed |
+| `rpm` | float32 | rev/min | 0x0C | Engine RPM |
+| `odometer_m` | float64 | m | 0xA6 | Total odometer reading |
 
 > **Two speed fields**: `speed_mps` (GNSS, mandatory) and `speed_obd_mps`
 > (OBD, optional) are intentionally separate. GPS speed degrades below
 > ~5 km/h and requires a fix; OBD speed is accurate at all speeds but
-> requires CAN wiring.
+> requires a wired OBD adapter.
 
 ```mermaid
 graph LR
     subgraph SPEED["Speed Sources"]
-        GPS_S["speed_mps\n(GNSS Doppler)\nMandatory"]
-        OBD_S["speed_obd_mps\n(OBD PID 0x0D)\nOptional §2.5"]
+        GPS_S["speed_mps\n(GNSS Doppler)\nMandatory §2.2"]
+        OBD_S["speed_obd_mps\n(OBD PID 0x0D)\nOptional §2.6"]
     end
 
     GPS_S -- "NaN at low speed" --> NOTE1["Degraded < 5 km/h\nNaN without fix"]
-    OBD_S -- "accurate always" --> NOTE2["Requires CAN wiring\nNaN if no OBD"]
+    OBD_S -- "accurate always" --> NOTE2["Requires OBD adapter\nNaN if not wired"]
 
     style GPS_S fill:#e8f5e9,stroke:#2e7d32
-    style OBD_S fill:#fce4ec,stroke:#c62828
+    style OBD_S fill:#dcedc8,stroke:#558b2f
 ```
 
-### 2.6 Vendor-Specific Extra Fields
+> **Additional OBD PIDs** (throttle position, engine load, coolant
+> temperature, etc.) may be included using the vendor-specific convention
+> `x_obd_<pid_name>` (e.g., `x_obd_throttle_pct`, `x_obd_coolant_c`).
+> These may be promoted to formal columns in future spec versions when
+> supported by Open datasets.
+
+### 2.7 Future Group — CAN Bus
+
+Raw CAN bus data (SAE J1939, manufacturer-specific DBCs) is **not yet
+formalized** in this specification. CAN signals are vendor-specific —
+each vehicle manufacturer defines its own signal dictionary (DBC file).
+
+Until formal CAN columns are defined, raw CAN data SHOULD use the
+vendor-specific convention:
+
+```
+x_can_<signal_name>
+```
+
+**Examples:** `x_can_wheel_speed_fl_mps`, `x_can_steering_angle_deg`,
+`x_can_brake_pressure_bar`.
+
+> CAN column formalization will be considered when Open datasets with
+> raw CAN data become available. The key difference with OBD: OBD PIDs
+> are standardized (same PID = same meaning across all vehicles), CAN
+> signals are manufacturer-specific (same signal ID = different meaning
+> per vehicle make/model).
+
+```mermaid
+graph TD
+    subgraph BUS["Vehicle Bus Data"]
+        OBD_B["OBD-II (§2.6)\nStandardized PIDs\nISO 15031 / SAE J1979\nUniversal across vehicles"]
+        CAN_B["CAN (§2.7)\nRaw signals\nManufacturer-specific DBC\nVendor-specific columns"]
+    end
+
+    OBD_B -- "e.g. PID 0x0D\n= vehicle speed\non ALL vehicles" --> UNIVERSAL["Universal meaning"]
+    CAN_B -- "e.g. signal 0x123\n= different per\nmake/model" --> SPECIFIC["Vendor-specific meaning"]
+
+    style OBD_B fill:#dcedc8,stroke:#558b2f
+    style CAN_B fill:#f0f4c3,stroke:#9e9d24
+```
+
+### 2.8 Optional Fields — I/O (Digital & Analog Inputs)
+
+Raw electrical signals from the device's input pins. These are
+hardware-level signals, not protocol data:
+
+| Column | Type | Unit | Description |
+|--------|------|------|-------------|
+| `ignition` | bool | — | Vehicle ignition state (digital input pin) |
+| `vehicle_voltage_v` | float32 | V | External power source voltage (analog input, 12 V / 24 V system) |
+
+> `vehicle_voltage_v` reads the vehicle electrical system voltage via
+> the device's power input. It is a key signal for determining whether
+> the device is wired to a vehicle (> 9 V) or running on battery.
+
+### 2.9 Vendor-Specific Extra Fields
 
 Telemachus files MAY contain additional columns not defined in this
 specification. These columns MUST follow the naming convention:
@@ -224,6 +314,8 @@ Where `<source>` identifies the data provider or processing origin, and
 | `x_stride_orientation_qw` | STRIDE dataset | Android orientation quaternion W |
 | `x_stride_gravity_x_mps2` | STRIDE dataset | Android-derived gravity vector X |
 | `x_rs3_road_type` | RoadSimulator3 | Simulation ground truth road classification |
+| `x_obd_throttle_pct` | OBD-II | Throttle position (PID 0x11, not yet formalized) |
+| `x_can_steering_angle_deg` | CAN bus | Raw CAN signal (manufacturer-specific) |
 | `x_vendor_firmware_flag` | Any vendor | Device-specific firmware status field |
 
 **Rules:**
@@ -231,7 +323,7 @@ Where `<source>` identifies the data provider or processing origin, and
 - Adapters SHOULD document their extra columns in the manifest
 - Consumers MUST NOT assume any `x_*` column is present
 
-### 2.7 Multi-Rate Convention
+### 2.10 Multi-Rate Convention
 
 Telemachus files are timestamped at the **highest sensor rate** (typically
 IMU rate, e.g. 10–100 Hz). Lower-rate columns (GNSS at 1 Hz) contain
@@ -262,7 +354,7 @@ sequenceDiagram
     GPS->>REC: lat=49.34, lon=1.38, speed=5.3
 ```
 
-### 2.8 AccPeriod — Accelerometer Frame Reference
+### 2.11 AccPeriod — Accelerometer Frame Reference
 
 Commercial telematics devices may apply **firmware-side gravity
 compensation**. The same accelerometer can output data in different
@@ -306,7 +398,7 @@ graph TD
     style PART fill:#fff3e0,stroke:#e65100
 ```
 
-### 2.9 Excluded Columns
+### 2.12 Excluded Columns
 
 The following columns MUST NOT appear in a Telemachus dataset. They
 represent **enriched or derived data** that is outside the scope of this
@@ -336,10 +428,12 @@ A Telemachus file is valid if:
    - `compensated`: ≈ 0 ± 1.0 m/s²
    - `partial`: ≈ `residual_g` ± 0.05 g
 4. `lat` / `lon` are within [-90, 90] / [-180, 180] when not NaN
-5. No excluded columns from §2.9 are present
+5. No excluded columns from §2.12 are present
 6. All extra columns follow the `x_<source>_<field>` convention
 7. `speed_mps` >= 0 when not NaN
-8. Gyro/magneto columns are either all present or all absent (no partial group)
+8. Gyro columns are either all present or all absent (no partial group)
+9. Magneto columns are either all present or all absent (no partial group)
+10. If `device_id` / `trip_id` are absent from columns, they MUST be resolvable from the manifest (SPEC-02 §4.1)
 
 ---
 
@@ -359,23 +453,25 @@ graph TD
         RS3["RoadSimulator3\n(synthetic)"]
     end
 
-    subgraph TIERS["Sensor Coverage Tiers"]
-        T2["GPS + Accel + Gyro"]
-        T3["GPS + Accel + Gyro + Magneto"]
-        T4["GPS + Accel + OBD"]
+    subgraph GROUPS["Functional Groups Covered"]
+        G_GPS["GNSS"]
+        G_IMU["IMU (Accel)"]
+        G_GYRO["IMU (Gyro)"]
+        G_MAG["IMU (Magneto)"]
+        G_OBD["OBD"]
     end
 
-    AEGIS --> T4
-    PVS --> T3
-    STRIDE --> T3
-    RS3 --> T2
+    AEGIS --> G_GPS & G_IMU & G_GYRO & G_OBD
+    PVS --> G_GPS & G_IMU & G_GYRO & G_MAG
+    STRIDE --> G_GPS & G_IMU & G_GYRO & G_MAG
+    RS3 --> G_GPS & G_IMU & G_GYRO
 
     style RESEARCH fill:#e8f5e9,stroke:#2e7d32
     style SIM fill:#e3f2fd,stroke:#1565c0
-    style TIERS fill:#fff9c4,stroke:#f9a825
+    style GROUPS fill:#fff9c4,stroke:#f9a825
 ```
 
-> **Commercial devices** (GPS + Accel, with optional Vehicle I/O) are
+> **Commercial devices** (GNSS + IMU + optional I/O and OBD) are
 > supported via private adapters documented outside this specification.
 
 ### 4.2 Detailed Column Mapping — Open Datasets
@@ -386,74 +482,74 @@ graph TD
 
 #### AEGIS (Zenodo 820576, Austria)
 
-| Raw CSV Column | Telemachus Column | Conversion |
-|----------------|-------------------|------------|
-| `timestamp` (accelerations.csv) | `ts` | ISO string → UTC datetime |
-| `x_value` (accelerations.csv) | `ax_mps2` | **G-force × 9.80665** |
-| `y_value` | `ay_mps2` | G-force × 9.80665 |
-| `z_value` | `az_mps2` | G-force × 9.80665 |
-| `x_value` (gyroscopes.csv) | `gx_rad_s` | **deg/s × π/180** |
-| `y_value` | `gy_rad_s` | deg/s × π/180 |
-| `z_value` | `gz_rad_s` | deg/s × π/180 |
-| `latitude` (positions.csv) | `lat` | **NMEA DDMM.MMMM → decimal degrees** |
-| `longitude` | `lon` | NMEA → decimal degrees |
-| `altitude` | `altitude_gps_m` | direct (meters) |
-| `data` (obdData.csv, PID 0x0D) | `speed_obd_mps` | km/h ÷ 3.6 |
-| `trip_id` | `trip_id` | direct |
-| `beaglebone_id` (trips.csv) | `device_id` | lookup |
+| Raw CSV Column | Telemachus Column | Group | Conversion |
+|----------------|-------------------|-------|------------|
+| `timestamp` (accelerations.csv) | `ts` | Datetime | ISO string → UTC datetime |
+| `x_value` (accelerations.csv) | `ax_mps2` | IMU | **G-force × 9.80665** |
+| `y_value` | `ay_mps2` | IMU | G-force × 9.80665 |
+| `z_value` | `az_mps2` | IMU | G-force × 9.80665 |
+| `x_value` (gyroscopes.csv) | `gx_rad_s` | IMU | **deg/s × π/180** |
+| `y_value` | `gy_rad_s` | IMU | deg/s × π/180 |
+| `z_value` | `gz_rad_s` | IMU | deg/s × π/180 |
+| `latitude` (positions.csv) | `lat` | GNSS | **NMEA DDMM.MMMM → decimal degrees** |
+| `longitude` | `lon` | GNSS | NMEA → decimal degrees |
+| `altitude` | `altitude_gps_m` | GNSS | direct (meters) |
+| `data` (obdData.csv, PID 0x0D) | `speed_obd_mps` | OBD | km/h ÷ 3.6 |
+| `trip_id` | `trip_id` | Metadata | direct |
+| `beaglebone_id` (trips.csv) | `device_id` | Metadata | lookup |
 
 #### PVS (Kaggle, Curitiba)
 
-| Raw CSV Column | Telemachus Column | Conversion |
-|----------------|-------------------|------------|
-| `timestamp` | `ts` | Unix seconds → UTC datetime |
-| `acc_x_{placement}` | `ax_mps2` | direct (already m/s²) |
-| `acc_y_{placement}` | `ay_mps2` | direct |
-| `acc_z_{placement}` | `az_mps2` | direct |
-| `gyro_x_{placement}` | `gx_rad_s` | **deg/s × π/180** |
-| `gyro_y_{placement}` | `gy_rad_s` | deg/s × π/180 |
-| `gyro_z_{placement}` | `gz_rad_s` | deg/s × π/180 |
-| `mag_x_{placement}` | `mx_uT` | direct (µT) |
-| `mag_y_{placement}` | `my_uT` | direct |
-| `mag_z_{placement}` | `mz_uT` | direct |
-| `latitude` | `lat` | direct (decimal degrees) |
-| `longitude` | `lon` | direct |
-| `speed` | `speed_mps` | direct (already m/s) |
-| `elevation` (GPS CSV) | `altitude_gps_m` | direct |
-| `hdop` (GPS CSV) | `hdop` | direct |
-| `satellites` (GPS CSV) | `n_satellites` | direct |
+| Raw CSV Column | Telemachus Column | Group | Conversion |
+|----------------|-------------------|-------|------------|
+| `timestamp` | `ts` | Datetime | Unix seconds → UTC datetime |
+| `acc_x_{placement}` | `ax_mps2` | IMU | direct (already m/s²) |
+| `acc_y_{placement}` | `ay_mps2` | IMU | direct |
+| `acc_z_{placement}` | `az_mps2` | IMU | direct |
+| `gyro_x_{placement}` | `gx_rad_s` | IMU | **deg/s × π/180** |
+| `gyro_y_{placement}` | `gy_rad_s` | IMU | deg/s × π/180 |
+| `gyro_z_{placement}` | `gz_rad_s` | IMU | deg/s × π/180 |
+| `mag_x_{placement}` | `mx_uT` | IMU | direct (µT) |
+| `mag_y_{placement}` | `my_uT` | IMU | direct |
+| `mag_z_{placement}` | `mz_uT` | IMU | direct |
+| `latitude` | `lat` | GNSS | direct (decimal degrees) |
+| `longitude` | `lon` | GNSS | direct |
+| `speed` | `speed_mps` | GNSS | direct (already m/s) |
+| `elevation` (GPS CSV) | `altitude_gps_m` | GNSS | direct |
+| `hdop` (GPS CSV) | `hdop` | GNSS | direct |
+| `satellites` (GPS CSV) | `n_satellites` | GNSS | direct |
 
 #### STRIDE (Figshare, Rajshahi)
 
-| Raw CSV Column | Telemachus Column | Conversion |
-|----------------|-------------------|------------|
-| `time` (TotalAcceleration.csv) | `ts` | **ns epoch → UTC datetime** |
-| `x` (TotalAcceleration.csv) | `ax_mps2` | direct (already m/s²) |
-| `y` | `ay_mps2` | direct |
-| `z` | `az_mps2` | direct |
-| `x` (Gyroscope.csv) | `gx_rad_s` | direct (already rad/s) |
-| `y` | `gy_rad_s` | direct |
-| `z` | `gz_rad_s` | direct |
-| `x` (Magnetometer.csv) | `mx_uT` | direct (µT) |
-| `y` | `my_uT` | direct |
-| `z` | `mz_uT` | direct |
-| `latitude` (Location.csv) | `lat` | direct (decimal degrees) |
-| `longitude` | `lon` | direct |
-| `speed` (Location.csv) | `speed_mps` | direct (already m/s) |
-| `altitude` (Location.csv) | `altitude_gps_m` | direct |
-| `bearing` (Location.csv) | `heading_deg` | direct (degrees) |
-| `horizontalAccuracy` (Location.csv) | `h_accuracy_m` | direct (meters) |
+| Raw CSV Column | Telemachus Column | Group | Conversion |
+|----------------|-------------------|-------|------------|
+| `time` (TotalAcceleration.csv) | `ts` | Datetime | **ns epoch → UTC datetime** |
+| `x` (TotalAcceleration.csv) | `ax_mps2` | IMU | direct (already m/s²) |
+| `y` | `ay_mps2` | IMU | direct |
+| `z` | `az_mps2` | IMU | direct |
+| `x` (Gyroscope.csv) | `gx_rad_s` | IMU | direct (already rad/s) |
+| `y` | `gy_rad_s` | IMU | direct |
+| `z` | `gz_rad_s` | IMU | direct |
+| `x` (Magnetometer.csv) | `mx_uT` | IMU | direct (µT) |
+| `y` | `my_uT` | IMU | direct |
+| `z` | `mz_uT` | IMU | direct |
+| `latitude` (Location.csv) | `lat` | GNSS | direct (decimal degrees) |
+| `longitude` | `lon` | GNSS | direct |
+| `speed` (Location.csv) | `speed_mps` | GNSS | direct (already m/s) |
+| `altitude` (Location.csv) | `altitude_gps_m` | GNSS | direct |
+| `bearing` (Location.csv) | `heading_deg` | GNSS | direct (degrees) |
+| `horizontalAccuracy` (Location.csv) | `h_accuracy_m` | GNSS | direct (meters) |
 
 #### RoadSimulator3 (Synthetic)
 
-| RS3 Field | Telemachus Column | Conversion |
-|-----------|-------------------|------------|
-| `timestamp` | `ts` | direct (10 Hz uniform UTC) |
-| `lat`, `lon` | `lat`, `lon` | direct |
-| `speed` | `speed_mps` | direct |
-| `heading` | `heading_deg` | direct |
-| `acc_x/y/z` | `ax/ay/az_mps2` | direct (includes gravity on az) |
-| `gyro_x/y/z` | `gx/gy/gz_rad_s` | direct (NaN if disabled) |
+| RS3 Field | Telemachus Column | Group | Conversion |
+|-----------|-------------------|-------|------------|
+| `timestamp` | `ts` | Datetime | direct (10 Hz uniform UTC) |
+| `lat`, `lon` | `lat`, `lon` | GNSS | direct |
+| `speed` | `speed_mps` | GNSS | direct |
+| `heading` | `heading_deg` | GNSS | direct |
+| `acc_x/y/z` | `ax/ay/az_mps2` | IMU | direct (includes gravity on az) |
+| `gyro_x/y/z` | `gx/gy/gz_rad_s` | IMU | direct (NaN if disabled) |
 
 > **Note:** RS3 also exports `road_type`, `event`, `target_speed` — these
 > are **ground truth metadata** for validation, NOT part of a Telemachus
@@ -505,7 +601,8 @@ tele.has_imu(df)         # → True if ax, ay, az have non-NaN values
 tele.has_gyro(df)        # → True if gx, gy, gz present and non-NaN
 tele.has_magneto(df)     # → True if mx, my, mz present and non-NaN
 tele.has_obd(df)         # → True if speed_obd_mps or rpm present and non-NaN
-tele.sensor_profile(df)  # → "gps+imu+gyro+magneto" or "gps+imu" etc.
+tele.has_io(df)          # → True if ignition or vehicle_voltage_v present
+tele.sensor_profile(df)  # → "gps+imu+gyro+magneto" or "gps+imu+obd" etc.
 tele.is_gps_only(df)     # → GPS but no IMU
 tele.is_full_imu(df)     # → accel + gyro available
 ```
