@@ -2,11 +2,15 @@
 RFC: 0009
 Title: RS3 Integration Pipeline
 Version: 0.1-draft
-Status: Draft
+Status: Deprecated
+Deprecated: 2026-04-16
+Superseded_by: ../SPEC-03-adapters-validation.md
 Author: Sébastien Edet
 Date: 2025-10-13
 Project: Telemachus Specification
 ---
+
+> **DEPRECATED** — RS3 is now treated as one adapter among others in [SPEC-03 §3.4](../SPEC-03-adapters-validation.md). Kept for historical reference.
 
 ## 1. Purpose
 

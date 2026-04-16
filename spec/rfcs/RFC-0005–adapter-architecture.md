@@ -2,11 +2,15 @@
 RFC: 0005
 Title: Adapter Architecture & Provider Modules
 Version: 0.1-draft
-Status: Draft
+Status: Deprecated
+Deprecated: 2026-04-16
+Superseded_by: ../SPEC-03-adapters-validation.md
 Author: Sébastien Edet
 Date: 2025-10-13
 Project: Telemachus Specification
 ---
+
+> **DEPRECATED** — This RFC has been superseded by [SPEC-03: Adapters & Validation](../SPEC-03-adapters-validation.md) (2026-04-16). The `BaseAdapter` class is replaced by simple function-based adapters. Kept for historical reference.
 
 ## 1. Purpose
 

@@ -2,11 +2,15 @@
 RFC: 0011
 Title: Versioning and Governance Policy
 Version: 0.1-draft
-Status: Draft
+Status: Deprecated
+Deprecated: 2026-04-16
+Superseded_by: ../SPEC-04-governance.md
 Author: Sébastien Edet
 Date: 2025-10-13
 Project: Telemachus Specification
 ---
+
+> **DEPRECATED** — This RFC has been superseded by [SPEC-04: Governance & Versioning](../SPEC-04-governance.md) (2026-04-16), simplified for solo-user context. Kept for historical reference.
 
 ## 1. Purpose
 

@@ -1,10 +1,14 @@
 ---
 title: "RFC-0001: Telemachus Core v0.2 – Schema Evolution"
-status: Draft
+status: Deprecated
+deprecated: 2026-04-16
+superseded_by: ../SPEC-01-record-format.md
 author: Sébastien Edet
 created: 2025-10-10
 discussion: https://github.com/telemachus3/telemachus-spec/discussions
 ---
+
+> **DEPRECATED** — This RFC has been superseded by [SPEC-01: Telemachus Record Format](../SPEC-01-record-format.md) (2026-04-16). Kept for historical reference.
 
 # RFC-0001: Telemachus Core v0.2 – Schema Evolution
 

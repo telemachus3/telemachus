@@ -2,11 +2,15 @@
 RFC: 0002
 Title: Comparative Telematics API Formats
 Version: 0.1-draft
-Status: Draft
+Status: Deprecated
+Deprecated: 2026-04-16
+Superseded_by: ../SPEC-03-adapters-validation.md (Appendix A)
 Author: Sébastien Edet
 Date: 2025-10-11
 Project: Telemachus Specification
 ---
+
+> **DEPRECATED** — This RFC has been absorbed into [SPEC-03: Adapters & Validation, Appendix A](../SPEC-03-adapters-validation.md) (2026-04-16). Kept for historical reference.
 
 ## Summary
 
