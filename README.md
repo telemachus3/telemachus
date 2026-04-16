@@ -34,33 +34,43 @@ magnetometer support, and the normative **Dataset Manifest** sidecar.
 
 ## Quickstart
 
-### Validate a telemetry payload against the core schema
-```bash
-ajv validate -s spec/schemas/telemachus_core_v0.2.json -d examples/*.jsonl
-```
-
-### Validate a dataset manifest (RFC-0014, v0.8 Draft)
-```bash
-ajv validate -s spec/schemas/telemachus_manifest_v0.8.json -d path/to/manifest.yaml
-```
-
-### Install the Python SDK & CLI (editable)
+### Install
 ```bash
 pip install -e python-sdk
-pip install -e python-cli
 ```
 
-## CLI examples
+### Read a dataset
+```python
+import telemachus as tele
 
+# Load from a manifest (returns a pandas DataFrame)
+df = tele.read("path/to/manifest.yaml")
+print(tele.sensor_profile(df))  # → "gps+imu+gyro"
+```
+
+### Validate
 ```bash
-# Validate a file
-telemachus validate examples/geotab_example_synthetic.json
+# Validate a dataset (Telemachus parquet + manifest)
+tele validate path/to/dataset/ --level full
 
-# Convert JSON/JSONL directory to Parquet
-telemachus to-parquet examples/ -o fleet.parquet
+# Quick D0 check on a parquet file
+tele validate path/to/d0.parquet --level d0
 
-# Compute Completeness Score
-telemachus tcs fleet.parquet
+# Dataset info
+tele info path/to/manifest.yaml
+```
+
+### Convert an Open dataset to D0
+```bash
+# Download AEGIS from Zenodo, then convert to Telemachus format
+tele convert aegis /path/to/aegis/csvs --outdir datasets/aegis/
+tele convert pvs /path/to/pvs/trips --outdir datasets/pvs/
+tele convert stride /path/to/stride/road_data --outdir datasets/stride/
+```
+
+### Validate a manifest schema (JSON Schema)
+```bash
+ajv validate -s spec/schemas/telemachus_manifest_v0.8.json -d path/to/manifest.yaml
 ```
 
 ## Specifications (v0.8)
