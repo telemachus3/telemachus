@@ -6,7 +6,7 @@ import tempfile
 import pandas as pd
 
 from telemachus.io_export import export_rs3_to_telemachus
-from telemachus.validate import validate_manifest, summarize_dataset
+from telemachus._validate_legacy import validate_manifest, summarize_dataset
 
 
 def test_tcs_dataset_summary_modern():
