@@ -66,7 +66,7 @@ The minimum hand-rolled checks:
 
 ```python
 import pandas as pd
-df = pd.read_parquet("d0.parquet")
+df = pd.read_parquet("data.parquet")
 
 REQUIRED = ["ts", "lat", "lon", "speed_mps",
             "ax_mps2", "ay_mps2", "az_mps2"]

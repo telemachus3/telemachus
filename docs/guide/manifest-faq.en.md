@@ -17,8 +17,8 @@ Next to the parquet(s):
 ```
 my-dataset/
 ├── manifest.yaml      ← here
-├── d0_xxx.parquet
-└── d0_yyy.parquet
+├── device_xxx.parquet
+└── device_yyy.parquet
 ```
 
 YAML is preferred (human-friendly). JSON with the same schema is also
@@ -35,7 +35,7 @@ If the manifest declares them, you can omit:
 | `carrier_state` | matched per `trip_id` from `trip_carrier_states` |
 
 For multi-device datasets, `device_id` MUST be either per-row or
-encoded in the filename (`d0_<device>_*.parquet`). See SPEC-02 §4.1.
+encoded in the filename (`<device>_*.parquet`). See SPEC-02 §4.1.
 
 ## How is the accelerometer frame applied?
 
