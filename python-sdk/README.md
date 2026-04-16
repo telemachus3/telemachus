@@ -1,158 +1,102 @@
 # telemachus-py
 
-Python tools for the **Telemachus** open telematics pivot format:
-- Export RS3 CSVs → Telemachus dataset (YAML manifest + Parquet tables)
-- Validate a dataset.yaml and check referenced tables
-- Summarize dataset (rows, columns, time span)
+Python SDK for the **Telemachus** open telematics format — read,
+validate, convert, and introspect high-frequency GNSS+IMU datasets.
 
+```
+pip install -e .
+```
 
-## Features
+## Read a dataset
 
-- **Export:** Convert RS3 CSV files into a structured Telemachus dataset with manifest and Parquet tables.
-- **Validate:** Check the integrity and correctness of dataset manifests and table contents.
-- **Summarize:** Generate summaries of datasets including row counts, columns, and time spans.
-- **Python API:** Load datasets, read tables as pandas DataFrames, validate data, and compute derived metrics.
-- **Integration with RS3:** Seamlessly process RS3 telematics export formats into Telemachus datasets.
+```python
+import telemachus as tele
 
+df = tele.read("path/to/manifest.yaml")   # → pandas DataFrame
+print(tele.sensor_profile(df))             # → "gps+imu+gyro"
+```
 
-## Quickstart
+## Sensor introspection
 
-The following example demonstrates exporting RS3 CSV files into a Telemachus dataset, validating the generated manifest, and displaying dataset information. The export command converts trajectory, IMU, and event CSVs into a structured dataset stored in the specified output directory. Validation checks the manifest file for correctness, and info displays summary details about the dataset.
+```python
+tele.has_gps(df)       # True if lat, lon, speed_mps non-NaN
+tele.has_imu(df)       # True if ax, ay, az non-NaN
+tele.has_gyro(df)      # True if gx, gy, gz present
+tele.has_magneto(df)   # True if mx, my, mz present
+tele.has_obd(df)       # True if speed_obd or rpm present
+tele.has_io(df)        # True if ignition or voltage present
+tele.is_full_imu(df)   # accel + gyro
+tele.is_gps_only(df)   # GPS but no IMU
+```
+
+## Validate
+
+```python
+report = tele.validate(df, profile="imu")
+print(report)
+# ValidationReport(PASS, profile=imu, level=basic, errors=0, warnings=0)
+
+report = tele.validate_dataset("path/to/dataset/", level="full")
+```
+
+Three profiles adapt validation to hardware capabilities:
+
+| Profile | Required columns | Use case |
+|---------|-----------------|----------|
+| `core` | ts, lat, lon, speed_mps | GPS trackers, fleet APIs |
+| `imu` | core + ax, ay, az | Telematics devices with accelerometer |
+| `full` | imu + gx, gy, gz | Research platforms with gyroscope |
+
+## Convert Open datasets
 
 ```bash
-tele export \
-  --traj tests/data/rs3_trajectory.csv \
-  --imu tests/data/rs3_imu.csv \
-  --events tests/data/rs3_events.csv \
-  --outdir out/tele/$(date -u +%Y%m%dT%H%M%SZ) \
-  --freq-hz 10 --vehicle-id VEH-01 --vehicle-type passenger_car
-
-tele validate out/tele/*/dataset.yaml
-tele info out/tele/*/dataset.yaml
+tele convert aegis /path/to/aegis/csvs -o datasets/aegis/
+tele convert pvs /path/to/pvs/trips -o datasets/pvs/ --placement dashboard
+tele convert stride /path/to/stride/road_data -o datasets/stride/ --category driving
 ```
 
+Supported Open datasets:
 
-## Schema Conventions
+| Adapter | Source | Sensors | License |
+|---------|--------|---------|---------|
+| `aegis` | Zenodo 820576 (Austria) | GPS 5Hz + Accel 24Hz + Gyro + OBD | CC-BY-4.0 |
+| `pvs` | Kaggle (Brazil) | GPS 1Hz + Accel 100Hz + Gyro + Magneto | CC-BY-NC-ND-4.0 |
+| `stride` | Figshare (Bangladesh) | GPS 1Hz + Accel 100Hz + Gyro + Magneto | CC-BY-4.0 |
 
-Telemachus defines **two complementary schema layers**:
+## CLI
 
-1. **Manifest schema** (`telemachus/schemas/manifest_schema.py`)  
-   - JSON Schema that validates the structure of `dataset.yaml`.  
-   - Ensures required keys (`version`, `dataset_id`, `frequency_hz`, `vehicle`, `tables`, …) are present and well-formed.  
-   - Describes the container metadata and the list of tables.
-
-2. **Table schemas** (`telemachus/core/schemas.py`)  
-   - PyArrow schemas that define the canonical columns and types of each table.  
-   - Example: `trajectory` (timestamp, lat, lon, alt, speed), `imu` (acc_x, gyro_x, …), `events` (event_type, severity).  
-   - Ensures that each Parquet file matches the expected columns and dtypes.
-
-👉 The **Telemachus specification** is the single source of truth.  
-These schemas are implementation mirrors:
-- JSON Schema → manifest structure  
-- PyArrow Schema → table content
-
-See the [Telemachus Spec](https://telemachus3.github.io/telemachus-spec/01_introduction/) for the formal definition.
-
-
-## Data Model
-
-The Telemachus dataset organizes telematics data into several main tables, each with canonical columns:
-
-- **trajectory**: Represents vehicle position and motion over time.
-  - Typical columns: `timestamp`, `lat`, `lon`, `alt`, `speed`, `heading`
-- **imu**: Contains inertial measurement unit data.
-  - Typical columns: `timestamp`, `acc_x`, `acc_y`, `acc_z`, `gyro_x`, `gyro_y`, `gyro_z`
-- **events**: Logs discrete events occurring during the trip.
-  - Typical columns: `timestamp`, `event_type`, `severity`, `description`
-
-These tables are stored as Parquet files referenced by the dataset manifest and are validated against their respective PyArrow schemas.
-
-
-## Python API
-
-The Python API provides convenient access to Telemachus datasets. You can load a dataset from a manifest file, read individual tables as pandas DataFrames, and validate all tables against their schemas.
-
-Example usage:
-
-```python
-from telemachus.core.dataset import Dataset
-
-# Load a dataset from a manifest YAML file
-dataset = Dataset.from_manifest("path/to/dataset.yaml")
-
-# Read a table as a pandas DataFrame
-df_trajectory = dataset.read_df("trajectory")
-
-# Validate all tables in the dataset
-dataset.validate_all()
+```bash
+tele validate path/to/manifest.yaml          # validate manifest
+tele validate path/to/dataset/ --level full   # validate dataset
+tele info path/to/manifest.yaml               # dataset summary
+tele convert aegis /data/aegis -o out/        # convert Open dataset
 ```
 
-### Working with Frame
+## Telemachus record format
 
-The `Frame` class from `telemachus.pandas.frame` extends pandas DataFrames with Telemachus-specific utilities:
+A Telemachus record is a flat Parquet row with 7 functional groups:
 
-```python
-from telemachus.pandas.frame import Frame
+| # | Group | Columns | Status |
+|---|-------|---------|--------|
+| 1 | **Datetime** | `ts` | Mandatory |
+| 2 | **GNSS** | `lat`, `lon`, `speed_mps`, `heading_deg`, `altitude_gps_m`, `hdop`, `h_accuracy_m`, `n_satellites` | Mandatory (lat/lon/speed) |
+| 3 | **IMU** | `ax_mps2`, `ay_mps2`, `az_mps2`, `gx_rad_s`, `gy_rad_s`, `gz_rad_s`, `mx_uT`, `my_uT`, `mz_uT` | Profile-dependent |
+| 4 | **OBD** | `speed_obd_mps`, `rpm`, `odometer_m` | Optional |
+| 5 | **CAN** | `x_can_<signal>` | Future |
+| 6 | **I/O** | `ignition`, `vehicle_voltage_v` | Optional |
+| 7 | **Extra** | `x_<source>_<field>` | Optional |
 
-# Convert a DataFrame to a Frame for additional methods
-frame = Frame(df_trajectory)
-
-# Compute time deltas between rows
-dt = frame.compute_dt()
-
-# Calculate speed from position data
-speed = frame.speed_from_pos()
-```
-
-### Validating DataFrames
-
-You can validate pandas DataFrames against the expected PyArrow schema for a table using:
-
-```python
-from telemachus.core.validation import validate_df_against_arrow_schema
-
-# Validate a DataFrame against the 'trajectory' schema
-validate_df_against_arrow_schema(df_trajectory, "trajectory")
-```
-
-### Computing Metrics
-
-The API includes helper functions to compute common telematics metrics:
-
-```python
-# Compute time delta between consecutive rows
-dt = frame.compute_dt()
-
-# Compute speed from positional data (lat, lon, timestamp)
-speed = frame.speed_from_pos()
-```
-
-These tools simplify analysis and validation of telematics data within Python.
-
+Full specification: [SPEC-01](../spec/SPEC-01-record-format.md) |
+[SPEC-02](../spec/SPEC-02-manifest.md) |
+[SPEC-03](../spec/SPEC-03-adapters-validation.md)
 
 ## Development
 
-To contribute or develop locally, follow these steps:
-
-- Install the package in development mode with dependencies:
-
 ```bash
 pip install -e .[dev]
+pytest                  # 31 tests
 ```
-
-- Run the test suite using pytest:
-
-```bash
-pytest
-```
-
-- Lint and format code with ruff and black:
-
-```bash
-ruff .
-black .
-```
-
 
 ## License
-GPL-3.0
+
+AGPL-3.0
