@@ -1,12 +1,15 @@
 ---
 title: "RFC-0014: Dataset Manifest — Canonical File-Level Metadata"
-status: Draft
+status: Absorbed
 version: "0.8"
+absorbed_into: ../SPEC-02-manifest.md
 author: Sébastien Edet
 created: 2026-04-15
-updated: 2026-04-15
+updated: 2026-04-16
 discussion: https://github.com/telemachus3/telemachus-spec/discussions
 ---
+
+> **ABSORBED** — The content of this RFC forms the core of [SPEC-02: Dataset Manifest](../SPEC-02-manifest.md) (2026-04-16), extended with burst sampling in sensors block and carrier_state clarified as manifest-only. This document is kept as historical reference.
 
 # RFC-0014: Dataset Manifest — Canonical File-Level Metadata
 

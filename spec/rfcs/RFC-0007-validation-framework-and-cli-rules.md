@@ -2,11 +2,15 @@
 RFC: 0007
 Title: Validation Framework & CLI Rules
 Version: 0.1-draft
-Status: Draft
+Status: Deprecated
+Deprecated: 2026-04-16
+Superseded_by: ../SPEC-03-adapters-validation.md
 Author: Sébastien Edet
 Date: 2025-10-13
 Project: Telemachus Specification
 ---
+
+> **DEPRECATED** — This RFC has been superseded by [SPEC-03: Adapters & Validation §4](../SPEC-03-adapters-validation.md) (2026-04-16). Kept for historical reference.
 
 ## 1. Purpose
 

@@ -1,12 +1,15 @@
 ---
 title: "RFC-0013: Telemachus Record Format — Telemetry Schema"
-status: Draft
+status: Absorbed
 version: "0.7"
+absorbed_into: ../SPEC-01-record-format.md
 author: Sébastien Edet
 created: 2026-03-25
-updated: 2026-04-10
+updated: 2026-04-16
 discussion: https://github.com/telemachus3/telemachus-spec/discussions
 ---
+
+> **ABSORBED** — The content of this RFC forms the core of [SPEC-01: Telemachus Record Format](../SPEC-01-record-format.md) (2026-04-16), extended with magnetometer, h_accuracy_m, vehicle_voltage_v, speed_obd_mps, and vendor-specific fields. This document is kept as historical reference.
 
 # RFC-0013: Telemachus Record Format — Telemetry Schema
 

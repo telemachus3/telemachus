@@ -2,11 +2,15 @@
 RFC: 0004
 Title: Extended FieldGroups Schema
 Version: 0.1-draft  
-Status: Draft  
+Status: Deprecated
+Deprecated: 2026-04-16
+Superseded_by: ../SPEC-01-record-format.md
 Author: Sébastien Edet  
 Date: 2025-10-13  
 Project: Telemachus Specification  
 ---
+
+> **DEPRECATED** — Extended FieldGroups (engine, fuel, odometer, diagnostics, energy) are now covered by [SPEC-01 §2.5 Vehicle I/O](../SPEC-01-record-format.md) for D0-level fields, and remain D1+ concerns for enriched fields. Kept for historical reference.
 
 ## 1. Purpose
 
