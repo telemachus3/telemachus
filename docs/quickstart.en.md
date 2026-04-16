@@ -50,7 +50,7 @@ ajv validate \
 ```python
 import pandas as pd
 
-df = pd.read_parquet("path/to/d0.parquet")
+df = pd.read_parquet("path/to/data.parquet")
 print(df.head())
 print(df.columns.tolist())
 # ['ts', 'lat', 'lon', 'speed_mps',

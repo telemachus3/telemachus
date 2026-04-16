@@ -5,8 +5,8 @@ A Telemachus Telemachus dataset is, on disk:
 ```
 my-dataset/
 ├── manifest.yaml          ← SPEC-02: device, trip, sensors, acc_periods…
-├── d0_<id_1>.parquet      ← signal, columnar
-├── d0_<id_2>.parquet
+├── <device_1>.parquet      ← signal, columnar
+├── <device_2>.parquet
 └── …
 ```
 
@@ -27,7 +27,7 @@ ds = Path("my-dataset")
 manifest = yaml.safe_load((ds / "manifest.yaml").read_text())
 
 df = pd.concat(
-    [pd.read_parquet(p) for p in ds.glob("d0_*.parquet")],
+    [pd.read_parquet(p) for p in ds.glob("*.parquet")],
     ignore_index=True,
 ).sort_values("ts").reset_index(drop=True)
 
@@ -54,13 +54,13 @@ DuckDB reads parquet natively and is great for ad-hoc exploration:
 ```python
 import duckdb
 con = duckdb.connect()
-con.sql("SELECT * FROM 'my-dataset/d0_*.parquet' LIMIT 5").show()
+con.sql("SELECT * FROM 'my-dataset/*.parquet' LIMIT 5").show()
 con.sql("""
     SELECT
         date_trunc('minute', ts) AS minute,
         AVG(speed_mps) AS v,
         COUNT(*) AS n
-    FROM 'my-dataset/d0_*.parquet'
+    FROM 'my-dataset/*.parquet'
     GROUP BY 1 ORDER BY 1
 """).show()
 ```

@@ -77,7 +77,7 @@ l'arrêt moteur coupé) :
 
 ```python
 import numpy as np, pandas as pd
-df = pd.read_parquet("d0.parquet")
+df = pd.read_parquet("data.parquet")
 
 # Prendre une fenêtre stationnaire (10 premières secondes ici)
 rest = df.iloc[:int(10 * 100)]  # 10 s à 100 Hz
@@ -118,7 +118,7 @@ ajv validate \
 # Sanity Telemachus (pas encore de CLI canonique)
 python -c "
 import pandas as pd
-df = pd.read_parquet('datasets/xx_my_source/d0.parquet')
+df = pd.read_parquet('datasets/xx_my_source/data.parquet')
 req = ['ts','lat','lon','speed_mps','ax_mps2','ay_mps2','az_mps2']
 assert not [c for c in req if c not in df.columns], 'colonnes manquantes'
 assert df['ts'].is_monotonic_increasing

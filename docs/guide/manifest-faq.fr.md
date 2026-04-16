@@ -18,8 +18,8 @@ Le manifest normalise ce sidecar.
 ```
 mon-dataset/
 ├── manifest.yaml      ← ici
-├── d0_xxx.parquet
-└── d0_yyy.parquet
+├── device_xxx.parquet
+└── device_yyy.parquet
 ```
 
 On préfère YAML (plus lisible). JSON avec le même schéma marche
@@ -37,7 +37,7 @@ Si le manifest les déclare, on peut les omettre :
 
 Pour un dataset multi-devices, `device_id` **doit** être soit
 présent par ligne, soit encodé dans le nom de fichier
-(`d0_<device>_*.parquet`). Détails en SPEC-02 §4.1.
+(`<device>_*.parquet`). Détails en SPEC-02 §4.1.
 
 ## Comment le frame accéléromètre est-il appliqué ?
 

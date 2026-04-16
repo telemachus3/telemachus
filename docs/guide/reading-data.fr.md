@@ -5,8 +5,8 @@ Sur disque, un dataset Telemachus Telemachus ressemble à ça :
 ```
 mon-dataset/
 ├── manifest.yaml          ← SPEC-02 : device, trip, sensors, acc_periods…
-├── d0_<id_1>.parquet      ← signal, colonnaire
-├── d0_<id_2>.parquet
+├── <device_1>.parquet      ← signal, colonnaire
+├── <device_2>.parquet
 └── …
 ```
 
@@ -27,7 +27,7 @@ ds = Path("mon-dataset")
 manifest = yaml.safe_load((ds / "manifest.yaml").read_text())
 
 df = pd.concat(
-    [pd.read_parquet(p) for p in ds.glob("d0_*.parquet")],
+    [pd.read_parquet(p) for p in ds.glob("*.parquet")],
     ignore_index=True,
 ).sort_values("ts").reset_index(drop=True)
 
@@ -56,13 +56,13 @@ ad-hoc :
 ```python
 import duckdb
 con = duckdb.connect()
-con.sql("SELECT * FROM 'mon-dataset/d0_*.parquet' LIMIT 5").show()
+con.sql("SELECT * FROM 'mon-dataset/*.parquet' LIMIT 5").show()
 con.sql("""
     SELECT
         date_trunc('minute', ts) AS minute,
         AVG(speed_mps) AS v_moy,
         COUNT(*) AS n
-    FROM 'mon-dataset/d0_*.parquet'
+    FROM 'mon-dataset/*.parquet'
     GROUP BY 1 ORDER BY 1
 """).show()
 ```

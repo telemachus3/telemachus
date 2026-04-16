@@ -75,7 +75,7 @@ segment (device on a table, vehicle parked + engine off):
 
 ```python
 import numpy as np, pandas as pd
-df = pd.read_parquet("d0.parquet")
+df = pd.read_parquet("data.parquet")
 
 # Pick a stationary window (first 10 seconds for instance)
 rest = df.iloc[:int(10 * 100)]  # 10 s at 100 Hz
@@ -116,7 +116,7 @@ ajv validate \
 # Telemachus sanity (no canonical CLI yet)
 python -c "
 import pandas as pd
-df = pd.read_parquet('datasets/xx_my_source/d0.parquet')
+df = pd.read_parquet('datasets/xx_my_source/data.parquet')
 req = ['ts','lat','lon','speed_mps','ax_mps2','ay_mps2','az_mps2']
 assert not [c for c in req if c not in df.columns], 'columns missing'
 assert df['ts'].is_monotonic_increasing

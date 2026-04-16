@@ -30,7 +30,7 @@ def adapt(input_csv: Path, output_dir: Path) -> None:
     df = pd.read_csv(input_csv)
 
     # Map vendor columns → Telemachus column names + units (SPEC-01 §3)
-    d0 = pd.DataFrame({
+    df = pd.DataFrame({
         "ts":         pd.to_datetime(df["timestamp"], utc=True),
         "lat":        df["latitude"],
         "lon":        df["longitude"],
@@ -41,7 +41,7 @@ def adapt(input_csv: Path, output_dir: Path) -> None:
     }).sort_values("ts").reset_index(drop=True)
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    d0.to_parquet(output_dir / "d0.parquet", index=False)
+    df.to_parquet(output_dir / "data.parquet", index=False)
 
     manifest = {
         "dataset_id": output_dir.name,
@@ -64,12 +64,12 @@ def adapt(input_csv: Path, output_dir: Path) -> None:
             },
         },
         "acc_periods": [{
-            "start": d0["ts"].min().isoformat(),
-            "end":   d0["ts"].max().isoformat(),
+            "start": df["ts"].min().isoformat(),
+            "end":   df["ts"].max().isoformat(),
             "frame": "raw",
             "detection_method": "user",
         }],
-        "data_files": [{"path": "d0.parquet", "format": "parquet"}],
+        "data_files": [{"path": "data.parquet", "format": "parquet"}],
     }
     with open(output_dir / "manifest.yaml", "w") as f:
         yaml.safe_dump(manifest, f, sort_keys=False)
