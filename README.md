@@ -17,7 +17,7 @@ single source of truth.
 
 | Directory | What |
 |-----------|------|
-| [`spec/`](spec/) | RFCs + JSON Schemas — the normative specification |
+| [`spec/`](spec/) | SPECs + JSON Schemas — the normative specification |
 | [`python-sdk/`](python-sdk/) | Python SDK & validator (`telemachus` package) |
 | [`python-cli/`](python-cli/) | CLI tools (`telemachus-cli`, validate / convert / score) |
 | [`datasets/`](datasets/) | Reference datasets & manifests (samples + pointers) |
@@ -26,12 +26,11 @@ single source of truth.
 
 | Artifact | Version |
 |----------|---------|
-| Latest released spec | **v0.2** (2025-10-13) — stable core schema |
-| Latest draft | **v0.8** — Telemachus Device Format (RFC-0013) + Dataset Manifest (RFC-0014) |
+| **Current spec** | **v0.8** (2026-04-16) — consolidated into 4 SPEC pillars |
 
-The v0.8 draft introduces the layered Telemachus processing layers data model, AccPeriod
-frame tracking, CarrierState classification, and the normative
-**Dataset Manifest** sidecar (RFC-0014).
+The v0.8 specification introduces the layered Telemachus processing layers data model,
+AccPeriod frame tracking, CarrierState classification, burst sampling,
+magnetometer support, and the normative **Dataset Manifest** sidecar.
 
 ## Quickstart
 
@@ -64,21 +63,18 @@ telemachus to-parquet examples/ -o fleet.parquet
 telemachus tcs fleet.parquet
 ```
 
-## RFCs
+## Specifications (v0.8)
 
-See [`spec/rfcs/`](spec/rfcs/) for the full list.
+The spec was consolidated in April 2026 from 10 RFCs into 4 pillars:
 
-| RFC | Title | Status |
-|-----|-------|--------|
-| RFC-0001 | Core Schema (v0.2) | Released |
-| RFC-0003 | Dataset Specification | Released |
-| RFC-0004 | Extended FieldGroups | Released |
-| RFC-0005 | Adapter Architecture | Released |
-| RFC-0007 | Validation Framework | Released |
-| RFC-0009 | RoadSimulator3 Integration Pipeline | Released |
-| RFC-0011 | Versioning & Governance | Released |
-| RFC-0013 | Telemachus Device Format (v0.7) | Released |
-| RFC-0014 | Dataset Manifest (v0.8) | Draft |
+| SPEC | Title | Scope |
+|------|-------|-------|
+| [SPEC-01](spec/SPEC-01-record-format.md) | Telemachus Record Format | Column definitions, functional groups (GNSS, IMU, Vehicle I/O), validation rules, hardware mapping |
+| [SPEC-02](spec/SPEC-02-manifest.md) | Dataset Manifest | manifest.yaml schema, sensors, AccPeriods, CarrierState, inheritance rules |
+| [SPEC-03](spec/SPEC-03-adapters-validation.md) | Adapters & Validation | Adapter interface, Open dataset specs (AEGIS/PVS/STRIDE), validation framework, CLI |
+| [SPEC-04](spec/SPEC-04-governance.md) | Governance & Versioning | Versioning model, release checklist, IP channel separation |
+
+Previous RFCs (0001→0014) are archived in [`spec/rfcs/`](spec/rfcs/) with deprecation notices pointing to the corresponding SPEC.
 
 ## History
 
