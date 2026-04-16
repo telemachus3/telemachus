@@ -23,9 +23,10 @@ RFC-0004 (Extended FieldGroups), and RFC-0013 (Device Layer v0.7).
 
 - **Raw device output only.** No enrichment, no interpretation, no external data.
 - **Columns are flat.** No nested JSON objects — every field is a top-level column.
-- **Units are SI.** m/s, m/s², rad/s, degrees WGS84, UTC nanoseconds.
+- **Units are SI.** m/s, m/s², rad/s, degrees WGS84, UTC nanoseconds. Unit suffixes in column names (`_mps`, `_rad_s`, `_uT`) make data self-documenting.
 - **Multi-rate is native.** GNSS and IMU may sample at different frequencies.
 - **One group per sensor.** Each functional group maps to a physical sensor or bus.
+- **Profiles, not one-size-fits-all.** Three profiles (`core`, `imu`, `full`) adapt to different device capabilities.
 - **Vendor extensions welcome.** Extra columns use `x_<source>_<field>` convention.
 
 ### 1.2 Record Overview
@@ -131,10 +132,44 @@ graph LR
     style XTR fill:#f3e5f5,stroke:#6a1b9a
 ```
 
-### 2.2 Mandatory Fields
+### 2.2 Profiles
 
-Every Telemachus-compliant file MUST contain these columns. These are
-the physical measurements that every GNSS+IMU device produces:
+Not all telematics devices have the same sensors. Telemachus defines
+three profiles to accommodate different hardware capabilities:
+
+```mermaid
+graph LR
+    subgraph PROFILES["Telemachus Profiles"]
+        CORE["core\nGNSS only\nts + lat + lon + speed"]
+        KIMU["imu\nGNSS + Accelerometer\ncore + ax + ay + az"]
+        FULL["full\nGNSS + Accel + Gyro\nimu + gx + gy + gz"]
+    end
+
+    CORE --> KIMU --> FULL
+
+    style CORE fill:#fff9c4,stroke:#f9a825
+    style KIMU fill:#c8e6c9,stroke:#2e7d32
+    style FULL fill:#bbdefb,stroke:#1565c0
+```
+
+| Profile | Required columns | Typical sources |
+|---------|-----------------|-----------------|
+| **`core`** | `ts`, `lat`, `lon`, `speed_mps` | GPS trackers, fleet APIs (Samsara, Geotab, Webfleet) |
+| **`imu`** | core + `ax_mps2`, `ay_mps2`, `az_mps2` | Commercial telematics devices with accelerometer |
+| **`full`** | imu + `gx_rad_s`, `gy_rad_s`, `gz_rad_s` | Research platforms, smartphones (AEGIS, STRIDE, PVS) |
+
+The profile is declared in the manifest (`profile` field, see SPEC-02).
+Validation adapts to the declared profile: a `core` dataset is valid
+without IMU columns.
+
+> **Default**: if no profile is declared, validators MUST assume `imu`
+> (GNSS + accelerometer) for backward compatibility.
+
+### 2.3 Mandatory Fields
+
+Mandatory columns depend on the declared profile:
+
+**All profiles (core, imu, full):**
 
 | Column | Type | Unit | Group | Description |
 |--------|------|------|-------|-------------|
@@ -142,11 +177,24 @@ the physical measurements that every GNSS+IMU device produces:
 | `lat` | float64 | degrees WGS84 | GNSS | Latitude. NaN between GNSS ticks |
 | `lon` | float64 | degrees WGS84 | GNSS | Longitude. NaN between GNSS ticks |
 | `speed_mps` | float32 | m/s | GNSS | Ground speed (Doppler). NaN between GNSS ticks |
+
+**Profile `imu` and `full` add:**
+
+| Column | Type | Unit | Group | Description |
+|--------|------|------|-------|-------------|
 | `ax_mps2` | float32 | m/s² | IMU | Longitudinal acceleration (+ = forward) |
 | `ay_mps2` | float32 | m/s² | IMU | Lateral acceleration (+ = left) |
 | `az_mps2` | float32 | m/s² | IMU | Vertical acceleration (~9.81 at rest if raw) |
 
-### 2.3 Recommended Fields — Identification
+**Profile `full` adds:**
+
+| Column | Type | Unit | Group | Description |
+|--------|------|------|-------|-------------|
+| `gx_rad_s` | float32 | rad/s | IMU | Gyroscope X (roll rate) |
+| `gy_rad_s` | float32 | rad/s | IMU | Gyroscope Y (pitch rate) |
+| `gz_rad_s` | float32 | rad/s | IMU | Gyroscope Z (yaw rate) |
+
+### 2.4 Recommended Fields — Identification
 
 These fields SHOULD be present per-row OR inherited from the manifest
 (see SPEC-02 §4.1). They are metadata, not physical measurements:
@@ -160,7 +208,7 @@ These fields SHOULD be present per-row OR inherited from the manifest
 > from the manifest. If the manifest declares multiple devices and the
 > file omits `device_id`, validation MUST fail.
 
-### 2.4 Recommended Fields — GNSS Metadata
+### 2.5 Recommended Fields — GNSS Metadata
 
 These fields SHOULD be present when the hardware provides them:
 
@@ -170,14 +218,14 @@ These fields SHOULD be present when the hardware provides them:
 | `altitude_gps_m` | float32 | m | GNSS altitude (NMEA GGA). Typical accuracy: 10–30 m |
 | `hdop` | float32 | — (ratio) | Horizontal Dilution of Precision. < 2.0 = good |
 | `h_accuracy_m` | float32 | m | Horizontal position accuracy (Android/smartphones). Complementary to hdop |
-| `n_satellites` | int8 | — | Number of satellites used in fix. > 6 = reliable |
+| `n_satellites` | Int8 (nullable) | — | Number of satellites used in fix. > 6 = reliable. NaN when no fix |
 
 > **`hdop` vs `h_accuracy_m`**: Commercial GNSS devices (Teltonika, Danlaw)
 > report `hdop` (dimensionless ratio). Smartphones (Android) report
 > `h_accuracy_m` (68th percentile radius in meters). Both may coexist; a
 > dataset typically has one or the other, rarely both.
 
-### 2.5 Optional Fields — Extended IMU
+### 2.6 Optional Fields — Extended IMU
 
 Present only if the device has the corresponding sensor. Columns MUST be
 absent or all-NaN when the sensor is not available — they MUST NOT be
@@ -207,7 +255,7 @@ graph TD
     style T3 fill:#bbdefb,stroke:#1565c0
 ```
 
-### 2.6 Optional Fields — OBD-II
+### 2.7 Optional Fields — OBD-II
 
 Standardized vehicle data from the OBD-II diagnostic port (ISO 15031,
 SAE J1979). These PIDs are universal across OBD-II compliant vehicles.
@@ -243,7 +291,7 @@ graph LR
 > These may be promoted to formal columns in future spec versions when
 > supported by Open datasets.
 
-### 2.7 Future Group — CAN Bus
+### 2.8 Future Group — CAN Bus
 
 Raw CAN bus data (SAE J1939, manufacturer-specific DBCs) is **not yet
 formalized** in this specification. CAN signals are vendor-specific —
@@ -279,7 +327,7 @@ graph TD
     style CAN_B fill:#f0f4c3,stroke:#9e9d24
 ```
 
-### 2.8 Optional Fields — I/O (Digital & Analog Inputs)
+### 2.9 Optional Fields — I/O (Digital & Analog Inputs)
 
 Raw electrical signals from the device's input pins. These are
 hardware-level signals, not protocol data:
@@ -293,7 +341,7 @@ hardware-level signals, not protocol data:
 > the device's power input. It is a key signal for determining whether
 > the device is wired to a vehicle (> 9 V) or running on battery.
 
-### 2.9 Vendor-Specific Extra Fields
+### 2.10 Vendor-Specific Extra Fields
 
 Telemachus files MAY contain additional columns not defined in this
 specification. These columns MUST follow the naming convention:
@@ -323,7 +371,7 @@ Where `<source>` identifies the data provider or processing origin, and
 - Adapters SHOULD document their extra columns in the manifest
 - Consumers MUST NOT assume any `x_*` column is present
 
-### 2.10 Multi-Rate Convention
+### 2.11 Multi-Rate Convention
 
 Telemachus files are timestamped at the **highest sensor rate** (typically
 IMU rate, e.g. 10–100 Hz). Lower-rate columns (GNSS at 1 Hz) contain
@@ -354,7 +402,7 @@ sequenceDiagram
     GPS->>REC: lat=49.34, lon=1.38, speed=5.3
 ```
 
-### 2.11 AccPeriod — Accelerometer Frame Reference
+### 2.12 AccPeriod — Accelerometer Frame Reference
 
 Commercial telematics devices may apply **firmware-side gravity
 compensation**. The same accelerometer can output data in different
@@ -398,11 +446,10 @@ graph TD
     style PART fill:#fff3e0,stroke:#e65100
 ```
 
-### 2.12 Excluded Columns
+### 2.13 Excluded Columns
 
-The following columns MUST NOT appear in a Telemachus dataset. They
-represent **enriched or derived data** that is outside the scope of this
-format:
+The following columns MUST NOT appear as **top-level columns** in a
+Telemachus dataset. They represent enriched or derived data:
 
 | Column | Reason |
 |--------|--------|
@@ -415,20 +462,27 @@ format:
 | `carrier_state` | Per-trip metadata — belongs in manifest (see SPEC-02) |
 | `is_vehicle_data` | Derived from carrier_state |
 
+> **Clarification — ground truth vs. enrichment**: Simulation ground
+> truth (e.g. `x_rs3_road_type`, `x_rs3_event`) is allowed as
+> vendor-specific extra columns (`x_*`). These are **annotations
+> attached to synthetic data for validation purposes**, not enrichment
+> derived from external sources. The exclusion rule applies only to
+> top-level columns without the `x_` prefix.
+
 ---
 
 ## 3. Validation Rules
 
 A Telemachus file is valid if:
 
-1. All mandatory columns (§2.2) are present with correct types
+1. All mandatory columns for the declared profile (§2.2–2.3) are present with correct types. Default profile is `imu` if not declared
 2. `ts` is monotonically increasing (strictly)
-3. **Per AccPeriod** (SPEC-02 §3.7), `|a|` mean at rest matches the declared frame:
+3. **For profiles `imu` and `full`**, per AccPeriod (SPEC-02 §3.7), `|a|` mean at rest matches the declared frame:
    - `raw`: ≈ 9.81 ± 1.0 m/s²
    - `compensated`: ≈ 0 ± 1.0 m/s²
    - `partial`: ≈ `residual_g` ± 0.05 g
 4. `lat` / `lon` are within [-90, 90] / [-180, 180] when not NaN
-5. No excluded columns from §2.12 are present
+5. No excluded columns from §2.13 are present (columns with `x_` prefix are always allowed)
 6. All extra columns follow the `x_<source>_<field>` convention
 7. `speed_mps` >= 0 when not NaN
 8. Gyro columns are either all present or all absent (no partial group)
@@ -587,6 +641,7 @@ to discover what data is available without loading the full dataset:
 
 ```python
 ds = tele.Dataset.from_manifest("manifest.yaml")
+ds.profile()             # → "core" | "imu" | "full"
 ds.declared_sensors()    # → {'gps': {'rate_hz': 1}, 'accelerometer': {...}, ...}
 ds.has_declared_gyro()   # → True / False
 ds.acc_frame()           # → "raw" | "compensated" | "partial"

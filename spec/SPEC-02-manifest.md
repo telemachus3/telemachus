@@ -90,6 +90,7 @@ download source:
 |-------|------|-------------|
 | `dataset_id` | string | Globally unique identifier. Pattern: `<country>_<slug>_<year>` |
 | `schema_version` | string | Telemachus spec version, e.g. `"telemachus-0.8"` |
+| `profile` | string | Device capability profile: `"core"`, `"imu"`, or `"full"` (see SPEC-01 §2.2). Default: `"imu"` |
 | `source` | object | Provenance block (see §3.5) |
 
 ### 3.2 Identification Block (recommended)
@@ -238,7 +239,7 @@ graph LR
 ### 3.7 AccPeriods (Accelerometer Frame)
 
 Declares one or more time ranges with a coherent accelerometer frame
-(see SPEC-01 §2.11 for definitions).
+(see SPEC-01 §2.12 for definitions).
 
 ```yaml
 acc_periods:
@@ -360,7 +361,7 @@ Enumerates the parquet files covered by the manifest.
 
 ```yaml
 data_files:
-  - path: "d0_device1.parquet"       # relative to manifest directory
+  - path: "device1.parquet"       # relative to manifest directory
     format: parquet
     size_mb: 31
     description: "device_1, all trips"
@@ -400,21 +401,27 @@ config_history:
 
 ## 4. Inheritance Rules
 
-### 4.1 Per-Row Fields Derivable from Manifest
+### 4.1 Per-Row Fields — Resolution Chain
 
 When per-row columns are **absent** from a parquet file, consumers
-MUST resolve them as follows:
+MUST resolve them using this priority chain:
 
-| Column | Manifest source | Fallback |
-|--------|-----------------|----------|
-| `device_id` | `hardware.devices[0].name` (if single device) | ERROR |
-| `trip_id` | Filename suffix (`d0_<trip_id>.parquet`) | ERROR |
+**`device_id` resolution:**
+1. Per-row column (highest priority)
+2. Manifest `hardware.devices[0].name` — only if exactly one device declared
+3. ERROR — if multiple devices declared and no per-row column
+
+**`trip_id` resolution:**
+1. Per-row column (highest priority)
+2. Manifest `trip_carrier_states[].trip_id` — if a single trip covers the file
+3. Filename convention: `<trip_id>.parquet` (basename without extension)
+4. ERROR — if none of the above resolves
 
 ### 4.2 Per-File Flags Derivable from Manifest
 
 | Flag | Source |
 |------|--------|
-| Accelerometer frame at `ts` | First `acc_periods` entry where `start <= ts <= end`. If none: `"raw"` |
+| Accelerometer frame at `ts` | First `acc_periods` entry where `start <= ts <= end`. If none match or list absent: `"raw"`. Validators SHOULD warn on incomplete time coverage |
 | Gyro unit conversion needed | `sensors.gyroscope.unit` — if `"deg/s"`, adapter converts to `rad/s` |
 | Carrier state for trip | `trip_carrier_states[].carrier_state` matched by `trip_id` |
 | `is_vehicle_data` | `carrier_state in {mounted_driving, mounted_idle}` |
@@ -435,7 +442,7 @@ A manifest is valid if:
 1. `dataset_id`, `schema_version`, `source` are present.
 2. `schema_version` matches pattern `telemachus-<version>`.
 3. If `hardware.devices` has > 1 entry, parquet files MUST declare
-   `device_id` per-row or use `d0_<device_id>_*.parquet` filename convention.
+   `device_id` per-row or use `<device_id>_*.parquet` filename convention.
 4. If `acc_periods` is present, each entry has `start`, `end`, `frame`
    in `{raw, compensated, partial}`. For `partial`, `residual_g` is required.
 5. If `trip_carrier_states` is present, each entry has `trip_id` and

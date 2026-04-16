@@ -219,8 +219,8 @@ graph TD
 
 | Level | Checks | Use Case |
 |-------|--------|----------|
-| `basic` | Mandatory columns present, correct types, value ranges (lat/lon bounds, speed >= 0) | Quick conformance |
-| `strict` | All of `basic` + monotonic ts, no NaN in mandatory fields, AccPeriod gravity check | Research-grade |
+| `basic` | Mandatory columns for declared profile present, correct types, value ranges (lat/lon bounds, speed >= 0) | Quick conformance |
+| `strict` | All of `basic` + monotonic ts, no NaN in mandatory fields, AccPeriod gravity check (profiles `imu`/`full`) | Research-grade |
 | `manifest` | SPEC-02 §5 rules (required fields, acc_periods consistency, sensor config) | Manifest-only check |
 | `full` | `strict` + `manifest` + cross-validation (manifest vs parquet agreement) | Publication-ready |
 
