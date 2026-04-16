@@ -154,7 +154,7 @@ graph TD
     end
 
     subgraph VALIDATE["6. Validate"]
-        CHECK["tele.validate(df, 'd0')"]
+        CHECK["tele.validate(df, 'basic')"]
     end
 
     FETCH --> PARSE --> CONVERT --> MERGE --> TAG --> VALIDATE
@@ -230,7 +230,7 @@ graph TD
 import telemachus as tele
 
 # Validate a DataFrame
-report = tele.validate(df, level="d0")
+report = tele.validate(df, level="basic")
 print(report.ok)        # True / False
 print(report.errors)    # list of error messages
 print(report.warnings)  # list of warnings
@@ -252,7 +252,7 @@ tele validate path/to/dataset/ --level full
 tele validate path/to/manifest.yaml --manifest-only
 
 # Quick check on a parquet file
-tele validate path/to/d0.parquet --level d0
+tele validate path/to/data.parquet --level basic
 
 # Output as JSON (for CI pipelines)
 tele validate path/to/dataset/ --json
