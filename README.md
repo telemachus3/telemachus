@@ -4,14 +4,21 @@
 
 # Telemachus
 
-**Telemachus** is an open RFC-driven pivot standard for high-frequency
-mobility and telematics data. It bridges simulated data
-(RoadSimulator3) and real-world fleet sources (Webfleet, Samsara,
-Geotab, Teltonika) under a unified, open schema.
+**Telemachus** is an open, Parquet-native pivot format for high-frequency
+mobility and telematics data. It bridges the rigor of scientific
+kinematics (multi-rate GNSS+IMU at 10-100 Hz, accelerometer gravity
+frame tracking) and scalable fleet analytics (OBD, trip metadata,
+carrier state) in a single format — instantly queryable in Pandas,
+Spark, DuckDB, or Athena.
 
-This repository is the **monorepo** that consolidates the four previous
-`telemachus-*` repositories (spec, Python SDK, CLI, datasets) into a
-single source of truth.
+**Why not an existing standard?** Robotics formats (ROS bags) handle
+the physics but aren't columnar. Fleet APIs (Geotab, Samsara) handle
+scale but abstract away raw sensors. IoT protocols (MQTT, SensorThings)
+handle transport but not analytical storage. Telemachus fills the gap:
+raw sensor data, SI units, flat columns, Parquet files, Python SDK.
+
+This repository is the **monorepo** consolidating spec, Python SDK,
+CLI, and reference datasets into a single source of truth.
 
 ## Layout
 
@@ -54,7 +61,7 @@ print(tele.sensor_profile(df))  # → "gps+imu+gyro"
 tele validate path/to/dataset/ --level full
 
 # Quick check on a parquet file
-tele validate path/to/d0.parquet --level d0
+tele validate path/to/data.parquet --level basic
 
 # Dataset info
 tele info path/to/manifest.yaml
