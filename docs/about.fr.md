@@ -28,7 +28,7 @@ chacun adapté à une famille d'outils différente :
 | **NumPy / Arrow** (mémoire) | Pipelines ML en Python, zero-copy | numpy, pyarrow, PyTorch |
 
 Les trois encodages sont **équivalents en contenu** — le JSON
-Schema (`telemachus_core_v0.2.json`) décrit le payload par message,
+Schema (`telemachus_manifest_v0.8.json`) décrit le payload par message,
 Parquet encode les mêmes payloads en bulk, NumPy/Arrow est la
 représentation en mémoire qu'adoptent pandas et DuckDB. On choisit
 selon l'outil, pas selon la sémantique.

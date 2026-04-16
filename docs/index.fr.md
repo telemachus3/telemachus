@@ -100,7 +100,7 @@ Personne n'a besoin d'apprendre un énième format pour intégrer.
 
 | Artefact | Version |
 |----------|---------|
-| Dernière spec publiée | **v0.2** (2025-10-13) — schéma cœur stable |
+| Dernière spec publiée | **v0.8** (2026-04-16) — 4 piliers SPEC |
 | Dernier brouillon | **v0.8** — Telemachus Record Format (SPEC-01) + Dataset Manifest (SPEC-02) |
 
 Telemachus est hébergé dans un unique [monorepo GitHub](https://github.com/telemachus3/telemachus).

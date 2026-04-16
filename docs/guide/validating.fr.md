@@ -15,7 +15,7 @@ Ici `ajv` :
 
 ```bash
 ajv validate \
-  -s spec/schemas/telemachus_core_v0.2.json \
+  -s spec/schemas/telemachus_manifest_v0.8.json \
   -d "vos_payloads/*.json"
 ```
 

@@ -36,7 +36,7 @@ a different tool family:
 | **NumPy / Arrow** (in-memory) | Python ML pipelines, zero-copy processing | numpy, pyarrow, PyTorch |
 
 All three are **equivalent in content** — the JSON Schema
-(`telemachus_core_v0.2.json`) describes per-message payloads; Parquet
+(`telemachus_manifest_v0.8.json`) describes per-message payloads; Parquet
 is the bulk encoding of the same payloads; NumPy/Arrow is how pandas
 & DuckDB materialise them in-memory. Choose per tool, not per
 semantics.
