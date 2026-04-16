@@ -2,7 +2,7 @@
 
 import click
 from .io_export import export_rs3_to_telemachus
-from .validate import validate_manifest, summarize_dataset
+from ._validate_legacy import validate_manifest, summarize_dataset
 from .io_import import load_dataset
 from .core.validate_tables import validate_all_tables
 
@@ -36,6 +36,49 @@ def validate_cmd(manifest_path):
 def info_cmd(manifest_path):
     """Summarize dataset rows, columns, and tables."""
     click.echo(summarize_dataset(manifest_path))
+
+
+@tele.command("convert")
+@click.argument("adapter_name")
+@click.argument("source_path")
+@click.option("--outdir", "-o", required=True, help="Output directory for Telemachus parquet + manifest")
+@click.option("--placement", default="dashboard", help="PVS: sensor placement (dashboard/above_suspension/below_suspension)")
+@click.option("--side", default="left", help="PVS: MPU sensor side (left/right)")
+@click.option("--category", default="driving", help="STRIDE: category (driving/anomalies/all)")
+@click.option("--top-n-trips", type=int, default=None, help="AEGIS: load N longest trips")
+def convert_cmd(adapter_name, source_path, outdir, placement, side, category, top_n_trips):
+    """Convert an Open dataset to Telemachus format.
+
+    ADAPTER_NAME: aegis, pvs, or stride
+    SOURCE_PATH: path to the raw dataset directory
+    """
+    import os
+    from telemachus.adapters import load as adapter_load
+
+    kwargs = {}
+    if adapter_name == "pvs":
+        kwargs = {"placement": placement, "side": side}
+    elif adapter_name == "stride":
+        kwargs = {"category": category}
+    elif adapter_name == "aegis":
+        if top_n_trips:
+            kwargs = {"top_n_trips": top_n_trips}
+
+    click.echo(f"Converting {adapter_name} from {source_path}...")
+    df = adapter_load(adapter_name, source_path, **kwargs)
+
+    os.makedirs(outdir, exist_ok=True)
+    pq_path = os.path.join(outdir, f"{adapter_name}.parquet")
+    df.to_parquet(pq_path, index=False, compression="zstd")
+
+    click.echo(f"  {len(df)} rows → {pq_path}")
+    click.echo(f"  Columns: {list(df.columns)}")
+
+    # Validate
+    import telemachus as tele
+    report = tele.validate(df)
+    click.echo(f"  Validation: {report}")
+    click.echo(f"Done.")
 
 
 @tele.command("check-tables")
