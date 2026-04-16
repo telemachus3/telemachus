@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 
-from .schemas import TRAJECTORY_SCHEMA, IMU_SCHEMA, EVENTS_SCHEMA
+from .schemas import TRAJECTORY_SCHEMA, _IMU_SCHEMA_LEGACY as IMU_SCHEMA, EVENTS_SCHEMA
 from .semantics import (
     assert_units,
     ensure_monotonic_increasing,
