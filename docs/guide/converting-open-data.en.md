@@ -108,20 +108,8 @@ acc_periods:
 Both artefacts must pass:
 
 ```bash
-# Manifest
-ajv validate \
-  -s spec/schemas/telemachus_manifest_v0.8.json \
-  -d datasets/xx_my_source/manifest.yaml
-
-# Telemachus sanity (no canonical CLI yet)
-python -c "
-import pandas as pd
-df = pd.read_parquet('datasets/xx_my_source/data.parquet')
-req = ['ts','lat','lon','speed_mps','ax_mps2','ay_mps2','az_mps2']
-assert not [c for c in req if c not in df.columns], 'columns missing'
-assert df['ts'].is_monotonic_increasing
-print('OK')
-"
+# Validate the dataset (manifest + parquet)
+tele validate datasets/xx_my_source/ --level full
 ```
 
 ## 6. Submit (optional)

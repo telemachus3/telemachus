@@ -1,93 +1,60 @@
 # Valider un fichier
 
-Un dataset Telemachus se valide sur deux plans, qu'on peut
-enchaîner ou séparer :
+Un dataset Telemachus se valide sur deux plans :
 
 1. **Le signal** (parquet) respecte le contrat de colonnes Telemachus (SPEC-01).
-2. **Le manifest** (`manifest.yaml`) respecte le schéma du manifest dataset (SPEC-02).
+2. **Le manifest** (`manifest.yaml`) respecte le schema manifest (SPEC-02).
 
-Les deux contrôles sont indépendants.
-
-## Valider un payload Core (JSON par message)
-
-On utilise le JSON Schema avec n'importe quel validateur Draft-07.
-Ici `ajv` :
+## Validation CLI
 
 ```bash
-ajv validate \
-  -s spec/schemas/telemachus_manifest_v0.8.json \
-  -d "vos_payloads/*.json"
+# Valider un dataset complet (manifest + parquet)
+tele validate chemin/vers/dataset/ --level full
+
+# Valider un manifest seul
+tele validate chemin/vers/manifest.yaml
+
+# Check rapide sur un fichier parquet
+tele validate chemin/vers/data.parquet --level basic
+
+# Info dataset
+tele info chemin/vers/manifest.yaml
 ```
 
-Ce que la validation attrape :
-
-- Clés requises manquantes (`timestamp`, `vehicle_id`, `position`)
-- Valeurs hors bornes (lat en dehors de ±90°, vitesse négative)
-- Clés inconnues au top level (le schéma est `additionalProperties: false`)
-- Énumérations invalides (ex : `fix_type` inconnu)
-
-## Valider un manifest de dataset (SPEC-02)
-
-```bash
-ajv validate \
-  -s spec/schemas/telemachus_manifest_v0.8.json \
-  -d datasets/votre-dataset/manifest.yaml
-```
-
-!!! tip "YAML ou JSON ?"
-    `ajv` lit nativement JSON. Pour un manifest YAML, soit on
-    pré-convertit (`yq -o=json . manifest.yaml | ajv ...`), soit on
-    passe par un validateur Python qui accepte YAML directement
-    (`jsonschema` + `pyyaml`).
-
-En Python, la variante qu'on utilise dans nos tests :
+## Validation Python
 
 ```python
-import json, yaml, jsonschema
-from datetime import datetime, date
+import telemachus as tele
 
-with open("spec/schemas/telemachus_manifest_v0.8.json") as f:
-    schema = json.load(f)
-with open("datasets/votre-dataset/manifest.yaml") as f:
-    manifest = yaml.safe_load(f)
+# Valider un DataFrame
+df = tele.read("chemin/vers/manifest.yaml")
+report = tele.validate(df, profile="imu")
+print(report)
 
-# Coercion datetime → str ISO-8601 (YAML auto-parse les dates)
-def coerce(v):
-    if isinstance(v, dict): return {k: coerce(x) for k,x in v.items()}
-    if isinstance(v, list): return [coerce(x) for x in v]
-    if isinstance(v, (datetime, date)): return v.isoformat()
-    return v
+# Valider un manifest
+report = tele.validate_manifest("chemin/vers/manifest.yaml")
 
-jsonschema.validate(coerce(manifest), schema)
-print("OK")
+# Valider un dataset complet
+report = tele.validate_dataset("chemin/vers/dataset/", level="full")
 ```
 
-## Valider le parquet contre le contrat Telemachus
+## Niveaux de validation
 
-Pas encore de CLI canonique (c'est prévu dans la suite de conformité
-1.0). Les contrôles minimaux à la main :
+| Niveau | Checks | Usage |
+|--------|--------|-------|
+| `basic` | Colonnes mandatory par profil, types, ranges | Check rapide |
+| `strict` | `basic` + ts monotone, gravite AccPeriod | Recherche |
+| `manifest` | Regles SPEC-02 (champs requis, acc_periods, sensors) | Manifest seul |
+| `full` | `strict` + `manifest` + validation croisee | Publication |
 
-```python
-import pandas as pd
-df = pd.read_parquet("data.parquet")
+## Profils
 
-REQUIS = ["ts", "lat", "lon", "speed_mps",
-          "ax_mps2", "ay_mps2", "az_mps2"]
-manquants = [c for c in REQUIS if c not in df.columns]
-assert not manquants, f"colonnes manquantes : {manquants}"
+La validation s'adapte au profil declare (SPEC-01 §2.2) :
 
-assert df["ts"].is_monotonic_increasing, "ts doit être croissant"
-assert df["lat"].dropna().between(-90, 90).all()
-assert df["lon"].dropna().between(-180, 180).all()
-```
+| Profil | Colonnes requises |
+|--------|------------------|
+| `core` | ts, lat, lon, speed_mps |
+| `imu` | core + ax_mps2, ay_mps2, az_mps2 |
+| `full` | imu + gx_rad_s, gy_rad_s, gz_rad_s |
 
-Pour les contrôles de gravité par AccPeriod (SPEC-01 §6 règle 3),
-voir [Concepts → AccPeriod](../concepts.md#accperiod-le-referentiel-de-laccelerometre).
-
-## Strict vs tolérant
-
-Les schémas actuels fonctionnent en mode **strict** : champ requis
-absent = rejet immédiat. Le tooling futur proposera un mode
-`--lenient` qui rétrograde les violations en warnings, utile pour
-identifier quels fichiers legacy ne sont pas conformes sans bloquer
-le pipeline.
+Si aucun profil n'est declare, le validateur assume `imu` (defaut).
