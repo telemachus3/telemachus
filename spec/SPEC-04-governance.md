@@ -44,7 +44,7 @@ valid for at least one minor release.
 ```mermaid
 graph LR
     V01["v0.1\nOct 2025\nJSON records\n(superseded)"]
-    V07["v0.7\nMar 2026\nD0 layers + CarrierState\n(RFC-0013)"]
+    V07["v0.7\nMar 2026\nRecord format + CarrierState\n(RFC-0013)"]
     V08["v0.8\nApr 2026\nManifest + consolidated SPECs\n(current)"]
     V10["v1.0\nTarget\nStable public release\n+ external validation"]
 
