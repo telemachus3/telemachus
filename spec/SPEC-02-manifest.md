@@ -460,6 +460,7 @@ A manifest is valid if:
 ```yaml
 dataset_id: at_aegis_zenodo_820576
 schema_version: "telemachus-0.8"
+profile: full
 title: "AEGIS Automotive Sensor Data (Graz)"
 slug: aegis_graz
 country: AT
@@ -527,6 +528,7 @@ source:
 ```yaml
 dataset_id: xx_fleet_fmc880_2025
 schema_version: "telemachus-0.8"
+profile: imu
 title: "Fleet Pilot — Teltonika FMC880"
 country: FR
 license: internal
@@ -585,6 +587,7 @@ config_history:
 ```yaml
 dataset_id: bd_stride_figshare_2024
 schema_version: "telemachus-0.8"
+profile: full
 title: "STRIDE — Smartphone Sensors for Road Safety (Rajshahi)"
 country: BD
 license: CC-BY-4.0
