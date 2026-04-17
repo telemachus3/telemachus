@@ -8,10 +8,23 @@ hide:
 
 **Open, Parquet-native pivot format for high-frequency telematics data.**
 
+[![PyPI](https://img.shields.io/pypi/v/telemachus.svg)](https://pypi.org/project/telemachus/)
+[![Python](https://img.shields.io/pypi/pyversions/telemachus.svg)](https://pypi.org/project/telemachus/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19609019.svg)](https://doi.org/10.5281/zenodo.19609019)
+[![License: MIT (spec) / AGPL-3.0 (SDK)](https://img.shields.io/badge/license-MIT%20%2F%20AGPL--3.0-blue.svg)](https://github.com/telemachus3/telemachus/blob/main/LICENSE)
+
 Telemachus bridges the rigor of scientific kinematics (multi-rate
 GNSS+IMU at 10-100 Hz, accelerometer gravity frame tracking) and
 scalable fleet analytics (OBD, trip metadata, carrier state) in a
 single format -- instantly queryable in Pandas, Spark, DuckDB, or Athena.
+
+```bash
+pip install telemachus
+```
+
+**Try the [AEGIS demo notebook](notebooks/aegis-demo.ipynb)**
+([open in Colab](https://colab.research.google.com/github/telemachus3/telemachus/blob/main/docs/notebooks/aegis-demo.ipynb))
+to see the format in action on a real Open dataset in 5 minutes.
 
 <div class="grid cards" markdown>
 

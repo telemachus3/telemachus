@@ -6,13 +6,26 @@ hide:
 
 # Telemachus
 
-**Un standard ouvert pour les données de mobilité et de télématique haute fréquence, guidé par un processus RFC.**
+**Format pivot ouvert, Parquet-native, pour la télématique haute fréquence.**
 
-Telemachus sert de pont entre les données simulées (RoadSimulator3)
-et les sources de flottes réelles (Webfleet, Samsara, Geotab,
-Teltonika). Un seul schéma, une seule manière de lire, quelle que
-soit l'origine : vos pipelines d'analyse, vos outils de calibration
-et vos datasets de référence parlent enfin la même langue.
+[![PyPI](https://img.shields.io/pypi/v/telemachus.svg)](https://pypi.org/project/telemachus/)
+[![Python](https://img.shields.io/pypi/pyversions/telemachus.svg)](https://pypi.org/project/telemachus/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19609019.svg)](https://doi.org/10.5281/zenodo.19609019)
+[![License: MIT (spec) / AGPL-3.0 (SDK)](https://img.shields.io/badge/license-MIT%20%2F%20AGPL--3.0-blue.svg)](https://github.com/telemachus3/telemachus/blob/main/LICENSE)
+
+Telemachus réconcilie la rigueur de la cinématique scientifique
+(GNSS+IMU multi-cadence 10-100 Hz, suivi du repère accéléromètre) et
+l'analytique flotte à l'échelle (OBD, métadonnées de trajet, état
+porteur) dans un seul format — interrogeable instantanément avec
+Pandas, Spark, DuckDB ou Athena.
+
+```bash
+pip install telemachus
+```
+
+**Essayez le [notebook de démo AEGIS](notebooks/aegis-demo.ipynb)**
+([ouvrir dans Colab](https://colab.research.google.com/github/telemachus3/telemachus/blob/main/docs/notebooks/aegis-demo.ipynb))
+pour voir le format en action sur un vrai dataset Open en 5 minutes.
 
 <div class="grid cards" markdown>
 
@@ -103,8 +116,5 @@ Personne n'a besoin d'apprendre un énième format pour intégrer.
 | Dernière spec publiée | **v0.8** (2026-04-16) — 4 piliers SPEC |
 | Dernier brouillon | **v0.8** — Telemachus Record Format (SPEC-01) + Dataset Manifest (SPEC-02) |
 
-Telemachus est hébergé dans un unique [monorepo GitHub](https://github.com/telemachus3/telemachus).
-Les 4 anciens dépôts (`telemachus-spec`, `telemachus-py`,
-`telemachus-cli`, `telemachus-datasets`) ont été regroupés et
-archivés ; leur historique git reste accessible sous `spec/`,
-`python-sdk/`, `python-cli/` et `datasets/`.
+Telemachus est hébergé dans un unique [monorepo GitHub](https://github.com/telemachus3/telemachus)
+et publié sous forme d'un seul package PyPI : `pip install telemachus`.

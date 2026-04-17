@@ -4,66 +4,62 @@ De zéro à un dataset Telemachus validé, en quelques minutes.
 
 ## Installation
 
-Il vous faut Python 3.10+ et `git`.
+Python 3.10+ :
 
 ```bash
-git clone https://github.com/telemachus3/telemachus
-cd telemachus
-pip install -e python-sdk
-pip install -e python-cli
+pip install telemachus
 ```
 
-La CLI s'appuie aussi sur [`ajv`](https://ajv.js.org/) pour la
-validation JSON Schema :
+Ça livre la bibliothèque (`import telemachus`), la CLI `tele`, et
+tous les adapters (AEGIS, PVS, STRIDE). La validation de schéma est
+intégrée — pas besoin de `ajv` ni d'outil externe.
 
-```bash
-npm install -g ajv-cli
-```
+## Essayer — démo 5 minutes
 
-## Valider un payload contre le schéma cœur
+Le plus rapide pour voir Telemachus en action : le
+[notebook de démo AEGIS](notebooks/aegis-demo.ipynb). Il télécharge un
+vrai dataset open depuis Zenodo, le charge, et trace un trajet.
+Ouvrable dans Colab en un clic.
 
-Un payload Telemachus, c'est un objet JSON qui décrit une trame de
-télémétrie (GNSS + IMU + mouvement + qualité + contexte optionnel).
-Des exemples vivent sous `spec/examples/` :
-
-```bash
-ajv validate \
-  -s spec/schemas/telemachus_manifest_v0.8.json \
-  -d "spec/examples/*.json"
-```
-
-## Valider un manifest de dataset (v0.8 brouillon)
-
-Un *dataset*, ce sont un ou plusieurs fichiers parquet Telemachus accompagnés
-d'un `manifest.yaml` sidecar (SPEC-02). Le manifest est la source
-d'autorité pour `device_id`, `trip_id`, `acc_periods` et
-`trip_carrier_states`.
-
-```bash
-ajv validate \
-  -s spec/schemas/telemachus_manifest_v0.8.json \
-  -d chemin/vers/votre/manifest.yaml
-```
-
-## Lire un fichier Telemachus en Python
+## Lire un dataset
 
 ```python
-import pandas as pd
+import telemachus as tele
 
-df = pd.read_parquet("chemin/vers/data.parquet")
-print(df.head())
-print(df.columns.tolist())
-# ['ts', 'lat', 'lon', 'speed_mps',
-#  'ax_mps2', 'ay_mps2', 'az_mps2', ...]
+df = tele.read("chemin/vers/manifest.yaml")   # ou directement un .parquet
+print(f"{len(df):,} lignes, {df['trip_id'].nunique()} trajets, "
+      f"profil = {tele.sensor_profile(df)}")
 ```
 
-Pour un workflow complet (lecture + manifest + héritage), voir
-[Lire des données Telemachus](guide/reading-data.md).
+`tele.read()` renvoie un pandas DataFrame normal, en unités SI, avec
+des timestamps UTC-aware — pas de wrapper, pas d'état caché.
+
+## Valider un dataset
+
+```bash
+tele validate chemin/vers/dataset/ --level full
+```
+
+Ou depuis Python :
+
+```python
+report = tele.validate(df, profile="full")  # core | imu | full
+print(report)
+# ValidationReport(PASS, profile=full, level=basic, errors=0, warnings=0)
+```
+
+## Convertir un dataset Open
+
+```bash
+tele convert aegis  /chemin/aegis/csvs         -o datasets/aegis/
+tele convert stride /chemin/stride/road_data   -o datasets/stride/ --category driving
+tele convert pvs    /chemin/pvs/trips          -o datasets/pvs/    --placement dashboard
+```
 
 ## Et ensuite ?
 
 - [Valider un fichier](guide/validating.md) — modes strict et tolérant
 - [Lire des données Telemachus](guide/reading-data.md) — Python, DuckDB, pandas
 - [Écrire un adapter](guide/writing-adapter.md) — convertir un format X vers Telemachus
-- [FAQ Manifest](guide/manifest-faq.md) — ce que SPEC-02 apporte concrètement
-- [Concepts](concepts.md) — le modèle en couches et les groupes fonctionnels
+- [FAQ Manifest](guide/manifest-faq.md) — ce que SPEC-02 apporte
+- [Concepts](concepts.md) — format d'enregistrement et profils

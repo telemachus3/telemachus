@@ -1,6 +1,8 @@
-[![Docs](https://img.shields.io/badge/docs-online-blue)](https://telemachus3.github.io/telemachus/)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17228092.svg)](https://doi.org/10.5281/zenodo.17228092)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/telemachus.svg)](https://pypi.org/project/telemachus/)
+[![Python](https://img.shields.io/pypi/pyversions/telemachus.svg)](https://pypi.org/project/telemachus/)
+[![Docs](https://img.shields.io/badge/docs-telemachus3.org-blue)](https://telemachus3.org)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19609019.svg)](https://doi.org/10.5281/zenodo.19609019)
+[![License](https://img.shields.io/badge/license-MIT%20%2F%20AGPL--3.0-green)](LICENSE)
 
 # Telemachus
 
@@ -25,9 +27,10 @@ CLI, and reference datasets into a single source of truth.
 | Directory | What |
 |-----------|------|
 | [`spec/`](spec/) | SPECs + JSON Schemas — the normative specification |
-| [`python-sdk/`](python-sdk/) | Python SDK & validator (`telemachus` package) |
-| [`python-cli/`](python-cli/) | CLI tools (`telemachus-cli`, validate / convert / score) |
-| [`datasets/`](datasets/) | Reference datasets & manifests (samples + pointers) |
+| [`python-sdk/`](python-sdk/) | Python SDK & validator (`telemachus` package on PyPI) |
+| [`python-cli/`](python-cli/) | CLI tools (`tele` command, bundled with the SDK) |
+| [`datasets/`](datasets/) | Open datasets in Telemachus format — AEGIS, STRIDE, RS3, PVS |
+| [`docs/`](docs/) | Site sources (mkdocs) + the AEGIS demo notebook |
 
 ## Versions
 
@@ -43,41 +46,35 @@ sampling, magnetometer support) and the normative **Dataset Manifest**.
 
 ### Install
 ```bash
-pip install -e python-sdk
+pip install telemachus
 ```
+
+### Try it in 5 minutes
+
+The [AEGIS demo notebook](docs/notebooks/aegis-demo.ipynb)
+([open in Colab](https://colab.research.google.com/github/telemachus3/telemachus/blob/main/docs/notebooks/aegis-demo.ipynb))
+downloads a real Open dataset from Zenodo, loads it, and plots one trip.
 
 ### Read a dataset
 ```python
 import telemachus as tele
 
-# Load from a manifest (returns a pandas DataFrame)
-df = tele.read("path/to/manifest.yaml")
-print(tele.sensor_profile(df))  # → "gps+imu+gyro"
+df = tele.read("path/to/manifest.yaml")   # or directly a .parquet
+print(tele.sensor_profile(df))            # → "gps+imu+gyro"
 ```
 
 ### Validate
 ```bash
-# Validate a dataset (parquet + manifest)
-tele validate path/to/dataset/ --level full
-
-# Quick check on a parquet file
+tele validate path/to/dataset/ --level full     # full dataset (parquet + manifest)
 tele validate path/to/data.parquet --level basic
-
-# Dataset info
-tele info path/to/manifest.yaml
+tele info path/to/manifest.yaml                 # dataset summary
 ```
 
-### Convert an Open dataset to Telemachus
+### Convert an Open dataset
 ```bash
-# Download AEGIS from Zenodo, then convert to Telemachus format
-tele convert aegis /path/to/aegis/csvs --outdir datasets/aegis/
-tele convert pvs /path/to/pvs/trips --outdir datasets/pvs/
-tele convert stride /path/to/stride/road_data --outdir datasets/stride/
-```
-
-### Validate a manifest schema (JSON Schema)
-```bash
-ajv validate -s spec/schemas/telemachus_manifest_v0.8.json -d path/to/manifest.yaml
+tele convert aegis  /path/to/aegis/csvs      -o datasets/aegis/
+tele convert pvs    /path/to/pvs/trips       -o datasets/pvs/    --placement dashboard
+tele convert stride /path/to/stride/road_data -o datasets/stride/ --category driving
 ```
 
 ## Specifications (v0.8)
@@ -93,26 +90,21 @@ The spec was consolidated in April 2026 from 10 RFCs into 4 pillars:
 
 Previous RFCs (0001→0014) are archived in [`spec/rfcs/`](spec/rfcs/) with deprecation notices pointing to the corresponding SPEC.
 
-## History
-
-This monorepo preserves the full Git history of the four source
-repositories. Each subdirectory contains the historical commits of
-its respective former repo (rewritten via `git filter-repo
---to-subdirectory-filter`).
-
-Former repos (now archived):
-- `telemachus-spec` → [`spec/`](spec/)
-- `telemachus-py` → [`python-sdk/`](python-sdk/)
-- `telemachus-cli` → [`python-cli/`](python-cli/)
-- `telemachus-datasets` → [`datasets/`](datasets/)
-
 ## Citation
 
 ```
-S. Edet (2025). Telemachus Specification.
-Zenodo. https://doi.org/10.5281/zenodo.17228092
+S. Edet (2026). Telemachus Specification v0.8 — Open Parquet-Native
+Format for High-Frequency Telematics Data. Zenodo.
+https://doi.org/10.5281/zenodo.19609019
 ```
+
+Open datasets shipped in Telemachus format:
+
+- **AEGIS** (Austria, GNSS+IMU+Gyro+OBD, CC-BY-4.0) — [10.5281/zenodo.19609044](https://doi.org/10.5281/zenodo.19609044)
+- **STRIDE** (Bangladesh, smartphone 100 Hz, CC-BY-4.0) — [10.5281/zenodo.19609053](https://doi.org/10.5281/zenodo.19609053)
+- **RS3** (Le Havre synthetic, CC0-1.0) — [10.5281/zenodo.19609057](https://doi.org/10.5281/zenodo.19609057)
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE).
+Specification, schemas, datasets: MIT / CC-BY / CC0 (per-file).
+Python SDK: AGPL-3.0-only. See [`LICENSE`](LICENSE).
