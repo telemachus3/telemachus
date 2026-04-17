@@ -18,3 +18,7 @@ build/
 # Docs build
 site/
 _site/
+
+# Notebook data (downloaded at runtime from Zenodo)
+docs/notebooks/*.parquet
+docs/notebooks/*.csv
