@@ -1,11 +1,18 @@
-# telemachus-py
+# telemachus
+
+[![PyPI](https://img.shields.io/pypi/v/telemachus.svg)](https://pypi.org/project/telemachus/)
+[![Python](https://img.shields.io/pypi/pyversions/telemachus.svg)](https://pypi.org/project/telemachus/)
 
 Python SDK for the **Telemachus** open telematics format — read,
 validate, convert, and introspect high-frequency GNSS+IMU datasets.
 
 ```
-pip install -e .
+pip install telemachus
 ```
+
+**Try it in 5 minutes**: the [AEGIS demo notebook](../docs/notebooks/aegis-demo.ipynb)
+([open in Colab](https://colab.research.google.com/github/telemachus3/telemachus/blob/main/docs/notebooks/aegis-demo.ipynb))
+downloads a real Zenodo dataset, loads it, and plots one trip.
 
 ## Read a dataset
 
@@ -93,6 +100,8 @@ Full specification: [SPEC-01](../spec/SPEC-01-record-format.md) |
 ## Development
 
 ```bash
+git clone https://github.com/telemachus3/telemachus
+cd telemachus/python-sdk
 pip install -e .[dev]
 pytest                  # 31 tests
 ```
