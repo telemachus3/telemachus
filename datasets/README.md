@@ -1,40 +1,63 @@
-![Verify](https://github.com/telemachus3/telemachus-datasets/actions/workflows/verify.yml/badge.svg)
-
 # Telemachus Datasets
 
-📊 Jeu de données **Telemachus 0.1** généré avec [RoadSimulator3](https://github.com/SebE585/RoadSimulator3).  
-Format conforme à la spécification [Telemachus Spec 0.1](https://github.com/telemachus3/telemachus-spec).
+All datasets in [Telemachus v0.8](https://doi.org/10.5281/zenodo.19609019) format.
+See `INDEX.yaml` for the complete machine-readable index.
 
----
+## Open datasets (Zenodo)
 
-## 📂 Contenu
+| Dataset | Dir | DOI | Rows | Trips | License |
+|---------|-----|-----|------|-------|---------|
+| **AEGIS** (Graz, AT) | `aegis/` | [10.5281/zenodo.19609044](https://doi.org/10.5281/zenodo.19609044) | 1,063,350 | 33 | CC-BY-4.0 |
+| **STRIDE** (Rajshahi, BD) | `stride/` | [10.5281/zenodo.19609053](https://doi.org/10.5281/zenodo.19609053) | 340,900 | 23 | CC-BY-4.0 |
+| **RS3** (Le Havre, FR) | `rs3/` | [10.5281/zenodo.19609057](https://doi.org/10.5281/zenodo.19609057) | 131,186 | 1 | CC0-1.0 |
+| **PVS** (Curitiba, BR) | `pvs/` | non-redistributable | 1,080,905 | 9 | CC-BY-NC-ND-4.0 |
 
-- `2025-10-01-v1.0/`
-  - `dataset.json` → métadonnées (schéma, version, infos simulation)
-  - `samples.csv` → données tabulaires brutes (lisibles avec Pandas / Excel)
-  - `samples.parquet` → version optimisée pour analyse big data
+## Directory structure
 
----
-
-## ⚙️ Utilisation rapide
-
-```python
-import pandas as pd
-
-# Charger le CSV
-df = pd.read_csv("2025-10-01-v1.0/samples.csv")
-
-# Charger le Parquet
-df_parquet = pd.read_parquet("2025-10-01-v1.0/samples.parquet")
+```
+datasets/
+├── INDEX.yaml              # Central index (all datasets, Open + private)
+├── aegis/                  # AEGIS — CC-BY-4.0, on Zenodo
+│   ├── manifest.yaml
+│   ├── aegis-telemachus.parquet
+│   ├── SHA256SUMS
+│   └── README.md
+├── stride/                 # STRIDE — CC-BY-4.0, on Zenodo
+│   ├── manifest.yaml
+│   ├── stride-telemachus.parquet
+│   ├── SHA256SUMS
+│   └── README.md
+├── rs3/                    # RS3 synthetic — CC0, on Zenodo
+│   ├── manifest.yaml
+│   ├── rs3-telemachus.parquet
+│   ├── SHA256SUMS
+│   └── README.md
+└── pvs/                    # PVS — CC-BY-NC-ND, local only
+    ├── manifest.yaml
+    ├── .gitignore          # parquet not committed
+    ├── SHA256SUMS
+    └── README.md           # reproduction instructions
 ```
 
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/telemachus3/telemachus-datasets/blob/main/examples/quickstart.ipynb)
+Parquet files are `.gitignore`d. To get them locally:
 
-Ce notebook permet d’explorer le dataset directement dans votre navigateur, sans installation préalable. Il offre une introduction interactive à l’analyse des données Telemachus. 
+```bash
+# Download from Zenodo
+wget https://zenodo.org/records/19609044/files/aegis-telemachus.parquet -O datasets/aegis/aegis-telemachus.parquet
+wget https://zenodo.org/records/19609053/files/stride-telemachus.parquet -O datasets/stride/stride-telemachus.parquet
+wget https://zenodo.org/records/19609057/files/rs3-telemachus.parquet -O datasets/rs3/rs3-telemachus.parquet
 
----
+# Or generate via adapters
+tele convert aegis /path/to/raw/ -o datasets/aegis/
+tele convert stride /path/to/raw/ -o datasets/stride/
+tele convert pvs /path/to/raw/ -o datasets/pvs/ --placement dashboard --side left
+```
 
-## 📜 Licence
+## Quick start
 
-Ce dataset est publié sous licence **[CC0 1.0 Universal](LICENSE)**.  
-Vous pouvez l’utiliser librement (recherche, industriel, enseignement) sans restriction.
+```python
+import telemachus as tele
+
+df = tele.read("datasets/aegis/aegis-telemachus.parquet")
+report = tele.validate(df, profile="imu", level="basic")
+```

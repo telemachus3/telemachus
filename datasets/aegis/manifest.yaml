@@ -1,0 +1,76 @@
+dataset_id: AT_aegis_graz_2017
+schema_version: "telemachus-0.8"
+profile: imu
+
+title: "AEGIS Automotive Sensor Data (Graz) — Telemachus Format"
+slug: aegis_graz
+country: AT
+license: CC-BY-4.0
+license_warning: "Derived from Brunner et al. (2017), original license CC-BY-4.0 applies."
+
+source:
+  type: open_external
+  url: "https://zenodo.org/records/820576"
+  citation: "Brunner, P., Trügler, A., & Sackl, A. (2017). AEGIS: Autonomous driving data from Graz. Zenodo."
+  doi: "10.5281/zenodo.820576"
+  download_status: complete
+  adapter_status: production
+  adapter_version: "telemachus-py 0.8.0"
+
+hardware:
+  vendor: "BeagleBone"
+  model: "Custom research platform"
+  class: research
+  devices:
+    - name: "1"
+
+sensors:
+  gps:
+    rate_hz: 5
+    quality: low_cost
+  accelerometer:
+    rate_hz: 24
+    range_g: null
+    has_gyroscope: true
+    unit: "m/s^2"
+    sampling_mode: continuous
+    notes: "Raw G-force converted to m/s² (×9.80665) by adapter"
+  gyroscope:
+    rate_hz: 24
+    unit: "rad/s"
+    notes: "Raw deg/s converted to rad/s (×π/180) by adapter"
+  obd2:
+    available: true
+    pids: ["0x0D"]
+    notes: "Speed via OBD-II (km/h → m/s)"
+
+acc_periods:
+  - start: 2017-01-19T16:19:03Z
+    end: 2017-01-30T06:58:37Z
+    frame: raw
+    detection_method: empirical
+    notes: "Research platform, no gravity compensation in firmware"
+
+location:
+  city: "Graz"
+  region: "Styria"
+  lat_center: 47.0459
+  lon_center: 15.3496
+
+period:
+  start: 2017-01-19T16:19:03Z
+  end: 2017-01-30T06:58:37Z
+  notes: "Academic data collection campaign, January 2017"
+
+volume:
+  n_devices: 1
+  n_trips: 33
+  n_messages: 1063350
+
+data_files:
+  - path: aegis-telemachus.parquet
+    format: parquet
+    size_mb: 17.7
+  - path: aegis-telemachus.csv
+    format: csv
+    size_mb: 226.3
