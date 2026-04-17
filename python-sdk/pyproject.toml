@@ -3,12 +3,14 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "telemachus-py"
+name = "telemachus"
 version = "0.8.0"
-description = "Telemachus: open Parquet-native format for high-frequency telematics data (GNSS+IMU). Read, validate, and convert datasets."
+description = "Open Parquet-native format for high-frequency telematics data (GNSS+IMU). Read, validate, and convert datasets."
 readme = { file = "README.md", content-type = "text/markdown" }
-authors = [{name = "Telemachus Project", email = "sebastien.edet@gmail.com"}]
+requires-python = ">=3.10"
+authors = [{name = "Sébastien Edet", email = "sebastien.edet@gmail.com"}]
 license = "AGPL-3.0-only"
+keywords = ["telematics", "gnss", "imu", "accelerometer", "parquet", "open-data", "vehicle-dynamics", "mobility"]
 dependencies = [
     "pydantic>=2.7",
     "pandas>=2.1",
@@ -18,12 +20,24 @@ dependencies = [
     "jsonschema>=4.22"
 ]
 classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Topic :: Scientific/Engineering :: Information Analysis",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Operating System :: OS Independent",
 ]
+
+[project.urls]
+Homepage = "https://telemachus3.org"
+Documentation = "https://telemachus3.org"
+Repository = "https://github.com/telemachus3/telemachus"
+Issues = "https://github.com/telemachus3/telemachus/issues"
+Changelog = "https://github.com/telemachus3/telemachus/blob/main/CHANGELOG.md"
 
 [project.scripts]
 tele = "telemachus.cli:tele"
