@@ -68,6 +68,7 @@ plugins:
             Writing an adapter: Écrire un adapter
             Manifest FAQ: FAQ Manifest
             Converting Open data: Convertir un dataset Open
+            Reproducing PVS: Reproduire PVS
             Open sources matrix: Matrice des sources Open
             Concepts: Concepts
             Specifications: Specifications
@@ -109,6 +110,7 @@ nav:
       - Writing an adapter: guide/writing-adapter.md
       - Manifest FAQ: guide/manifest-faq.md
       - Converting Open data: guide/converting-open-data.md
+      - Reproducing PVS: guide/reproducing-pvs.md
       - Open sources matrix: guide/open-sources-matrix.md
   - Concepts: concepts.md
   - Specifications: rfcs.md
