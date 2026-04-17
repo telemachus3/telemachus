@@ -7,7 +7,7 @@ tooling and manifest, but **not the data itself**.
 ## Prerequisites
 
 - Python 3.10+
-- `telemachus-py` installed (`pip install telemachus-py`)
+- `telemachus` installed (`pip install telemachus`)
 - A Kaggle account (free)
 
 ## Step 1 — Download from Kaggle
