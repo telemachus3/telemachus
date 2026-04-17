@@ -1,28 +1,23 @@
 cff-version: 1.2.0
-title: "Telemachus Specification v0.2"
-message: "Please cite this project (v0.2) using the following metadata."
+title: "Telemachus Specification v0.8 — Open Parquet-Native Format for High-Frequency Telematics Data"
+message: "Please cite this project using the following metadata."
 authors:
   - family-names: "Edet"
     given-names: "Sébastien"
 keywords:
   - telematics
-  - interoperability
-  - open standard
-  - mobility
-  - fleet management
-  - data standardization
-  - RFC
-  - governance
-  - open data
-  - simulation
-  - RS3
+  - IMU
+  - GNSS
+  - accelerometer
+  - parquet
+  - open-data
+  - vehicle-dynamics
 license: MIT
-version: 0.2
-date-released: 2025-10-13
-repository-code: "https://github.com/telemachus3/telemachus-spec"
+version: 0.8
+date-released: 2026-04-16
+repository-code: "https://github.com/telemachus3/telemachus"
 abstract: >
-  Telemachus v0.2 defines an open, RFC-driven standard for high-frequency mobility and telematics data.
-  It provides a unified schema across simulated (RS3) and real-world fleet datasets (Webfleet, Samsara, Geotab, Teltonika),
-  supporting time-series consistency, semantic validation, and contextual enrichments.
-  The specification evolves through public RFCs and open governance under the MIT License.
-doi: 10.5281/zenodo.xxxxx
+  Telemachus v0.8 is an open, Parquet-native format for high-frequency telematics data (GNSS+IMU).
+  The specification defines 25 columns across 7 functional groups, 3 device profiles (core/imu/full),
+  a dataset manifest (SPEC-02), and production adapters for AEGIS, PVS, and STRIDE open datasets.
+doi: 10.5281/zenodo.19609019

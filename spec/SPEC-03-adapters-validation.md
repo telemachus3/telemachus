@@ -369,6 +369,13 @@ choose the right dataset for their use case.
 | **Country** | Austria | Brazil | Bangladesh | Spain |
 | **License** | CC-BY-4.0 | CC-BY-NC-ND-4.0 | CC-BY-4.0 | Academic |
 | **Republishable** | yes | **no** (ND) | yes | case-by-case |
+| **Zenodo DOI (Telemachus)** | [10.5281/zenodo.19609044](https://doi.org/10.5281/zenodo.19609044) | — | [10.5281/zenodo.19609053](https://doi.org/10.5281/zenodo.19609053) | — |
+
+A synthetic reference dataset (RoadSimulator3, Le Havre) is also available:
+DOI [10.5281/zenodo.19609057](https://doi.org/10.5281/zenodo.19609057) (CC0-1.0).
+
+All datasets conform to Telemachus Specification v0.8
+(DOI [10.5281/zenodo.19609019](https://doi.org/10.5281/zenodo.19609019)).
 
 ---
 

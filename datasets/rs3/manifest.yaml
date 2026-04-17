@@ -1,0 +1,71 @@
+dataset_id: FR_rs3_lehavre_2025
+schema_version: "telemachus-0.8"
+profile: imu
+
+title: "RoadSimulator3 Synthetic Dataset (Le Havre) — Telemachus Format"
+slug: rs3_lehavre
+country: FR
+license: CC0-1.0
+license_warning: ""
+
+source:
+  type: synthetic
+  url: "https://github.com/SebE585/RoadSimulator3"
+  citation: "Edet, S. (2025). RoadSimulator3: Physics-based telematics simulator."
+  download_status: complete
+  adapter_status: production
+  adapter_version: "telemachus-py 0.8.0"
+
+hardware:
+  vendor: "Simulated"
+  model: "RoadSimulator3 v1.0"
+  class: research
+  devices:
+    - name: "VL-HN-01"
+
+sensors:
+  gps:
+    rate_hz: 1
+    quality: low_cost
+    notes: "Simulated GNSS with realistic noise model"
+  accelerometer:
+    rate_hz: 10
+    range_g: 16
+    has_gyroscope: true
+    unit: "m/s^2"
+    sampling_mode: continuous
+    notes: "Simulated IMU with gravity + vehicle dynamics"
+  gyroscope:
+    rate_hz: 10
+    unit: "rad/s"
+
+acc_periods:
+  - start: 2025-09-03T12:00:00Z
+    end: 2025-09-03T15:38:38Z
+    frame: raw
+    detection_method: empirical
+    notes: "Synthetic data — raw frame with known gravity vector"
+
+location:
+  city: "Le Havre"
+  region: "Normandie"
+  lat_center: 49.5558
+  lon_center: 0.6575
+
+period:
+  start: 2025-09-03T12:00:00Z
+  end: 2025-09-03T15:38:38Z
+  notes: "Single synthetic trip, ~3.6 hours"
+
+volume:
+  n_devices: 1
+  n_trips: 1
+  n_messages: 131186
+
+data_files:
+  - path: rs3-telemachus.parquet
+    format: parquet
+    size_mb: 9.1
+  - path: rs3-telemachus.csv
+    format: csv
+    size_mb: 26.0

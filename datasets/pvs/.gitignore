@@ -1,0 +1,7 @@
+# PVS data is CC-BY-NC-ND — never commit converted files
+*.parquet
+*.csv
+!README.md
+!manifest.yaml
+!SHA256SUMS
+!.gitignore

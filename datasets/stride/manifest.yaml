@@ -1,0 +1,75 @@
+dataset_id: BD_stride_rajshahi_2023
+schema_version: "telemachus-0.8"
+profile: full
+
+title: "STRIDE Road Quality Data (Bangladesh) — Telemachus Format"
+slug: stride_rajshahi
+country: BD
+license: CC-BY-4.0
+license_warning: "Derived from STRIDE dataset (Figshare), original license CC-BY-4.0 applies."
+
+source:
+  type: open_external
+  url: "https://figshare.com/articles/dataset/25460755"
+  citation: "STRIDE: Smartphone-based road quality dataset for driving behaviour and road anomaly detection."
+  doi: "10.6084/m9.figshare.25460755"
+  download_status: complete
+  adapter_status: production
+  adapter_version: "telemachus-py 0.8.0"
+
+hardware:
+  vendor: "Xiaomi"
+  model: "POCO X2"
+  class: smartphone
+  devices:
+    - name: "poco_x2"
+
+sensors:
+  gps:
+    rate_hz: 1
+    quality: smartphone
+  accelerometer:
+    rate_hz: 100
+    range_g: null
+    has_gyroscope: true
+    unit: "m/s^2"
+    sampling_mode: continuous
+    notes: "Total acceleration (with gravity), already in SI units"
+  gyroscope:
+    rate_hz: 100
+    unit: "rad/s"
+    notes: "Already in SI units (rad/s)"
+  magnetometer:
+    rate_hz: 100
+    unit: "uT"
+
+acc_periods:
+  - start: 2023-10-10T17:16:04Z
+    end: 2024-07-12T12:33:01Z
+    frame: raw
+    detection_method: empirical
+    notes: "Smartphone total acceleration — includes gravity component"
+
+location:
+  city: "Rajshahi"
+  region: "Rajshahi Division"
+  lat_center: 24.3797
+  lon_center: 88.6156
+
+period:
+  start: 2023-10-10T17:16:04Z
+  end: 2024-07-12T12:33:01Z
+  notes: "Multi-month collection campaign: 6 driving sessions + 17 road anomaly sessions"
+
+volume:
+  n_devices: 1
+  n_trips: 23
+  n_messages: 340900
+
+data_files:
+  - path: stride-telemachus.parquet
+    format: parquet
+    size_mb: 7.6
+  - path: stride-telemachus.csv
+    format: csv
+    size_mb: 100.2

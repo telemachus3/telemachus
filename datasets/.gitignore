@@ -1,6 +1,14 @@
-.DS_Store
-.vscode/
-.idea/
-__pycache__/
-*.pyc
-*.log
+# Large parquet/csv files — download from Zenodo or generate via adapters
+aegis/*.parquet
+aegis/*.csv
+stride/*.parquet
+stride/*.csv
+pvs/*.parquet
+pvs/*.csv
+rs3/*.parquet
+rs3/*.csv
+
+# Keep metadata
+!*/manifest.yaml
+!*/README.md
+!*/SHA256SUMS

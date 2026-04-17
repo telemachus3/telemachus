@@ -1,0 +1,77 @@
+dataset_id: BR_pvs_curitiba_2019
+schema_version: "telemachus-0.8"
+profile: full
+
+title: "PVS — Passive Vehicular Sensors (Curitiba) — Telemachus Format"
+slug: pvs_curitiba
+country: BR
+license: CC-BY-NC-ND-4.0
+license_warning: >
+  Non-redistributable. This converted dataset must NOT be uploaded to any
+  public repository. The original data must be downloaded from Kaggle and
+  converted locally using the telemachus-py PVS adapter.
+
+source:
+  type: open_external
+  url: "https://www.kaggle.com/datasets/jefmenegazzo/pvs-passive-vehicular-sensors-datasets"
+  citation: "Menegazzo, J. & von Wangenheim, A. (2020). PVS — Passive Vehicular Sensors datasets. Kaggle."
+  doi: null
+  download_status: complete
+  adapter_status: production
+  adapter_version: "telemachus-py 0.8.0"
+
+hardware:
+  vendor: "InvenSense"
+  model: "MPU-9250"
+  class: research
+  devices:
+    - name: "pvs_left"
+      notes: "Left-side sensor, GFS_1000 (±1000 deg/s), AFS_8G (±8g)"
+
+sensors:
+  gps:
+    rate_hz: 1
+    quality: smartphone
+  accelerometer:
+    rate_hz: 100
+    range_g: 8
+    has_gyroscope: true
+    unit: "m/s^2"
+    sampling_mode: continuous
+    notes: "MPU-9250, already in SI units (m/s²)"
+  gyroscope:
+    rate_hz: 100
+    unit: "rad/s"
+    notes: "Raw in deg/s, converted to rad/s by adapter (×π/180)"
+  magnetometer:
+    rate_hz: 100
+    unit: "uT"
+
+acc_periods:
+  - start: 2019-12-24T20:19:56Z
+    end: 2019-12-26T22:38:40Z
+    frame: raw
+    detection_method: empirical
+    notes: "Research platform, total acceleration (gravity included)"
+
+location:
+  city: "Curitiba"
+  region: "Paraná"
+  lat_center: -27.6998
+  lon_center: -51.1171
+
+period:
+  start: 2019-12-24T20:19:56Z
+  end: 2019-12-26T22:38:40Z
+  notes: "9 trips, 3 vehicles × 3 drivers, December 2019"
+
+volume:
+  n_devices: 1
+  n_trips: 9
+  n_messages: 1080905
+
+data_files:
+  - path: pvs-telemachus-dashboard-left.parquet
+    format: parquet
+    size_mb: 25.4
+    notes: "Placement: dashboard, side: left"
