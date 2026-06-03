@@ -31,6 +31,10 @@ GNSS_RECOMMENDED_FIELDS = [
     pa.field("hdop", pa.float32(), nullable=True),
     pa.field("h_accuracy_m", pa.float32(), nullable=True),
     pa.field("n_satellites", pa.int8(), nullable=True),       # nullable Int8
+    pa.field("pdop", pa.float32(), nullable=True),
+    pa.field("gnss_valid", pa.bool_(), nullable=True),        # per-fix valid flag, advisory only
+    pa.field("gnss_state", pa.int8(), nullable=True),         # receiver mode: off/no-fix/2D/3D
+    pa.field("gnss_fix_status", pa.bool_(), nullable=True),   # fix acquired (distinct from gnss_valid)
 ]
 
 # ---------------------------------------------------------------------------
@@ -76,6 +80,39 @@ OBD_FIELDS = [
 IO_FIELDS = [
     pa.field("ignition", pa.bool_(), nullable=True),
     pa.field("vehicle_voltage_v", pa.float32(), nullable=True),
+    pa.field("moving", pa.bool_(), nullable=True),
+    pa.field("instant_moving", pa.bool_(), nullable=True),
+    pa.field("sleep_mode", pa.int8(), nullable=True),
+]
+
+# ---------------------------------------------------------------------------
+# Group 8 — Device telemetry & diagnostics (optional)
+# ---------------------------------------------------------------------------
+TELEMETRY_FIELDS = [
+    pa.field("battery_voltage_v", pa.float32(), nullable=True),
+    pa.field("battery_current_a", pa.float32(), nullable=True),
+    pa.field("battery_level_pct", pa.int8(), nullable=True),
+    pa.field("gsm_signal_level", pa.int8(), nullable=True),
+    pa.field("gsm_network_type", pa.string(), nullable=True),  # 2G/3G/4G
+    pa.field("gsm_mcc", pa.int16(), nullable=True),
+    pa.field("gsm_mnc", pa.int16(), nullable=True),
+    pa.field("gsm_operator", pa.int32(), nullable=True),
+]
+
+# ---------------------------------------------------------------------------
+# Group 9 — Events & provenance (optional context, never replaces measurements)
+# ---------------------------------------------------------------------------
+EVENT_FIELDS = [
+    pa.field("event_id", pa.int16(), nullable=True),
+    pa.field("event_priority", pa.int8(), nullable=True),
+    pa.field("accel_calibration_state", pa.int8(), nullable=True),  # device frame state, cf RFC-0013 §3.6
+]
+PROVENANCE_FIELDS = [
+    pa.field("codec_id", pa.int16(), nullable=True),
+    pa.field("protocol_id", pa.int16(), nullable=True),
+    pa.field("channel_id", pa.int32(), nullable=True),
+    pa.field("ts_received_ms", pa.int64(), nullable=True),
+    pa.field("segment_distance_m", pa.float64(), nullable=True),
 ]
 
 # ---------------------------------------------------------------------------
@@ -89,6 +126,10 @@ IO_FIELDS = [
 METADATA_FIELDS = [
     pa.field("device_id", pa.string(), nullable=True),
     pa.field("trip_id", pa.string(), nullable=True),
+    # Sensitive (PII) — part of the format, but omitted/anonymized in PUBLISHED
+    # open datasets (use opaque device_id). Cf SPEC-01 §2.4.
+    pa.field("device_imei", pa.string(), nullable=True),
+    pa.field("sim_iccid", pa.string(), nullable=True),
 ]
 
 # ---------------------------------------------------------------------------
@@ -133,6 +174,9 @@ def schema_for_profile(profile: str = "imu", *, include_optional: bool = True) -
             fields += list(MAGNETO_FIELDS)
         fields += list(OBD_FIELDS)
         fields += list(IO_FIELDS)
+        fields += list(TELEMETRY_FIELDS)
+        fields += list(EVENT_FIELDS)
+        fields += list(PROVENANCE_FIELDS)
         fields += list(METADATA_FIELDS)
 
     return pa.schema(fields)

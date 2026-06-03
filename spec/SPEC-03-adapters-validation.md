@@ -1,9 +1,10 @@
 ---
 title: "SPEC-03: Adapters & Validation — Tooling"
 status: Draft
-version: "0.8"
+version: "0.9"
 author: Sébastien Edet
 created: 2026-04-16
+updated: 2026-06-03
 supersedes: RFC-0002, RFC-0005, RFC-0007, RFC-0009
 ---
 
@@ -167,6 +168,15 @@ graph TD
     style VALIDATE fill:#c8e6c9,stroke:#2e7d32
 ```
 
+> **High-rate IMU burst decoding (deterministic timestamps)**: when acceleration
+> arrives as a burst (N = `burst_size` samples per frame at `burst_rate_hz`, SPEC-02
+> §3.6), an adapter MUST place the sub-samples at deterministic timestamps so that
+> two adapters for the same hardware produce **bit-identical** output. The convention
+> is therefore **mandatory** (not adapter-chosen): anchor sub-sample 0 at the frame
+> timestamp and step forward by `1 / burst_rate_hz` — `ts_i = ts_frame + i / burst_rate_hz`.
+> Linear interpolation across frames is NOT permitted (it invents motion). Fixing a
+> single anchor is what guarantees two adapters cannot diverge.
+
 ---
 
 ## 3. Adapter Specifications
@@ -219,7 +229,7 @@ graph TD
 
 | Level | Checks | Use Case |
 |-------|--------|----------|
-| `basic` | Mandatory columns for declared profile present, correct types, value ranges (lat/lon bounds, speed >= 0) | Quick conformance |
+| `basic` | Mandatory columns for declared profile present, correct types, value ranges (lat/lon bounds, speed >= 0, `hdop`/`pdop` > 0, `n_satellites` >= 0, `heading_deg` in [0, 360), \|a\| finite) | Quick conformance |
 | `strict` | All of `basic` + monotonic ts, AccPeriod gravity check (profiles `imu`/`full`). NaN is allowed in GNSS columns between ticks (multi-rate convention) but at least one non-NaN GPS fix MUST exist | Research-grade |
 | `manifest` | SPEC-02 §5 rules (required fields, acc_periods consistency, sensor config) | Manifest-only check |
 | `full` | `strict` + `manifest` + cross-validation (manifest vs parquet agreement) | Publication-ready |

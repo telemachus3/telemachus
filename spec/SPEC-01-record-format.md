@@ -1,13 +1,19 @@
 ---
 title: "SPEC-01: Telemachus Record Format — Open Telematics Data"
 status: Draft
-version: "0.8"
+version: "0.9"
 author: Sébastien Edet
 created: 2026-04-16
+updated: 2026-06-03
 supersedes: RFC-0001, RFC-0004, RFC-0013
 ---
 
 # SPEC-01: Telemachus Record Format
+
+> **v0.9 (2026-06-03)** — Device-frame coverage completion: GNSS-quality flags,
+> device telemetry & motion state, sensitive-identifier (PII) policy, full
+> source-field coverage rule, and acceleration unified across sampling rates and
+> transport encodings. Details in `CHANGELOG.md`.
 
 ## 1. Introduction
 
@@ -201,12 +207,27 @@ These fields SHOULD be present per-row OR inherited from the manifest
 
 | Column | Type | Group | Description | Fallback |
 |--------|------|-------|-------------|----------|
-| `device_id` | string | Metadata | Unique device identifier | Manifest `hardware.devices[0].name` |
+| `device_id` | string | Metadata | Unique device identifier (opaque, non-sensitive) | Manifest `hardware.devices[0].name` |
 | `trip_id` | string | Metadata | Unique trip identifier | Manifest or filename convention |
+| `device_imei` | string | Metadata | Hardware IMEI — **sensitive (PII)** | optional |
+| `sim_iccid` | string | Metadata | SIM serial / ICCID — **sensitive (PII)** | optional |
 
 > If a file omits `device_id` / `trip_id`, consumers MUST resolve them
 > from the manifest. If the manifest declares multiple devices and the
 > file omits `device_id`, validation MUST fail.
+
+> **Sensitive identifiers — defined, but publication-restricted**: `device_imei`
+> and `sim_iccid` are **part of the format** (a telematics record legitimately
+> carries them for operational/private use). They are **PII**: in a **published
+> open dataset** they MUST be omitted or anonymized (the opaque `device_id` is
+> used instead) and MUST NOT carry real values in public data. The schema
+> *defines* them; the publication policy (SPEC-04) *restricts* them. Sensitivity
+> is a publication concern, not a reason to exclude them from the format.
+>
+> The cellular-network identifiers `gsm_mcc` / `gsm_mnc` / `gsm_operator` (§2.9.1)
+> are **quasi-identifiers**: they reveal the fleet's operator and country and can
+> enable indirect de-anonymization. In a published open dataset they MUST be
+> coarsened or omitted (keep `gsm_network_type`, drop operator / MCC / MNC).
 
 ### 2.5 Recommended Fields — GNSS Metadata
 
@@ -219,6 +240,14 @@ These fields SHOULD be present when the hardware provides them:
 | `hdop` | float32 | — (ratio) | Horizontal Dilution of Precision. < 2.0 = good |
 | `h_accuracy_m` | float32 | m | Horizontal position accuracy (Android/smartphones). Complementary to hdop |
 | `n_satellites` | Int8 (nullable) | — | Number of satellites used in fix. > 6 = reliable. NaN when no fix |
+| `pdop` | float32 | — (ratio) | Position Dilution of Precision |
+| `gnss_valid` | bool | — | Per-fix valid flag. **Advisory only** — some firmwares assert it on only a minority of valid fixes; MUST NOT be used to drop positioned rows |
+| `gnss_state` | Int8 (nullable) | — | Receiver mode (off / no-fix / 2D / 3D), device enum |
+| `gnss_fix_status` | bool | — | Fix acquired (device flag), distinct from `gnss_valid` |
+
+> **Three GNSS flags, distinct roles**: `gnss_valid` = per-fix valid bit
+> (advisory, often sparse); `gnss_state` = receiver mode; `gnss_fix_status` =
+> boolean fix-acquired. Complementary, not interchangeable.
 
 > **`hdop` vs `h_accuracy_m`**: Commercial GNSS devices (Teltonika, Danlaw)
 > report `hdop` (dimensionless ratio). Smartphones (Android) report
@@ -341,6 +370,36 @@ hardware-level signals, not protocol data:
 > the device's power input. It is a key signal for determining whether
 > the device is wired to a vehicle (> 9 V) or running on battery.
 
+### 2.9.1 Optional Fields — Device Telemetry & Motion State
+
+Slowly-varying device status, typically reported on heartbeat/status frames.
+On the multi-rate timeline these are **sparse** (status-frame cadence); a
+consumer needing a per-row value SHOULD forward-fill them, since they are
+**persistent states**, not instantaneous measurements (unlike GNSS/IMU, which
+must not be filled).
+
+| Column | Type | Unit | Description |
+|--------|------|------|-------------|
+| `moving` | bool | — | Device movement flag (firmware motion detector) |
+| `instant_moving` | bool | — | Instantaneous movement flag |
+| `sleep_mode` | Int8 (nullable) | — | Device power/sleep state (0 = active) |
+| `battery_voltage_v` | float32 | V | Internal/backup battery voltage |
+| `battery_current_a` | float32 | A | Battery current |
+| `battery_level_pct` | Int8 (nullable) | % | Internal battery charge |
+| `gsm_signal_level` | Int8 (nullable) | — | Cellular signal level (device-specific scale) |
+| `gsm_network_type` | string | — | Cellular network type (2G / 3G / 4G) |
+| `gsm_mcc` / `gsm_mnc` | Int16 (nullable) | — | Mobile country / network code |
+| `gsm_operator` | Int32 (nullable) | — | Operator code |
+
+> Optional **context**: a consumer MUST tolerate absence and MUST NOT let these
+> replace mandatory measurement columns.
+>
+> **Forward-fill TTL**: when a consumer forward-fills a persistent state, it SHOULD
+> NOT propagate it across a data gap longer than a bounded TTL (recommended: a few
+> minutes, or until a `sleep_mode` / ignition transition). A stale battery or GSM
+> value carried over hours of silence is misleading; beyond the TTL the state
+> reverts to NaN.
+
 ### 2.10 Vendor-Specific Extra Fields
 
 Telemachus files MAY contain additional columns not defined in this
@@ -370,6 +429,11 @@ Where `<source>` identifies the data provider or processing origin, and
 - Validators MUST ignore columns matching `x_*` (never reject them)
 - Adapters SHOULD document their extra columns in the manifest
 - Consumers MUST NOT assume any `x_*` column is present
+- The `<field>` part MUST be sanitized to `snake_case`: any non-alphanumeric
+  character (e.g. the dots in a source key like `accelerometer.calibration.state`)
+  MUST become `_` → `x_teltonika_accelerometer_calibration_state`
+- A source field that is **always empty** on a device (e.g. CAN/OBD fillers on a
+  non-CAN unit) SHOULD be **omitted**, not emitted as an all-NaN column
 
 ### 2.11 Multi-Rate Convention
 
@@ -446,6 +510,12 @@ graph TD
     style PART fill:#fff3e0,stroke:#e65100
 ```
 
+> The frame only states whether the device's own firmware left gravity in the
+> signal (`raw`) or removed/re-framed it on-board (`compensated` / `partial`). The
+> **orientation/mounting estimate and any rectification** of the raw signal are
+> **off-board processing** (D1+), not device output — they live in the pipeline,
+> never in a Telemachus record (per §2.2).
+
 ### 2.13 Excluded Columns
 
 The following columns MUST NOT appear as **top-level columns** in a
@@ -461,6 +531,20 @@ Telemachus dataset. They represent enriched or derived data:
 | `lat_matched` | Requires map matching engine |
 | `carrier_state` | Per-trip metadata — belongs in manifest (see SPEC-02) |
 | `is_vehicle_data` | Derived from carrier_state |
+
+> **Sensitive identifiers are NOT excluded from the format**: `device_imei` and
+> `sim_iccid` are defined optional PII fields (§2.4), governed by the *publication*
+> policy (omitted/anonymized in open datasets, SPEC-04) — not by this list.
+>
+> **Raw transport blobs** (e.g. a raw payload hex/text buffer) are likewise NOT in
+> this list: they are not a standard measurement column, but MAY be carried as a
+> single `x_<vendor>_payload` extension if an adapter must preserve the wire bytes.
+> This list is only for **derived/enriched** columns (external maps / DEM / algorithms).
+>
+> **Coverage rule** (§2.4 + §2.10 + this list): every source field maps to a
+> standard column, a defined-but-sensitive identifier (§2.4), an
+> `x_<vendor>_<field>` extra (§2.10), or this exclusion list — nothing is silently
+> lost.
 
 > **Clarification — ground truth vs. enrichment**: Simulation ground
 > truth (e.g. `x_rs3_road_type`, `x_rs3_event`) is allowed as
@@ -480,7 +564,7 @@ A Telemachus file is valid if:
 3. **For profiles `imu` and `full`**, per AccPeriod (SPEC-02 §3.7), `|a|` mean at rest matches the declared frame:
    - `raw`: ≈ 9.81 ± 1.0 m/s²
    - `compensated`: ≈ 0 ± 1.0 m/s²
-   - `partial`: ≈ `residual_g` ± 0.05 g
+   - `partial`: `0 < |a| < g` at rest (qualitative band; no exact value required — `residual_g`, if present, is an off-board descriptive hint, not a conformance target)
    - **"At rest" heuristic**: rows where `speed_mps < 0.5 m/s` (when GPS available) OR where `accel_norm_std < 0.3 m/s²` over a 2-second sliding window. Implementations MAY use different thresholds but MUST document them
 4. `lat` / `lon` are within [-90, 90] / [-180, 180] when not NaN
 5. `heading_deg` is within [0, 360) when not NaN

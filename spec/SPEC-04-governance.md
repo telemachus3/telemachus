@@ -1,9 +1,10 @@
 ---
 title: "SPEC-04: Governance & Versioning"
 status: Draft
-version: "0.8"
+version: "0.9"
 author: Sébastien Edet
 created: 2026-04-16
+updated: 2026-06-03
 supersedes: RFC-0011
 ---
 

@@ -1,9 +1,10 @@
 ---
 title: "SPEC-02: Dataset Manifest — Canonical File-Level Metadata"
 status: Draft
-version: "0.8"
+version: "0.9"
 author: Sébastien Edet
 created: 2026-04-16
+updated: 2026-06-03
 supersedes: RFC-0003, RFC-0014
 ---
 
@@ -179,6 +180,26 @@ source:
   campaign: "commercial pilot Q2 2026"
 ```
 
+For datasets ingested from a device gateway, the adapter SHOULD report **row
+accounting** so a consumer can audit that valid data was not silently dropped
+upstream (the validator only sees the output file, never what the adapter discarded):
+
+```yaml
+source:
+  type: live
+  metrics:
+    raw_rows_in: 2693414            # frames read from the source
+    rows_out: 2681050              # rows written to the Telemachus file
+    raw_rows_dropped: 12364        # MUST be explained by drop_reasons
+    drop_reasons:
+      duplicate_ts: 12000
+      no_position_and_no_imu: 364
+```
+
+A non-zero `raw_rows_dropped` MUST be explained by `drop_reasons`. Dropping rows
+solely because the advisory `gnss_valid` flag is false is **NOT permitted**
+(SPEC-01 §2.5) — it discards valid positioned fixes.
+
 ### 3.6 Sensors
 
 Declares per-sensor native rates and characteristics. Consumers use
@@ -247,7 +268,7 @@ acc_periods:
     end: 2025-09-04T12:04:27Z
     frame: partial                   # raw | compensated | partial
     detection_method: empirical      # device-reported | auto | user | empirical
-    residual_g: 0.101                # REQUIRED if frame=partial
+    residual_g: 0.101                # OPTIONAL descriptive hint (off-board |a| statistic), not required
     calibration_state: null           # device-specific, optional
     notes: "Firmware compensation imperfect — 5.77° residual"
 ```
@@ -269,6 +290,10 @@ acc_periods:
     detection_method: profile_change
     notes: "After config change — gravity_filter OFF"
 ```
+
+> The device orientation/mounting and any rectification of the raw signal are
+> **off-board processing** (D1+), not manifest metadata — they are not declared
+> here (per SPEC-01 §2.2 / §2.12).
 
 ```mermaid
 timeline
@@ -444,7 +469,7 @@ A manifest is valid if:
 3. If `hardware.devices` has > 1 entry, parquet files MUST declare
    `device_id` per-row or use `<device_id>_*.parquet` filename convention.
 4. If `acc_periods` is present, each entry has `start`, `end`, `frame`
-   in `{raw, compensated, partial}`. For `partial`, `residual_g` is required.
+   in `{raw, compensated, partial}`. `residual_g` is OPTIONAL (an off-board hint, never required); a `partial` period need only satisfy `0 < |a|_rest < g`.
 5. If `trip_carrier_states` is present, each entry has `trip_id` and
    `carrier_state` from §3.8.
 6. `sensors.*.rate_hz` values are positive numbers.
