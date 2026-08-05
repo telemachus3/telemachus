@@ -23,9 +23,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     several cadences to measure what down-sampling destroys;
   - `session_contiguity` — whether packets, bursts or files of a feed abut or
     only cover isolated windows;
+  - `session_profile` — size and duration of each delivery unit, which tells
+    whether a sample cap or a time window shapes the feed;
   - `path_length_m`, `epoch_s` — supporting primitives.
-- 15 tests covering these, including timestamp-resolution independence
-  (`ns`/`us`/`s`, tz-aware and naive) and monotonicity of decimation loss.
+- **`telemachus.metrics.trips`** — trip reconstruction, pluggable. Cutting a
+  stream into trips is a decision, not a property of the data, and nearly
+  everything downstream is priced per trip:
+  - `by_gap` — cut where the stream goes silent (a transport property);
+  - `by_stop` — cut where the vehicle stands still (usually what an operator
+    means by a trip);
+  - `TripSegmenter` protocol — any conforming callable can be passed to
+    `segment_trips`, so domain-specific logic drops in without a fork. Neither
+    built-in attempts to *qualify* a stop; that needs more than a threshold;
+  - `trip_profile` — per-trip samples, duration, distance, stationary share.
+- **`telemachus.metrics.describe.stream_summary`** — one-call characterisation
+  of an unfamiliar feed: volume, coverage, cadence, trip count with its
+  threshold, motion, travelled distance, geographic extent, positioning
+  quality. Absent measurements are `NaN` rather than omitted, so summaries of
+  different streams stay comparable.
+- 34 tests covering these, including timestamp-resolution independence
+  (`ns`/`us`/`s`, tz-aware and naive), monotonicity of decimation loss, the
+  index-alignment contract of segmenters on out-of-order frames, and the
+  divergence between `by_gap` and `by_stop` on a parked but still-reporting
+  vehicle.
 
 ### Notes
 - `epoch_s` exists because dividing a raw int64 timestamp view by a hard-coded

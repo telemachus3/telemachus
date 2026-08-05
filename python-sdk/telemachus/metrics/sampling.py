@@ -28,6 +28,7 @@ __all__ = [
     "decimation_loss",
     "stops",
     "session_contiguity",
+    "session_profile",
 ]
 
 
@@ -203,6 +204,29 @@ def stops(df: pd.DataFrame, by: str = "device_id", ts: str = "ts",
     agg["duration_s"] = (agg["t1"] - agg["t0"]).dt.total_seconds()
     return (agg[agg["duration_s"] >= min_duration_s]
             .drop(columns="_run").reset_index(drop=True))
+
+
+def session_profile(df: pd.DataFrame, session: str, by: str = "device_id",
+                    ts: str = "ts") -> pd.DataFrame:
+    """Shape of each delivery unit: how many samples, over how long.
+
+    A feed arriving in packets, bursts or files is often shaped by a transport
+    constraint rather than by the phenomenon observed — a cap on samples per
+    unit, or a fixed time window. Reading sample count against duration tells
+    which of the two binds: a constant count with varying duration means the
+    cap binds, a constant duration with varying count means the window does.
+
+    Returns
+    -------
+    pd.DataFrame
+        One row per session: ``<by>``, ``<session>``, ``n``, ``t0``, ``t1``,
+        ``duration_s``, ``mean_gap_s``.
+    """
+    agg = (df.groupby([by, session])[ts]
+             .agg(n="size", t0="min", t1="max").reset_index())
+    agg["duration_s"] = (agg["t1"] - agg["t0"]).dt.total_seconds()
+    agg["mean_gap_s"] = (agg["duration_s"] / (agg["n"] - 1)).where(agg["n"] > 1)
+    return agg.sort_values([by, "t0"]).reset_index(drop=True)
 
 
 def session_contiguity(df: pd.DataFrame, session: str, by: str = "device_id",
