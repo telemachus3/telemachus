@@ -5,7 +5,7 @@ Bridges high-frequency scientific kinematics and scalable fleet
 analytics in a single, Parquet-native format.
 """
 
-__version__ = "0.8.0"
+__version__ = "0.9.0"
 
 from telemachus._api import (
     read,
