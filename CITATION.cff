@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: "Telemachus Specification v0.8 — Open Parquet-Native Format for High-Frequency Telematics Data"
+title: "Telemachus Specification v0.9 — Open Parquet-Native Format for High-Frequency Telematics Data"
 message: "Please cite this project using the following metadata."
 authors:
   - family-names: "Edet"
@@ -13,11 +13,13 @@ keywords:
   - open-data
   - vehicle-dynamics
 license: MIT
-version: 0.8
-date-released: 2026-04-16
+version: 0.9
+date-released: 2026-08-13
 repository-code: "https://github.com/telemachus3/telemachus"
 abstract: >
-  Telemachus v0.8 is an open, Parquet-native format for high-frequency telematics data (GNSS+IMU).
+  Telemachus v0.9 is an open, Parquet-native format for high-frequency telematics data (GNSS+IMU).
   The specification defines 25 columns across 7 functional groups, 3 device profiles (core/imu/full),
   a dataset manifest (SPEC-02), and production adapters for AEGIS, PVS, and STRIDE open datasets.
-doi: 10.5281/zenodo.19609019
+# DOI de concept : resout toujours vers la derniere version publiee.
+# Le DOI de version (0.8 : 10.5281/zenodo.19609019) perimerait a chaque release.
+doi: 10.5281/zenodo.17228091

@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased] — 2026-08-05
+## [0.9] — 2026-08-13
 
 ### Added
 - **`telemachus.metrics.sampling`** — sampling-cadence metrics, for streams whose
