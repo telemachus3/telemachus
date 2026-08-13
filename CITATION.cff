@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: "Telemachus Specification v0.9 — Open Parquet-Native Format for High-Frequency Telematics Data"
+title: "Telemachus v0.9 - Specification and Python SDK"
 message: "Please cite this project using the following metadata."
 authors:
   - family-names: "Edet"
@@ -13,7 +13,7 @@ keywords:
   - open-data
   - vehicle-dynamics
 license: MIT
-version: 0.9
+version: v0.9
 date-released: 2026-08-13
 repository-code: "https://github.com/telemachus3/telemachus"
 abstract: >
