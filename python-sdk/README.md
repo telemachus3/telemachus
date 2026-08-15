@@ -108,4 +108,4 @@ pytest                  # 31 tests
 
 ## License
 
-AGPL-3.0
+Apache-2.0

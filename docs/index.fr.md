@@ -11,7 +11,7 @@ hide:
 [![PyPI](https://img.shields.io/pypi/v/telemachus.svg)](https://pypi.org/project/telemachus/)
 [![Python](https://img.shields.io/pypi/pyversions/telemachus.svg)](https://pypi.org/project/telemachus/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19609019.svg)](https://doi.org/10.5281/zenodo.19609019)
-[![License: MIT (spec) / AGPL-3.0 (SDK)](https://img.shields.io/badge/license-MIT%20%2F%20AGPL--3.0-blue.svg)](https://github.com/telemachus3/telemachus/blob/main/LICENSE)
+[![License: MIT (spec) / Apache-2.0 (SDK)](https://img.shields.io/badge/license-MIT%20%2F%20Apache--2.0-blue.svg)](https://github.com/telemachus3/telemachus/blob/main/LICENSE)
 
 Telemachus réconcilie la rigueur de la cinématique scientifique
 (GNSS+IMU multi-cadence 10-100 Hz, suivi du repère accéléromètre) et

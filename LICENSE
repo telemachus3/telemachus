@@ -1,3 +1,17 @@
+Telemachus is licensed in two parts. This file covers the first.
+
+    Specification (spec/), schemas, documentation      MIT, below
+    Python SDK and CLI (python-sdk/, python-cli/)      Apache-2.0,
+                                                       see python-sdk/LICENSE
+    Datasets (datasets/)                               per-file, see each
+                                                       dataset's manifest.yaml
+
+The split is deliberate: the specification is silent on patents so that
+implementing it carries no encumbrance, and the reference library grants
+patent rights over its own code so that adopting it carries no doubt.
+
+--------------------------------------------------------------------------
+
 MIT License
 
 Copyright (c) 2025 telemachus3

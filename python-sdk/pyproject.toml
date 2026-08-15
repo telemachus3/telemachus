@@ -4,12 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "telemachus"
-version = "0.9.0"
+version = "1.0.0a1"
 description = "Open Parquet-native format for high-frequency telematics data (GNSS+IMU). Read, validate, and convert datasets."
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
 authors = [{name = "Sébastien Edet", email = "sebastien.edet@gmail.com"}]
-license = "AGPL-3.0-only"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 keywords = ["telematics", "gnss", "imu", "accelerometer", "parquet", "open-data", "vehicle-dynamics", "mobility"]
 dependencies = [
     "pydantic>=2.7",

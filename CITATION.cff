@@ -1,6 +1,7 @@
 cff-version: 1.2.0
-title: "Telemachus v0.9 - Specification and Python SDK"
+title: "Telemachus v1.0 - Specification and Python SDK"
 message: "Please cite this project using the following metadata."
+type: software
 authors:
   - family-names: "Edet"
     given-names: "Sébastien"
@@ -12,14 +13,26 @@ keywords:
   - parquet
   - open-data
   - vehicle-dynamics
-license: MIT
-version: v0.9
-date-released: 2026-08-13
+  - mobility
+license:
+  - MIT          # specification, schemas, documentation
+  - Apache-2.0   # Python SDK and CLI
+version: v1.0.0a1
+date-released: 2026-08-15
 repository-code: "https://github.com/telemachus3/telemachus"
+url: "https://telemachus3.org"
 abstract: >
-  Telemachus v0.9 is an open, Parquet-native format for high-frequency telematics data (GNSS+IMU).
-  The specification defines 25 columns across 7 functional groups, 3 device profiles (core/imu/full),
-  a dataset manifest (SPEC-02), and production adapters for AEGIS, PVS, and STRIDE open datasets.
+  Telemachus is an open, Parquet-native format for high-frequency telematics
+  data (GNSS+IMU). The specification defines 25 columns across 7 functional
+  groups, 3 device profiles (core/imu/full), and a dataset manifest (SPEC-02).
+  Version 1.0 adds format adapters that convert data the project has never seen
+  — CSV through a declarative column-and-unit mapping, GPX and NMEA 0183 —
+  alongside the dataset adapters for AEGIS, PVS and STRIDE. It makes the
+  manifest row accounting normative, so a consumer can audit what an adapter
+  discarded; adds unit plausibility checking, which catches the wrong-unit
+  defect every schema check passes; and introduces carrier profiles, opening
+  the manifest to carriers that are not vehicles without changing what a
+  vehicle means.
 # DOI de concept : resout toujours vers la derniere version publiee.
 # Le DOI de version (0.8 : 10.5281/zenodo.19609019) perimerait a chaque release.
 doi: 10.5281/zenodo.17228091

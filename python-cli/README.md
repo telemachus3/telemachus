@@ -38,4 +38,4 @@ docker run -v $(pwd):/data telemachus-cli tcs /data/out.parquet
 ```
 
 ## License
-AGPL-3.0
+Apache-2.0

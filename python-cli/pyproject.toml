@@ -7,7 +7,7 @@ name = "telemachus-cli"
 version = "0.1.0"
 description = "CLI for Telemachus Core validation and conversion"
 authors = [{name = "Telemachus Project"}]
-license = {text = "AGPL-3.0"}
+license = {text = "Apache-2.0"}
 dependencies = [
   "telemachus @ git+https://github.com/telemachus3/telemachus-py.git",
   "pandas",
