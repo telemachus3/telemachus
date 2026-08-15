@@ -4,15 +4,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from telemachus.analysis import decimation_loss, session_contiguity, stops
 from telemachus.metrics import (
-    decimation_loss,
     epoch_s,
     gap_profile,
     gaps,
     path_length_m,
     sampling_populations,
-    session_contiguity,
-    stops,
 )
 
 

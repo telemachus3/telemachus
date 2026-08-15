@@ -2,9 +2,8 @@
 
 import numpy as np
 import pandas as pd
-import pytest
 
-from telemachus.metrics import (
+from telemachus.analysis import (
     TripSegmenter,
     by_gap,
     by_stop,

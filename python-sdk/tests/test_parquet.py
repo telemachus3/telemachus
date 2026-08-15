@@ -1,7 +1,6 @@
 # tests/test_parquet.py
 # Modern test aligned with Telemachus v0.1 (manifest YAML + Parquet tables)
 
-import os
 import pandas as pd
 import pyarrow.parquet as pq
 

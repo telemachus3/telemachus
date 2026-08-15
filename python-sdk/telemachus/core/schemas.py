@@ -211,6 +211,64 @@ IO_COLUMN_NAMES = {f.name for f in IO_FIELDS}
 ALL_KNOWN_COLUMNS = {f.name: f for f in COMPLETE_SCHEMA}
 
 
+def coerce_schema_dtypes(df, *, columns=None):
+    """Cast the Telemachus columns of a frame to the types SPEC-01 declares.
+
+    SPEC-01 §3 rule 9 requires *every* present column to carry its specified
+    type, not only the mandatory ones. An adapter that reads a CSV gets int64
+    where the schema says float32 and object where it says bool, which produces
+    a file that is right in every respect a reader looks at and wrong in the
+    one a writer checks. Doing the cast in one place means an adapter cannot
+    forget it column by column.
+
+    Unknown columns and ``x_*`` extras are left exactly as they are: their type
+    is the source's business.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+    columns : iterable of str or None
+        Restrict the cast to these columns. Default: every known column present.
+
+    Returns
+    -------
+    pd.DataFrame
+        A copy, with the castable columns converted. A column that cannot be
+        cast is left untouched rather than turned into NaN, so the validator
+        reports it instead of the adapter hiding it.
+    """
+    import pandas as pd
+
+    out = df.copy()
+    targets = [c for c in (columns if columns is not None else out.columns)
+               if c in ALL_KNOWN_COLUMNS and c in out.columns]
+
+    for col in targets:
+        arrow_type = ALL_KNOWN_COLUMNS[col].type
+        try:
+            if pa.types.is_timestamp(arrow_type):
+                # The resolution is part of the type. pandas picks its own from
+                # the input, so a file whose timestamps came from ISO strings
+                # would carry microseconds where SPEC-01 says nanoseconds.
+                out[col] = pd.to_datetime(out[col], utc=True, errors="coerce") \
+                             .astype(f"datetime64[{arrow_type.unit}, UTC]")
+            elif pa.types.is_boolean(arrow_type):
+                out[col] = out[col].astype("boolean")
+            elif pa.types.is_integer(arrow_type):
+                # Nullable integer: a missing satellite count is missing, not 0.
+                width = {8: "Int8", 16: "Int16", 32: "Int32", 64: "Int64"}[arrow_type.bit_width]
+                out[col] = pd.to_numeric(out[col], errors="coerce").astype(width)
+            elif pa.types.is_floating(arrow_type):
+                out[col] = pd.to_numeric(out[col], errors="coerce").astype(
+                    "float32" if arrow_type.bit_width == 32 else "float64")
+            elif pa.types.is_string(arrow_type):
+                out[col] = out[col].astype("string")
+        except (TypeError, ValueError):
+            continue
+
+    return out
+
+
 # Backward compat aliases (used by old validate_tables.py / tests)
 # These use the v0.1 column names (timestamp_ns, acc_x, etc.)
 TRAJECTORY_SCHEMA = pa.schema([

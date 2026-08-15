@@ -11,9 +11,14 @@ from pathlib import Path
 from typing import Optional, Union
 
 import pandas as pd
-import pyarrow.parquet as pq
 import yaml
 
+from telemachus.core.accounting import check_row_accounting
+from telemachus.core.breaks import check_acquisition_breaks
+from telemachus.core.carrier import CarrierProfileError, resolve_carrier_profile
+from telemachus.core.corrections import check_corrections
+from telemachus.core.plausibility import check_units
+from telemachus.core.privacy import check_pii
 from telemachus.core.schemas import (
     MANDATORY_BY_PROFILE,
     GYRO_COLUMN_NAMES,
@@ -183,6 +188,7 @@ def validate(
     df: pd.DataFrame,
     level: str = "basic",
     profile: Optional[str] = None,
+    acc_frame: Optional[str] = None,
 ) -> "ValidationReport":
     """Validate a DataFrame against Telemachus record format.
 
@@ -193,6 +199,10 @@ def validate(
         "basic", "strict", "manifest", or "full".
     profile : str or None
         "core", "imu", or "full". If None, auto-detect from columns.
+    acc_frame : str or None
+        Declared AccPeriod frame (SPEC-02 §3.7), passed to the unit
+        plausibility check so it can tell a compensated frame from a raw one
+        left in g. :func:`validate_dataset` supplies it from the manifest.
 
     Returns
     -------
@@ -254,13 +264,10 @@ def validate(
         if col not in known and not col.startswith("x_"):
             warnings.append(f"Unknown column '{col}' — should use x_<source>_<field> convention")
 
-    # Rule 9: type checking for known columns
-    for col in df.columns:
-        if col in ALL_KNOWN_COLUMNS:
-            expected_field = ALL_KNOWN_COLUMNS[col]
-            # Basic type compatibility check (float vs int vs string vs bool)
-            # Full PyArrow type checking deferred to strict level
-            pass
+    # Rule 9 (SPEC-01 §3): every present column carries its specified type.
+    # Not enforced here — `core.schemas.coerce_schema_dtypes` is what an adapter
+    # uses to satisfy it, and a reader that rejected a float64 where the schema
+    # says float32 would refuse most files in the wild for no benefit.
 
     # Rule 10: gyro all-or-nothing
     gyro_present = GYRO_COLUMN_NAMES & set(df.columns)
@@ -271,6 +278,20 @@ def validate(
     mag_present = MAGNETO_COLUMN_NAMES & set(df.columns)
     if mag_present and mag_present != MAGNETO_COLUMN_NAMES:
         errors.append(f"Partial magneto columns: {sorted(mag_present)}. Must have all or none of {sorted(MAGNETO_COLUMN_NAMES)}")
+
+    # Rule 12: unit plausibility. Every rule above passes on a file whose
+    # columns are correctly named, correctly typed and in the wrong unit; this
+    # is the one that does not. Findings that name the wrong unit outright are
+    # errors, the rest are warnings — see telemachus.core.plausibility.
+    for finding in check_units(df, acc_frame=acc_frame):
+        (errors if finding.severity == "error" else warnings).append(finding.message)
+
+    # Rule 13: personal data (SPEC-01 §2.4). Reported at every level so a
+    # producer is never surprised by what is in their own file. It becomes an
+    # error only in validate_dataset, where the manifest says whether the
+    # dataset is going out.
+    _, pii_warnings = check_pii(df)
+    warnings.extend(pii_warnings)
 
     return ValidationReport(
         ok=len(errors) == 0,
@@ -300,10 +321,26 @@ def validate_manifest(path: Union[str, Path]) -> "ValidationReport":
     except ValidationError as e:
         errors.append(f"Schema error: {e.message} @ {list(e.path)}")
 
-    # Check acc_periods consistency
-    for ap in data.get("acc_periods", []):
-        if ap.get("frame") == "partial" and ap.get("residual_g") is None:
-            errors.append("acc_periods: frame=partial requires residual_g")
+    warnings: list[str] = []
+
+    # SPEC-02 §5.1: dataset_id, schema_version and source are all required.
+    # The JSON Schema only enforces dataset_id, because a manifest missing the
+    # other two is still readable and rejecting it there would give a message
+    # about a schema rather than about what is missing.
+    for field in ("schema_version", "source"):
+        if not data.get(field):
+            errors.append(f"Missing required field '{field}' (SPEC-02 §5.1)")
+
+    # Check acc_periods consistency. `residual_g` is explicitly OPTIONAL in
+    # SPEC-02 §5 rule 4 — an off-board descriptive hint, never a conformance
+    # target — so its absence on a `partial` period is not an error.
+    for i, ap in enumerate(data.get("acc_periods") or []):
+        frame = ap.get("frame")
+        if frame == "partial" and ap.get("residual_g") is None:
+            warnings.append(
+                f"acc_periods[{i}]: frame=partial without residual_g. The hint is "
+                f"optional (SPEC-02 §5 rule 4) but it is the only quantitative "
+                f"description of a partial frame")
 
     # Check burst sampling consistency
     accel = (data.get("sensors") or {}).get("accelerometer") or {}
@@ -313,10 +350,44 @@ def validate_manifest(path: Union[str, Path]) -> "ValidationReport":
         if not accel.get("burst_rate_hz"):
             errors.append("sensors.accelerometer: sampling_mode=burst requires burst_rate_hz")
 
+    # SPEC-02 §3.8 carrier profile. Absent means `vehicle` with the taxonomy the
+    # specification always had, so an existing manifest resolves unchanged.
+    try:
+        profile = resolve_carrier_profile(data)
+    except CarrierProfileError as exc:
+        errors.append(str(exc))
+    else:
+        declared_states = {e.get("carrier_state")
+                           for e in (data.get("trip_carrier_states") or [])}
+        declared_states |= set(data.get("carrier_state_summary") or {})
+        unknown = sorted(s for s in declared_states
+                         if s is not None and s not in profile.states)
+        if unknown:
+            errors.append(
+                f"carrier_state(s) {unknown} are not states of the "
+                f"{profile.name!r} carrier profile ({sorted(profile.states)}). "
+                f"Either use a state of the profile, or declare a profile that "
+                f"has them (SPEC-02 §3.8)")
+
+    # SPEC-02 §3.9 acquisition breaks. Structure only here; the one claim the
+    # data can contradict (`data_gap`) is cross-checked in validate_dataset,
+    # which is the only entry point that has both halves in front of it.
+    break_errors, break_warnings = check_acquisition_breaks(data)
+    errors.extend(break_errors)
+    warnings.extend(break_warnings)
+
+    # SPEC-02 §3.5 row accounting. A validator only ever sees the output file,
+    # so this block is its only evidence about what the adapter discarded on
+    # the way in — and an unbalanced block is worse than none, since it reads
+    # as an audit that was performed.
+    metrics = (data.get("source") or {}).get("metrics")
+    if metrics is not None:
+        errors.extend(check_row_accounting(metrics))
+
     return ValidationReport(
         ok=len(errors) == 0,
         errors=errors,
-        warnings=[],
+        warnings=warnings,
         profile=data.get("profile", "imu"),
         level="manifest",
     )
@@ -339,6 +410,14 @@ def validate_dataset(
 
     profile = manifest.get("profile", "imu")
 
+    # A single declared frame can be handed to the unit check; several mean the
+    # file changes frame partway through and no single magnitude describes it,
+    # so the check is left to say what it sees. SPEC-02 §3.7: an absent
+    # `acc_periods` means one implicit `raw` period over the whole dataset.
+    periods = manifest.get("acc_periods") or []
+    frames = {p.get("frame") for p in periods if p.get("frame")}
+    acc_frame = frames.pop() if len(frames) == 1 else ("raw" if not periods else None)
+
     # Read and validate data
     try:
         df = read(manifest_path)
@@ -351,12 +430,32 @@ def validate_dataset(
             level=level,
         )
 
-    data_report = validate(df, level=level, profile=profile)
+    data_report = validate(df, level=level, profile=profile, acc_frame=acc_frame)
+
+    # SPEC-02 §5 rule 11 — only reachable here, where manifest and data meet.
+    cross_errors: list[str] = []
+    cross_warnings: list[str] = []
+    if level == "full":
+        cross_errors, _ = check_acquisition_breaks(manifest, df)
+        # SPEC-02 §5 rules 12-13 / SPEC-01 §3 rule 13: the correction
+        # declaration and the columns it describes only meet here.
+        correction_errors, cross_warnings = check_corrections(manifest, df)
+        cross_errors += correction_errors
+
+    # SPEC-01 §2.4 / SPEC-04 §5.1. The manifest is where the intent to publish
+    # is on record, so this is the only place the check has standing to refuse.
+    # When it does refuse, drop the warning `validate()` already produced about
+    # the same columns: one fact, one line.
+    pii_errors, _ = check_pii(df, manifest)
+    if pii_errors:
+        cross_errors += pii_errors
+        data_report.warnings = [w for w in data_report.warnings
+                                if not w.startswith("Personal data present:")]
 
     return ValidationReport(
-        ok=manifest_report.ok and data_report.ok,
-        errors=manifest_report.errors + data_report.errors,
-        warnings=manifest_report.warnings + data_report.warnings,
+        ok=manifest_report.ok and data_report.ok and not cross_errors,
+        errors=manifest_report.errors + data_report.errors + cross_errors,
+        warnings=manifest_report.warnings + data_report.warnings + cross_warnings,
         profile=profile,
         level=level,
     )

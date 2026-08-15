@@ -1,43 +1,37 @@
+"""Geodesic primitives.
+
+Normative tier (SPEC-04 §5.3): ``haversine_m`` is what produces
+``volume.distance_km`` in a SPEC-02 manifest, and what the unit plausibility
+check measures a declared speed against.
+
+It was already here in 0.9. It was nevertheless rewritten by hand in 61 files
+across the projects that consume this format, 9 of which already import
+Telemachus — which is a discoverability problem rather than a missing feature,
+and one of the reasons the library is now split into two named tiers.
+"""
+
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
 
+__all__ = ["haversine_m"]
 
-def compute_dt(ts: pd.Series) -> pd.Series:
-    """
-    Delta t in seconds (NaN for first row).
-    """
-    ts = pd.to_datetime(ts, utc=True, errors="coerce")
-    return ts.diff().dt.total_seconds()
+#: Mean Earth radius, IUGG. The same constant every hand-written copy uses.
+EARTH_RADIUS_M = 6_371_000.0
 
 
 def haversine_m(lat1, lon1, lat2, lon2) -> np.ndarray:
+    """Elementwise great-circle distance in metres between two positions.
+
+    Spherical, not ellipsoidal: at the distances between two consecutive
+    telematics fixes the difference is well under the positioning error, and a
+    formula that stays correct under NaN and vectorises over a whole column is
+    worth more here than the last metre over a thousand kilometres.
     """
-    Elementwise haversine distance in meters between (lat1, lon1) and (lat2, lon2).
-    """
-    R = 6_371_000.0
-    lat1 = np.radians(lat1); lon1 = np.radians(lon1)
-    lat2 = np.radians(lat2); lon2 = np.radians(lon2)
+    lat1, lon1 = np.radians(lat1), np.radians(lon1)
+    lat2, lon2 = np.radians(lat2), np.radians(lon2)
     dlat = lat2 - lat1
     dlon = lon2 - lon1
     a = np.sin(dlat / 2.0) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2.0) ** 2
     c = 2.0 * np.arctan2(np.sqrt(a), np.sqrt(1.0 - a))
-    return R * c
-
-
-def speed_from_pos(df: pd.DataFrame) -> pd.Series:
-    """
-    Estimate speed (m/s) from timestamp+lat/lon (forward difference).
-    Returns a Series aligned with df.index (first row NaN).
-    """
-    dt = compute_dt(df["timestamp"]).to_numpy()
-    dist = haversine_m(
-        df["lat"].shift(1).to_numpy(), df["lon"].shift(1).to_numpy(),
-        df["lat"].to_numpy(),          df["lon"].to_numpy()
-    )
-    with np.errstate(divide="ignore", invalid="ignore"):
-        v = dist / dt
-    if len(v):
-        v[0] = np.nan
-    return pd.Series(v, index=df.index, name="speed_from_pos")
+    return EARTH_RADIUS_M * c

@@ -1,7 +1,8 @@
 """Trip reconstruction — pluggable, with two simple built-in strategies.
 
-Cutting a continuous stream of positions into trips is not a property of the
-data: it is a decision, and different decisions give different counts. Since
+Convenience tier (SPEC-04 §5.3), and the clearest case for the tier existing at
+all: cutting a continuous stream of positions into trips is not a property of
+the data, it is a decision, and different decisions give different counts. Since
 almost everything downstream is expressed per trip — distances, durations,
 map-matching requests, invoices — that decision deserves to be explicit and
 swappable rather than buried in a pipeline.
@@ -36,8 +37,8 @@ from typing import Protocol, runtime_checkable
 import numpy as np
 import pandas as pd
 
-from .basic import haversine_m
-from .sampling import gaps
+from ..metrics.basic import haversine_m
+from ..metrics.sampling import gaps
 
 __all__ = [
     "TripSegmenter",
@@ -92,7 +93,7 @@ def by_stop(min_stop_s: float = 300.0, speed: str = "speed_mps") -> TripSegmente
     Closer to what an operator calls a trip than :func:`by_gap`, and far more
     sensitive to sampling cadence: a stop shorter than the sampling interval
     cannot be seen at all, so the trip count rises with the cadence. Measure
-    that sensitivity — with :func:`~telemachus.metrics.stops` at several
+    that sensitivity — with :func:`~telemachus.analysis.stops` at several
     cadences — before pricing anything per trip.
     """
 

@@ -2,9 +2,8 @@
 
 import numpy as np
 import pandas as pd
-import pytest
 
-from telemachus.metrics import session_profile, stream_summary
+from telemachus.analysis import session_profile, stream_summary
 
 
 def _track(n=120, step_s=1, device="dev1", start="2026-01-01T00:00:00Z",

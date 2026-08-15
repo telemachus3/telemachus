@@ -8,6 +8,13 @@ together, from a Telemachus-conformant frame.
 
 It is deliberately descriptive: no threshold here changes a result downstream,
 so it is safe to run first on an unfamiliar dataset.
+
+Convenience tier (SPEC-04 §5.3). Several of its fields would fill a manifest
+block on their own, but ``n_trips`` cannot be produced without segmenting, and
+a function that cannot be used without making a decision belongs on the
+decision side of the line. The individual measurements it aggregates —
+:func:`~telemachus.metrics.gap_profile`, :func:`~telemachus.metrics.path_length_m` —
+are normative and importable directly.
 """
 
 from __future__ import annotations
@@ -15,7 +22,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from .sampling import gap_profile, gaps, path_length_m
+from ..metrics.sampling import gap_profile, gaps, path_length_m
 from .trips import segment_trips
 
 __all__ = ["stream_summary"]

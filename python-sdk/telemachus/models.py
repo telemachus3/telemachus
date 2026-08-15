@@ -94,7 +94,7 @@ class AccPeriod(BaseModel):
 
 
 class DataFile(BaseModel):
-    """Data file reference (SPEC-02 §3.10)."""
+    """Data file reference (SPEC-02 §3.11)."""
     path: str
     format: str = "parquet"
     size_mb: Optional[float] = None
