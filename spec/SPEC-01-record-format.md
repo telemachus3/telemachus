@@ -174,7 +174,7 @@ graph LR
 
 | Profile | Required columns | Typical sources |
 |---------|-----------------|-----------------|
-| **`core`** | `ts`, `lat`, `lon`, `speed_mps` | GPS trackers, fleet APIs (Samsara, Geotab, Webfleet) |
+| **`core`** | `ts`, `lat`, `lon` (+ `speed_mps` if the receiver measures it, see §2.3.1) | GPS trackers, fleet APIs (Samsara, Geotab, Webfleet), low-power trackers |
 | **`imu`** | core + `ax_mps2`, `ay_mps2`, `az_mps2` | Commercial telematics devices with accelerometer |
 | **`full`** | imu + `gx_rad_s`, `gy_rad_s`, `gz_rad_s` | Research platforms, smartphones (AEGIS, STRIDE, PVS) |
 
@@ -196,7 +196,31 @@ Mandatory columns depend on the declared profile:
 | `ts` | datetime64[ns, UTC] | UTC | Datetime | Timestamp at highest sensor rate |
 | `lat` | float64 | degrees WGS84 | GNSS | Latitude. NaN between GNSS ticks |
 | `lon` | float64 | degrees WGS84 | GNSS | Longitude. NaN between GNSS ticks |
-| `speed_mps` | float32 | m/s | GNSS | Ground speed (Doppler). NaN between GNSS ticks |
+| `speed_mps` | float32 | m/s | GNSS | Ground speed. **Conditional — see §2.3.1.** NaN between GNSS ticks |
+
+### 2.3.1 `speed_mps` is conditional, and never back-filled
+
+A Doppler solution costs energy. Many low-power receivers — wildlife collars,
+asset tags, long-life trackers — emit position without ever emitting speed.
+Under the previous wording such a device had two ways out, and both were bad:
+declare itself non-conformant, or fill `speed_mps` by differentiating two
+positions.
+
+The second is the dangerous one. A Doppler speed is **independent** of the
+position error; a speed obtained from two positions is **made of it**. The two
+carry the same column name and are not the same quantity.
+
+Therefore:
+
+- `speed_mps` MUST be present when the receiver measures it;
+- it MAY be absent when the receiver does not measure it, either by omitting
+  the column or by carrying it all-NaN;
+- whenever the column exists in the file, the dataset MUST declare its
+  provenance (§2.14). That includes an all-NaN column, which is declared
+  `absent`. For this column the declaration is required, which strengthens the
+  SHOULD of §2.14 to a MUST;
+- a position-differentiated speed MUST be declared `derived`, never `measured`;
+- a consumer MUST NOT assume `measured` in the absence of a declaration.
 
 **Profile `imu` and `full` add:**
 
@@ -309,7 +333,7 @@ SAE J1979). These PIDs are universal across OBD-II compliant vehicles.
 | `rpm` | float32 | rev/min | 0x0C | Engine RPM |
 | `odometer_m` | float64 | m | 0xA6 | Total odometer reading |
 
-> **Two speed fields**: `speed_mps` (GNSS, mandatory) and `speed_obd_mps`
+> **Two speed fields**: `speed_mps` (GNSS, conditional, see §2.3.1) and `speed_obd_mps`
 > (OBD, optional) are intentionally separate. GPS speed degrades below
 > ~5 km/h and requires a fix; OBD speed is accurate at all speeds but
 > requires a wired OBD adapter.
@@ -317,8 +341,8 @@ SAE J1979). These PIDs are universal across OBD-II compliant vehicles.
 ```mermaid
 graph LR
     subgraph SPEED["Speed Sources"]
-        GPS_S["speed_mps\n(GNSS Doppler)\nMandatory §2.2"]
-        OBD_S["speed_obd_mps\n(OBD PID 0x0D)\nOptional §2.6"]
+        GPS_S["speed_mps\n(GNSS Doppler)\nConditional §2.3.1"]
+        OBD_S["speed_obd_mps\n(OBD PID 0x0D)\nOptional §2.7"]
     end
 
     GPS_S -- "NaN at low speed" --> NOTE1["Degraded < 5 km/h\nNaN without fix"]
@@ -658,11 +682,60 @@ Two consequences worth stating:
   not vendor extras and do not take the `x_` prefix, because their relationship
   to the source column is exactly what a consumer needs to be able to rely on.
 
+### 2.14 Column Provenance — measured, derived, or absent
+
+A column name says what a value *is*. It does not say where it *came from*,
+and for several columns that difference decides whether an analysis is valid.
+
+`speed_mps` is the clearest case. Measured by Doppler, it is independent of the
+position solution. Computed from two positions, it is entirely made of position
+error. Same name, same unit, opposite error properties. The same applies to
+`heading_deg`, which a receiver may measure as course over ground or which an
+adapter may derive from successive positions.
+
+Consequence, observed on a real dataset: selecting stationary samples by a
+Doppler speed and then measuring position scatter yields the receiver noise.
+Doing the same with a position-derived speed is circular, and returns a number
+that looks reasonable while meaning nothing. Nothing in the file distinguishes
+the two cases.
+
+A dataset therefore SHOULD declare, per column, one of:
+
+| Value | Meaning |
+|-------|---------|
+| `measured` | the sensor emitted this quantity directly |
+| `derived` | computed by the adapter from other columns of this dataset |
+| `absent` | the sensor does not provide it (column omitted or all-NaN) |
+
+Declaration lives in the manifest (SPEC-02 §3.11), not in the rows: it is a
+property of the dataset, not of the sample.
+
+Rules:
+
+- an adapter that fills a column by computation MUST declare it `derived`;
+- an adapter MUST NOT declare `measured` a column it computed, even when the
+  computation is exact;
+- a consumer MUST NOT assume `measured` in the absence of a declaration;
+- a validator SHOULD warn when a mandatory or recommended column carries no
+  declaration.
+
+> **Why not a per-row flag.** Provenance is fixed by the acquisition chain, not
+> by the sample. A per-row flag would cost one column per field and describe a
+> variation that does not exist. Where provenance genuinely changes inside one
+> dataset — two device generations in one file, for instance — the dataset
+> SHOULD be split, exactly as §2.12 requires for a frame change.
+
+> **Relation to §2.13.** §2.13 excludes columns *enriched from external
+> sources* (DEM, maps, map-matching). §2.14 covers columns computed **from the
+> dataset's own columns**, which stay in the record. The two rules are
+> complementary: the first says what must not enter, the second says how to
+> label what legitimately does.
+
 ## 3. Validation Rules
 
 A Telemachus file is valid if:
 
-1. All mandatory columns for the declared profile (§2.2–2.3) are present with correct types. Default profile is `imu` if not declared
+1. All mandatory columns for the declared profile (§2.2–2.3) are present with correct types, except `speed_mps` where the receiver does not measure it (§2.3.1). Default profile is `imu` if not declared
 2. `ts` is monotonically increasing (strictly)
 3. **For profiles `imu` and `full`**, per AccPeriod (SPEC-02 §3.7), `|a|` mean at rest matches the declared frame:
    - `raw`: ≈ 9.81 ± 1.0 m/s²

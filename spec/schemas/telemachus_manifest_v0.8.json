@@ -72,6 +72,14 @@
       },
       "additionalProperties": true
     },
+    "column_provenance": {
+      "type": "object",
+      "description": "Per-column origin: measured by the sensor, derived by the adapter from other columns of this dataset, or absent. See SPEC-01 2.14 and SPEC-02 3.11.",
+      "additionalProperties": {
+        "type": "string",
+        "enum": ["measured", "derived", "absent"]
+      }
+    },
     "sensors": {
       "type": "object",
       "properties": {

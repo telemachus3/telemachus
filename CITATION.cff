@@ -33,6 +33,12 @@ abstract: >
   defect every schema check passes; and introduces carrier profiles, opening
   the manifest to carriers that are not vehicles without changing what a
   vehicle means.
-# DOI de concept : resout toujours vers la derniere version publiee.
-# Le DOI de version (0.8 : 10.5281/zenodo.19609019) perimerait a chaque release.
-doi: 10.5281/zenodo.17228091
+# DOI de CONCEPT : resout toujours vers la derniere version publiee, la ou un
+# DOI de version perimerait a chaque release.
+#
+# Cette serie a change au passage en 1.0, et ce n'est pas une erreur : Zenodo
+# rattache une serie a UN depot GitHub, et l'ancienne (10.5281/zenodo.17228091)
+# etait celle de `telemachus3/telemachus-spec`. Le monorepo lui etant inconnu,
+# l'integration a ouvert la sienne. L'ancienne reste valide et continue de
+# resoudre vers v0.1-alpha, v0.8 et v0.9 ; elle ne suivra simplement plus rien.
+doi: 10.5281/zenodo.21959388

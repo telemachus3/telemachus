@@ -6,6 +6,57 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- **SPEC-01 §2.2 / §2.3.1 — `speed_mps` is now conditional in profile `core`.**
+  A Doppler solution costs energy, and many low-power receivers emit position
+  without ever emitting speed. The previous wording left such a device two ways
+  out and both were bad: declare itself non-conformant, or fill the column by
+  differentiating two positions. The second silently turns an independent
+  measurement into a function of the position error.
+
+### Added
+
+- **SPEC-01 §2.14 / SPEC-02 §3.11 — column provenance.** A dataset declares,
+  per column, whether a value was `measured` by the sensor, `derived` by the
+  adapter from other columns, or is `absent`. Declared in the manifest, not
+  per row: provenance is a property of the acquisition chain, not of the
+  sample.
+
+  Motivation, from a real dataset: selecting stationary samples by a Doppler
+  speed and then measuring position scatter yields the receiver noise. Doing
+  the same with a position-derived speed is circular and returns a plausible
+  number that means nothing. Nothing in a file distinguished the two cases.
+
+  Complementary to §2.13, which excludes columns enriched from *external*
+  sources. §2.14 covers columns computed from the dataset's own columns, which
+  legitimately stay in the record and now say so.
+
+- `column_provenance` in the manifest JSON Schema.
+
+### Fixed
+
+- **SPEC-01 — four leftovers from the wording that preceded §2.3.1.** Making
+  `speed_mps` conditional changed one section and left four places still
+  asserting the opposite, which is how an implementer ends up following the
+  rule the specification no longer states:
+
+  - the §2.7 note and its diagram both called `speed_mps` mandatory;
+  - the diagram pointed at §2.2 for it, and at §2.6 for `speed_obd_mps`, which
+    is Extended IMU Fields. The OBD section is §2.7;
+  - validation rule 1 required every mandatory column of the declared profile,
+    with no exception for a receiver that does not measure speed. A `core` file
+    that §2.3.1 allows would have been rejected by the rule next to it;
+  - §2.3.1 defined an all-NaN column as *absent*, then required a provenance
+    declaration for a column that is *present*. Both sentences applied to the
+    same column and gave opposite answers. An all-NaN column now declares
+    `absent` explicitly, and §2.3.1 says outright that it raises the SHOULD of
+    §2.14 to a MUST for this column.
+
+---
+
 ## [1.0.0a2] — 2026-08-16
 
 ### Fixed
