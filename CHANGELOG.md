@@ -6,6 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- **SPEC-01 §2.2 / §2.3.1 — `speed_mps` is now conditional in profile `core`.**
+  A Doppler solution costs energy, and many low-power receivers emit position
+  without ever emitting speed. The previous wording left such a device two ways
+  out and both were bad: declare itself non-conformant, or fill the column by
+  differentiating two positions. The second silently turns an independent
+  measurement into a function of the position error.
+
+### Added
+
+- **SPEC-01 §2.14 / SPEC-02 §3.11 — column provenance.** A dataset declares,
+  per column, whether a value was `measured` by the sensor, `derived` by the
+  adapter from other columns, or is `absent`. Declared in the manifest, not
+  per row: provenance is a property of the acquisition chain, not of the
+  sample.
+
+  Motivation, from a real dataset: selecting stationary samples by a Doppler
+  speed and then measuring position scatter yields the receiver noise. Doing
+  the same with a position-derived speed is circular and returns a plausible
+  number that means nothing. Nothing in a file distinguished the two cases.
+
+  Complementary to §2.13, which excludes columns enriched from *external*
+  sources. §2.14 covers columns computed from the dataset's own columns, which
+  legitimately stay in the record and now say so.
+
+- `column_provenance` in the manifest JSON Schema.
+
+---
+
 ## [1.0.0a1] — 2026-08-15
 
 First stable-numbered release, published as a pre-release: `pip` does not
