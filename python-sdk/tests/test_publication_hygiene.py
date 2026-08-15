@@ -145,7 +145,14 @@ def test_no_private_term_anywhere_in_the_repository():
     is just as damaging in a comment, a fixture, a notebook or a YAML file as it
     is in a published paragraph.
     """
-    patterns = [(re.compile(rf"\b{re.escape(t)}\b", re.I), t) for t in PRIVATE_TERMS]
+    # The offending term is deliberately NOT echoed. This runs in a public
+    # repository, and a failing job writes its assertion message into a log
+    # anyone can read — a guard that names the thing it protects, at the exact
+    # moment it catches it, publishes it. The report gives the file, the line
+    # and the index of the term in the list; the maintainer resolves it locally,
+    # where saying the word costs nothing.
+    patterns = [(re.compile(rf"\b{re.escape(t)}\b", re.I), i)
+                for i, t in enumerate(PRIVATE_TERMS)]
     offences = []
     for path in _publishable_files():
         try:
@@ -154,11 +161,15 @@ def test_no_private_term_anywhere_in_the_repository():
             continue
         if path.resolve() == Path(__file__).resolve():
             continue                      # this file holds the terms at runtime
-        for pattern, term in patterns:
+        for pattern, index in patterns:
             for m in pattern.finditer(text):
                 line = text.count("\n", 0, m.start()) + 1
-                offences.append(f"{path.relative_to(REPO)}:{line} names {term!r}")
-    assert not offences, "\n".join(offences[:40])
+                offences.append(
+                    f"{path.relative_to(REPO)}:{line} matches private term #{index}")
+    assert not offences, (
+        "\n".join(offences[:40]) + "\n\nTerms are indexed, not printed: this log "
+        "is public. Reproduce locally with TELEMACHUS_PRIVATE_TERMS set to see "
+        "which word matched.")
 
 
 def test_the_denylist_is_configured_in_ci():
