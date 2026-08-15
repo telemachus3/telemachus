@@ -1,0 +1,131 @@
+name: release
+
+# Tag -> PyPI -> GitHub Release -> Zenodo DOI, in that order and no other.
+#
+#   git tag -a v1.0.0a1 -m "Telemachus 1.0.0a1" && git push origin v1.0.0a1
+#
+# The order matters. Zenodo mints a DOI from the *GitHub Release*, so the
+# release is created last, once the artefacts exist and are known good. A DOI
+# pointing at a release whose wheel failed to build is not retractable.
+#
+# One-time setup, none of which this file can do for you:
+#
+#   PyPI      Trusted Publishing, at https://pypi.org/manage/account/publishing/
+#             owner telemachus3 / repo telemachus / workflow release.yml /
+#             environment pypi. No API token is stored anywhere as a result.
+#   GitHub    Settings > Environments > new environment named `pypi`.
+#   Zenodo    https://zenodo.org/account/settings/github/ , flip the switch on
+#             telemachus3/telemachus. `.zenodo.json` at the repo root is what it
+#             reads; CITATION.cff is for humans and for GitHub's citation box.
+#
+# A pre-release tag (1.0.0a1, 1.0.0rc1) is marked as such on GitHub and is not
+# installed by `pip install telemachus` unless `--pre` is passed.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    uses: ./.github/workflows/tests.yml
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # setuptools and the release notes want history
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: The tag and the package version must agree
+        # A tag that says one thing and a wheel that says another is a support
+        # question forever after, and the mismatch is invisible until someone
+        # tries to reproduce a result.
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(python -c "import tomllib,pathlib;print(tomllib.loads(pathlib.Path('python-sdk/pyproject.toml').read_text())['project']['version'])")"
+          echo "tag=$tag  pyproject=$pkg"
+          test "$tag" = "$pkg" || { echo "::error::tag $tag != pyproject version $pkg"; exit 1; }
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade build twine
+          python -m build python-sdk --outdir dist
+
+      - name: Check the metadata PyPI will render
+        run: python -m twine check --strict dist/*
+
+      - name: Install the wheel in a clean interpreter and use it
+        # `pytest` passing against the working tree does not prove the *wheel*
+        # contains what it should: a package left out of `packages.find`
+        # produces a wheel that imports and then fails on a submodule.
+        run: |
+          python -m venv /tmp/fresh
+          /tmp/fresh/bin/pip install --quiet dist/*.whl
+          /tmp/fresh/bin/python - <<'PY'
+          import telemachus as tele
+          from telemachus import analysis, metrics
+          from telemachus.adapters import csv_mapping, gpx, nmea
+          print("version", tele.__version__, "spec", tele.__spec_version__)
+          assert tele.merge_multirate and tele.RowAccount and tele.check_units
+          assert tele.resolve_carrier_profile({}).name == "vehicle"
+          PY
+          /tmp/fresh/bin/tele --version
+          /tmp/fresh/bin/tele mapping-template > /dev/null
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/telemachus
+    permissions:
+      id-token: write        # Trusted Publishing; no token in repo secrets
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    # Last, because this is what Zenodo watches.
+    needs: pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Release notes from the changelog
+        run: |
+          python - <<'PY' > notes.md
+          import os, re, pathlib
+          tag = os.environ["GITHUB_REF_NAME"].lstrip("v")
+          text = pathlib.Path("CHANGELOG.md").read_text()
+          # The section for this version, up to the next one.
+          m = re.search(rf"^## \[{re.escape(tag)}\].*?$(.*?)(?=^## \[)", text, re.M | re.S)
+          print(m.group(1).strip() if m else f"See CHANGELOG.md for {tag}.")
+          PY
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          body_path: notes.md
+          files: dist/*
+          prerelease: ${{ contains(github.ref_name, 'a') || contains(github.ref_name, 'b') || contains(github.ref_name, 'rc') }}

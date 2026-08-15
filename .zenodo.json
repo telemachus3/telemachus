@@ -1,0 +1,49 @@
+{
+  "title": "Telemachus v1.0 - Specification and Python SDK",
+  "upload_type": "software",
+  "license": "MIT",
+  "version": "v1.0.0a1",
+  "creators": [
+    {
+      "name": "Edet, Sébastien"
+    }
+  ],
+  "keywords": [
+    "telematics",
+    "IMU",
+    "GNSS",
+    "accelerometer",
+    "parquet",
+    "open-data",
+    "vehicle-dynamics",
+    "mobility",
+    "biologging"
+  ],
+  "description": "<p>Telemachus is an open, Parquet-native pivot format for high-frequency telematics data (GNSS + IMU). The specification defines 25 columns across 7 functional groups, three device profiles (core / imu / full), and a dataset manifest.</p><p>Version 1.0 is a coherence release rather than a feature release. Until it, the specification required a manifest row accounting that the reference implementation did not produce, and asserted a library perimeter that had never been written down. 1.0 ends that gap and adds what an outside adopter needs:</p><ul><li><strong>Format adapters</strong> for data the project has never seen: CSV through a declarative column-and-unit mapping, GPX 1.0/1.1, and NMEA 0183. The unit is required on every column that carries one, which removes at source the commonest defect in a telematics dataset: a correct column name over values in the wrong unit.</li><li><strong>Normative row accounting</strong>, so a consumer can audit what an adapter discarded on the way in. A validator only ever sees the output file.</li><li><strong>Unit plausibility checking</strong>, which cross-checks a declared speed against the speed its own positions imply and names the offending unit from the ratio.</li><li><strong>Carrier profiles</strong>, opening the manifest to carriers that are not vehicles - the invariant being the declaration of which states an analysis may use, not any particular vocabulary - without changing what a vehicle means.</li><li><strong>A two-tier library</strong> whose tier is visible in the import path: normative measurements that fill a manifest field or serve a validation rule, and convenience utilities that make a decision.</li></ul><p><strong>Licensing.</strong> The specification, schemas and documentation are MIT. The Python SDK and CLI are Apache-2.0: permissive with an explicit patent grant, so that the reference implementation of the format can be used by anyone, including in closed software. Datasets carry their own licence, declared per dataset.</p><p>Datasets published in this format: AEGIS (Austria), STRIDE (Bangladesh), RoadSimulator3 (synthetic, France).</p>",
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/telemachus3/telemachus",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    },
+    {
+      "identifier": "10.5281/zenodo.19609044",
+      "relation": "hasPart",
+      "scheme": "doi",
+      "resource_type": "dataset"
+    },
+    {
+      "identifier": "10.5281/zenodo.19609053",
+      "relation": "hasPart",
+      "scheme": "doi",
+      "resource_type": "dataset"
+    },
+    {
+      "identifier": "10.5281/zenodo.19609057",
+      "relation": "hasPart",
+      "scheme": "doi",
+      "resource_type": "dataset"
+    }
+  ],
+  "access_right": "open"
+}
