@@ -36,6 +36,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - `column_provenance` in the manifest JSON Schema.
 
+### Fixed
+
+- **SPEC-01 — four leftovers from the wording that preceded §2.3.1.** Making
+  `speed_mps` conditional changed one section and left four places still
+  asserting the opposite, which is how an implementer ends up following the
+  rule the specification no longer states:
+
+  - the §2.7 note and its diagram both called `speed_mps` mandatory;
+  - the diagram pointed at §2.2 for it, and at §2.6 for `speed_obd_mps`, which
+    is Extended IMU Fields. The OBD section is §2.7;
+  - validation rule 1 required every mandatory column of the declared profile,
+    with no exception for a receiver that does not measure speed. A `core` file
+    that §2.3.1 allows would have been rejected by the rule next to it;
+  - §2.3.1 defined an all-NaN column as *absent*, then required a provenance
+    declaration for a column that is *present*. Both sentences applied to the
+    same column and gave opposite answers. An all-NaN column now declares
+    `absent` explicitly, and §2.3.1 says outright that it raises the SHOULD of
+    §2.14 to a MUST for this column.
+
 ---
 
 ## [1.0.0a1] — 2026-08-15

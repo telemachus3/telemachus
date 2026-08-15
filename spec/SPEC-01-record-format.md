@@ -213,9 +213,13 @@ carry the same column name and are not the same quantity.
 Therefore:
 
 - `speed_mps` MUST be present when the receiver measures it;
-- it MAY be absent (column omitted, or present and all-NaN) when it does not;
-- if it is present, the dataset MUST declare its provenance (§2.14). A
-  position-differentiated speed MUST be declared `derived`, never `measured`;
+- it MAY be absent when the receiver does not measure it, either by omitting
+  the column or by carrying it all-NaN;
+- whenever the column exists in the file, the dataset MUST declare its
+  provenance (§2.14). That includes an all-NaN column, which is declared
+  `absent`. For this column the declaration is required, which strengthens the
+  SHOULD of §2.14 to a MUST;
+- a position-differentiated speed MUST be declared `derived`, never `measured`;
 - a consumer MUST NOT assume `measured` in the absence of a declaration.
 
 **Profile `imu` and `full` add:**
@@ -329,7 +333,7 @@ SAE J1979). These PIDs are universal across OBD-II compliant vehicles.
 | `rpm` | float32 | rev/min | 0x0C | Engine RPM |
 | `odometer_m` | float64 | m | 0xA6 | Total odometer reading |
 
-> **Two speed fields**: `speed_mps` (GNSS, mandatory) and `speed_obd_mps`
+> **Two speed fields**: `speed_mps` (GNSS, conditional, see §2.3.1) and `speed_obd_mps`
 > (OBD, optional) are intentionally separate. GPS speed degrades below
 > ~5 km/h and requires a fix; OBD speed is accurate at all speeds but
 > requires a wired OBD adapter.
@@ -337,8 +341,8 @@ SAE J1979). These PIDs are universal across OBD-II compliant vehicles.
 ```mermaid
 graph LR
     subgraph SPEED["Speed Sources"]
-        GPS_S["speed_mps\n(GNSS Doppler)\nMandatory §2.2"]
-        OBD_S["speed_obd_mps\n(OBD PID 0x0D)\nOptional §2.6"]
+        GPS_S["speed_mps\n(GNSS Doppler)\nConditional §2.3.1"]
+        OBD_S["speed_obd_mps\n(OBD PID 0x0D)\nOptional §2.7"]
     end
 
     GPS_S -- "NaN at low speed" --> NOTE1["Degraded < 5 km/h\nNaN without fix"]
@@ -731,7 +735,7 @@ Rules:
 
 A Telemachus file is valid if:
 
-1. All mandatory columns for the declared profile (§2.2–2.3) are present with correct types. Default profile is `imu` if not declared
+1. All mandatory columns for the declared profile (§2.2–2.3) are present with correct types, except `speed_mps` where the receiver does not measure it (§2.3.1). Default profile is `imu` if not declared
 2. `ts` is monotonically increasing (strictly)
 3. **For profiles `imu` and `full`**, per AccPeriod (SPEC-02 §3.7), `|a|` mean at rest matches the declared frame:
    - `raw`: ≈ 9.81 ± 1.0 m/s²
