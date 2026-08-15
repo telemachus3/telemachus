@@ -106,6 +106,60 @@ def test_a_misspelt_source_column_lists_what_the_file_has(export):
     assert "Latitude" in str(exc.value)
 
 
+@pytest.fixture
+def fleet_export(tmp_path):
+    """One file, three vehicles, the same timestamps for all three.
+
+    The shape any fleet export has, and the one a single scalar device_id
+    cannot describe."""
+    n = 60
+    ts = pd.date_range("2026-03-01T08:00:00Z", periods=n, freq="1s")
+    parts = []
+    for i, name in enumerate(("truck_07", "truck_08", "truck_09")):
+        parts.append(pd.DataFrame({
+            "Horodatage": ts.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "Latitude": 49.33 + i * 0.01 + np.arange(n) * 1.2e-6,
+            "Longitude": 1.38 + i * 0.01 + np.arange(n) * 2.0e-6,
+            "Vitesse": 46.8,
+            "Vehicule": name,
+        }))
+    path = tmp_path / "fleet.csv"
+    pd.concat(parts, ignore_index=True).to_csv(path, index=False, sep=";", decimal=",")
+    return path
+
+
+FLEET_MAPPING = {
+    "dataset_id": "FR_fleet_2026",
+    "device_id": {"column": "Vehicule"},
+    "read": {"sep": ";", "decimal": ","},
+    "columns": {
+        "ts": {"column": "Horodatage", "unit": "iso8601"},
+        "lat": {"column": "Latitude", "unit": "deg"},
+        "lon": {"column": "Longitude", "unit": "deg"},
+        "speed_mps": {"column": "Vitesse", "unit": "km/h"},
+    },
+}
+
+
+def test_device_id_can_name_a_column_when_one_file_holds_several_devices(fleet_export):
+    out = csv_mapping.load(fleet_export, mapping=FLEET_MAPPING)
+    assert sorted(out.device_id.unique()) == ["truck_07", "truck_08", "truck_09"]
+    # nothing is dropped: three devices at the same instant are not duplicates
+    assert len(out) == 180
+
+
+def test_device_id_naming_an_absent_column_is_refused(fleet_export):
+    mapping = FLEET_MAPPING | {"device_id": {"column": "Camion"}}
+    with pytest.raises(MappingError, match="Camion"):
+        csv_mapping.load(fleet_export, mapping=mapping)
+
+
+def test_device_id_with_an_unsupported_key_is_refused(fleet_export):
+    mapping = FLEET_MAPPING | {"device_id": {"colonne": "Vehicule"}}
+    with pytest.raises(MappingError, match="device_id"):
+        csv_mapping.load(fleet_export, mapping=mapping)
+
+
 def test_a_mapping_can_be_a_yaml_file(export, tmp_path):
     path = tmp_path / "mapping.yaml"
     path.write_text(yaml.safe_dump(MAPPING))
