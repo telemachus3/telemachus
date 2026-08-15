@@ -31,6 +31,11 @@ permissions:
 jobs:
   test:
     uses: ./.github/workflows/tests.yml
+    # A called workflow inherits nothing by default, secrets included. Without
+    # this line the client-data denylist arrives empty here while being present
+    # on a direct push, so the release gate fails on the one run that matters
+    # and passes on every run that does not.
+    secrets: inherit
 
   build:
     needs: test
@@ -117,7 +122,7 @@ jobs:
         run: |
           python - <<'PY' > notes.md
           import os, re, pathlib
-          tag = os.environ["GITHUB_REF_NAME"].lstrip("v")
+          tag = os.environ["GITHUB_REF_NAME"].removeprefix("v")  # not lstrip: it strips characters, not a prefix
           text = pathlib.Path("CHANGELOG.md").read_text()
           # The section for this version, up to the next one.
           m = re.search(rf"^## \[{re.escape(tag)}\].*?$(.*?)(?=^## \[)", text, re.M | re.S)
