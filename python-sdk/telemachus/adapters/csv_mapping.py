@@ -221,8 +221,32 @@ def load(source_path, *, mapping, account: RowAccount | None = None,
         raise MappingError(f"extras must be 'drop' or 'keep', got {extras!r}")
 
     for key in ("device_id", "trip_id"):
-        if key in spec and key not in out.columns:
-            out[key] = spec[key]
+        if key not in spec or key in out.columns:
+            continue
+        rule = spec[key]
+        if isinstance(rule, dict):
+            # A source that carries several entities in one file names the
+            # entity in a column, not in the mapping. Movebank exports are the
+            # common case: one file, thirty animals, one column telling them
+            # apart. Accepting {column: ...} here and dropping it on the floor
+            # was worse than refusing it, because drop_duplicate_ts then keys
+            # on an all-null device_id, which is the same as keying on ts
+            # alone, and one entity survives out of thirty.
+            if set(rule) - {"column"}:
+                raise MappingError(
+                    f"{key}: only a scalar or {{column: ...}} is accepted, "
+                    f"got {sorted(rule)}")
+            if "column" not in rule:
+                raise MappingError(f"{key}: {{column: ...}} is missing 'column'")
+            src = rule["column"]
+            if src not in raw.columns:
+                raise MappingError(
+                    f"{key}: source has no column {src!r}."
+                    f"{_suggest(src, raw.columns)} "
+                    f"Available: {list(raw.columns)}")
+            out[key] = raw[src]
+        else:
+            out[key] = rule
 
     return _finish(out, account)
 

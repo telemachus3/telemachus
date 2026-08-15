@@ -57,6 +57,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.0.0a2] — 2026-08-16
+
+### Fixed
+
+- **`csv_mapping`: `device_id` and `trip_id` can name a column.** A source that
+  holds several entities in one file names the entity in a column, not in the
+  mapping. Any fleet export has that shape, and so does every Movebank export:
+  one file, thirty animals, one column telling them apart.
+
+  The mapping form `device_id: {column: ...}` was accepted and then written to
+  the frame as the dict itself, which the dtype coercion turned into an
+  all-null column. That was worse than a refusal, because the column existed,
+  so `drop_duplicate_ts` keyed on it — and a null key is the same as no key at
+  all, which is a global dedup on `ts`.
+
+  Measured on a real export: 1 269 952 rows in, 459 243 out, 810 709 counted as
+  `duplicate_ts`, one animal surviving out of thirty. Validation reported PASS
+  with no warning; the row accounting of SPEC-02 §3.5.1 did record the loss.
+
+  Declaring `device_id` under `columns:` always worked. The two spellings now
+  behave the same, and a `{column: ...}` naming a column the source does not
+  have raises `MappingError` instead of passing silently.
+
 ## [1.0.0a1] — 2026-08-15
 
 First stable-numbered release, published as a pre-release: `pip` does not
