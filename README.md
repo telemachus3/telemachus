@@ -1,7 +1,7 @@
 [![PyPI](https://img.shields.io/pypi/v/telemachus.svg)](https://pypi.org/project/telemachus/)
 [![Python](https://img.shields.io/pypi/pyversions/telemachus.svg)](https://pypi.org/project/telemachus/)
 [![Docs](https://img.shields.io/badge/docs-telemachus3.org-blue)](https://telemachus3.org)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19609019.svg)](https://doi.org/10.5281/zenodo.19609019)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21959388.svg)](https://doi.org/10.5281/zenodo.21959388)
 [![License](https://img.shields.io/badge/spec-MIT-green)](LICENSE)
 [![SDK License](https://img.shields.io/badge/SDK-Apache--2.0-green)](python-sdk/LICENSE)
 
@@ -194,9 +194,12 @@ Previous RFCs (0001→0014) are archived in [`spec/rfcs/`](spec/rfcs/) with depr
 ## Citation
 
 ```
-S. Edet (2026). Telemachus Specification v1.0 — Open Parquet-Native
-Format for High-Frequency Telematics Data. Zenodo.
-https://doi.org/10.5281/zenodo.19609019
+S. Edet (2026). Telemachus v1.0 — Specification and Python SDK. Zenodo.
+https://doi.org/10.5281/zenodo.21959388
+
+Concept DOI: resolves to the latest release. The v0.8 specification keeps its
+own version DOI, [10.5281/zenodo.19609019](https://doi.org/10.5281/zenodo.19609019),
+which remains the right thing to cite for a result produced against v0.8.
 ```
 
 Open datasets shipped in Telemachus format:
