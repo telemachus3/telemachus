@@ -236,6 +236,52 @@ def test_gpx_accounts_for_what_it_dropped(ride):
         "duplicate_ts": 1, "no_timestamp": 1}
 
 
+SHARED_SECOND = """<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.0" creator="OpenStreetMap.org"
+     xmlns="http://www.topografix.com/GPX/1/0">
+  <trk><trkseg>
+    <trkpt lat="49.4400" lon="1.0900"><time>2026-03-01T08:00:00Z</time></trkpt>
+  </trkseg></trk>
+  <trk><trkseg>
+    <trkpt lat="49.3300" lon="1.3800"><time>2026-03-01T08:00:00Z</time></trkpt>
+  </trkseg></trk>
+</gpx>
+"""
+
+
+def test_gpx_two_recordings_may_share_a_second(tmp_path):
+    """Two separate tracks are not duplicates of one another.
+
+    A public archive hands back every contributor under one ``creator``, so
+    ``device_id`` is constant and cannot key the dedup: two people who each
+    recorded a point in the same second would lose one of them. The unit is the
+    track segment. Measured on the Rouen extract of the OSM public traces,
+    keying on the constant destroyed 7 618 of 178 436 timestamped points.
+    """
+    path = tmp_path / "shared.gpx"
+    path.write_text(SHARED_SECOND)
+    df = gpx.load(path)
+    assert len(df) == 2
+    assert df["trip_id"].nunique() == 2
+
+
+def test_gpx_manifest_reads_the_file_rather_than_assuming(tmp_path):
+    """Version and provenance are properties of the file, not of the adapter."""
+    path = tmp_path / "shared.gpx"
+    path.write_text(SHARED_SECOND)
+    m = gpx.manifest(path)
+    assert m["source"]["ingestion"] == "GPX 1.0 track points"
+    # SPEC-01 §2.3.1: the column is in the frame, so it declares itself, and a
+    # GPX with no speed extension declares `absent` rather than staying silent.
+    assert m["column_provenance"]["speed_mps"] == "absent"
+
+
+def test_gpx_manifest_declares_a_measured_speed_when_the_file_has_one(ride):
+    """The Garmin fixture carries no speed; a Cluetrust one does."""
+    assert gpx.manifest(ride)["column_provenance"]["speed_mps"] == "absent"
+    assert gpx.manifest(ride)["column_provenance"]["altitude_gps_m"] == "measured"
+
+
 # ---------------------------------------------------------------------------
 # NMEA
 # ---------------------------------------------------------------------------
@@ -282,6 +328,29 @@ def test_nmea_counts_a_corrupt_position_sentence(track):
     df = nmea.load(track, account=account)
     metrics = account.finish(rows_out=len(df))
     assert metrics["drop_reasons"] == {"bad_checksum": 1}
+
+
+def test_nmea_manifest_declares_the_speed_measured(track):
+    """An NMEA speed is the receiver's own solution, never the adapter's.
+
+    The distinction is the whole point of SPEC-01 §2.14: a Doppler speed is
+    independent of the position error, a position-differentiated one is made of
+    it, and only the manifest can tell a consumer which one it holds.
+    """
+    p = nmea.manifest(track)["column_provenance"]
+    assert p["speed_mps"] == "measured"
+    assert p["heading_deg"] == "measured"
+    assert p["altitude_gps_m"] == "measured"      # GGA carries it
+
+
+def test_nmea_manifest_declares_absent_what_the_log_lacks(tmp_path):
+    """A GGA-only log has no velocity sentence, and says so."""
+    path = tmp_path / "gga_only.nmea"
+    path.write_text(_sentence(
+        "GPGGA,080000.00,4919.8000,N,00122.8000,E,1,09,0.9,52.1,M,46.9,M,,") + "\n")
+    p = nmea.manifest(path)["column_provenance"]
+    assert p["speed_mps"] == "absent"
+    assert p["altitude_gps_m"] == "measured"
 
 
 def test_nmea_refuses_to_invent_a_date(tmp_path):

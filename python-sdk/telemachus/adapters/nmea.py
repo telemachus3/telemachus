@@ -282,7 +282,52 @@ def manifest(source_path, *, account: RowAccount | None = None,
         "sensors": {"gps": {"quality": "low_cost"}},
         "source": {"type": "open_external", "adapter_status": "draft",
                    "ingestion": "NMEA 0183 RMC/GGA/VTG"},
+        # SPEC-01 §2.3.1 / §2.14. Worth declaring rather than leaving to
+        # inference: an NMEA speed is the receiver's own solution, so it is
+        # independent of the position error, which is exactly the property an
+        # analysis relies on when it selects stationary samples by speed and
+        # then measures position scatter. Nothing in the column says so.
+        "column_provenance": _provenance(_sentence_kinds(_logs(path))),
     }
     if account is not None and rows_out is not None:
         out["source"]["metrics"] = account.finish(rows_out=rows_out)
     return out
+
+
+def _logs(path: Path) -> list[Path]:
+    if path.is_dir():
+        return sorted([p for p in path.iterdir()
+                       if p.suffix.lower() in (".nmea", ".log", ".txt")])
+    return [path]
+
+
+def _sentence_kinds(files: list[Path]) -> set[str]:
+    """Which fix sentences the log actually carries.
+
+    Cheap on purpose: the scan stops as soon as the three sentences that decide
+    the provenance have been seen, so asking for a manifest does not cost a
+    second full parse of a long log.
+    """
+    seen: set[str] = set()
+    wanted = {"RMC", "GGA", "VTG"}
+    for log in files:
+        with open(log, encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                if not line.startswith(("$", "!")):
+                    continue
+                head = line.partition("*")[0].split(",", 1)[0]
+                kind = head[3:] if len(head) >= 6 else ""
+                if kind in wanted:
+                    seen.add(kind)
+                    if seen >= wanted:
+                        return seen
+    return seen
+
+
+def _provenance(kinds: set[str]) -> dict[str, str]:
+    has_velocity = bool(kinds & {"RMC", "VTG"})
+    return {
+        "speed_mps": "measured" if has_velocity else "absent",
+        "heading_deg": "measured" if has_velocity else "absent",
+        "altitude_gps_m": "measured" if "GGA" in kinds else "absent",
+    }

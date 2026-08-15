@@ -73,6 +73,13 @@ def load(source_path, *, account: RowAccount | None = None,
         Value for the ``device_id`` column. Defaults to the ``creator``
         attribute of the GPX root, which is what wrote the file.
 
+        A caveat worth stating, because everything downstream defaults to
+        grouping by it: ``creator`` names a piece of software, not a receiver.
+        Every track exported by the same application carries the same string,
+        and a public archive can hand back a whole city under one value. Pass a
+        real identifier when you have one; otherwise group by ``trip_id``,
+        which is the grain a GPX file actually distinguishes.
+
     Returns
     -------
     pd.DataFrame
@@ -123,7 +130,14 @@ def load(source_path, *, account: RowAccount | None = None,
 
     df["ts"] = pd.to_datetime(df["ts"], utc=True, errors="coerce")
     df = df.sort_values("ts", kind="stable")
-    df, account = drop_duplicate_ts(df, account)
+    # Deduplicate per track segment, not per device. ``device_id`` here is the
+    # file's ``creator``, which names the software that wrote the GPX and is
+    # therefore the same string for every track inside it. Keying on a constant
+    # collapses to a global dedup on ``ts`` alone, and two recordings that
+    # happen to share a second lose one of them — the failure mode SPEC-02
+    # §3.5.1 exists to make visible. A ``trkseg`` is the unit of one recording,
+    # so it is the unit against which a repeated timestamp means anything.
+    df, account = drop_duplicate_ts(df, account, by="trip_id")
 
     if "speed_mps" not in df.columns:
         df["speed_mps"] = float("nan")
@@ -178,16 +192,54 @@ def manifest(source_path, *, account: RowAccount | None = None,
     blanks are left for whoever knows.
     """
     path = Path(source_path)
+    files = sorted(path.glob("*.gpx")) if path.is_dir() else [path]
+    versions, present = _inspect(files)
+
     out = {
         "dataset_id": _slug(path.stem if path.is_file() else path.name),
         "schema_version": "telemachus-1.0",
         "profile": "core",
         "source": {"type": "open_external", "adapter_status": "draft",
-                   "ingestion": "GPX 1.1 track points"},
+                   "ingestion": f"GPX {'/'.join(versions)} track points"},
+        # SPEC-01 §2.3.1: the column exists in the frame, so its provenance is
+        # declared. A bare GPX carries no speed, and the honest declaration is
+        # `absent` rather than a silent all-NaN column a consumer may read as a
+        # vehicle that never moved.
+        "column_provenance": {
+            col: ("measured" if col in present else "absent")
+            for col in ("speed_mps", "heading_deg", "altitude_gps_m")
+        },
     }
     if account is not None and rows_out is not None:
         out["source"]["metrics"] = account.finish(rows_out=rows_out)
     return out
+
+
+def _inspect(files) -> tuple[list[str], set[str]]:
+    """GPX versions found, and which measurement columns the files carry.
+
+    Read rather than assumed: the schema version is an attribute of the root,
+    and a speed or a course exists only when an extension supplies it. Stating
+    either from a constant produces a manifest that describes the adapter's
+    expectations instead of the file in front of it.
+    """
+    versions: list[str] = []
+    present: set[str] = set()
+    for gpx_file in files:
+        root = ElementTree.parse(gpx_file).getroot()
+        version = root.get("version") or "1.1"
+        if version not in versions:
+            versions.append(version)
+        for node in root.iter():
+            tag = _localname(node.tag)
+            if tag == "ele":
+                present.add("altitude_gps_m")
+            elif tag == "extensions":
+                for key in _flatten_extensions(node):
+                    target, _ = _EXTENSION_COLUMNS.get(key, (None, None))
+                    if target in ("speed_mps", "heading_deg"):
+                        present.add(target)
+    return (versions or ["1.1"]), present
 
 
 def _slug(name: str) -> str:

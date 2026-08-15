@@ -8,6 +8,47 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`gpx`: a repeated timestamp is judged per track, not per file.** The
+  adapter fills `device_id` with the GPX `creator`, which names the software
+  that wrote the file. Every track inside carries the same string, so the
+  `[device_id, ts]` dedup key of `drop_duplicate_ts` collapsed to `ts` alone
+  and two recordings sharing a second lost one of them. A `trkseg` is the unit
+  of one recording, and it is now the unit the dedup keys on.
+
+  Measured on the public OSM traces over Rouen, 167 files and 794 508 track
+  points: **7 618 of 178 436 timestamped points were being destroyed**, and the
+  row accounting counted them as `duplicate_ts`, which was exact in volume and
+  wrong in reason. Same mechanism as the `csv_mapping` defect fixed in 1.0.0a2,
+  reached by the other road: there the key was null, here it is constant, and a
+  constant key is the same as no key at all.
+
+  `load()` now states in its own docstring that `creator` names software rather
+  than a receiver, since everything downstream defaults to grouping by
+  `device_id`.
+
+- **`gpx`: the manifest read the file instead of assuming it.** `ingestion` was
+  hard-coded to `GPX 1.1` and reported that for a 1.0 file, which is a false
+  provenance statement in the block whose job is provenance. The version now
+  comes from the root attribute.
+
+### Added
+
+- **`gpx` and `nmea` declare `column_provenance`** (SPEC-01 §2.3.1, §2.14).
+  The rule shipped with the specification and no adapter applied it, so every
+  converted dataset was of undetermined origin.
+
+  A bare GPX has no speed field, so `speed_mps` is declared `absent` rather
+  than left as a silent all-NaN column a consumer may read as a vehicle that
+  never moved. NMEA declares it `measured`: the value is the receiver's own
+  solution, independent of the position error, which is the property an
+  analysis leans on when it selects stationary samples by speed and then
+  measures position scatter. Both adapters inspect the file rather than assume
+  a shape, so a GGA-only log declares `absent` and says why.
+
+  Still to do: `aegis`, `pvs`, `stride` and `csv_mapping` declare nothing yet.
+
 ### Changed
 
 - **SPEC-01 §2.2 / §2.3.1 — `speed_mps` is now conditional in profile `core`.**
