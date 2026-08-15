@@ -1,10 +1,10 @@
 ---
 title: "SPEC-02: Dataset Manifest — Canonical File-Level Metadata"
 status: Draft
-version: "0.9"
+version: "1.0"
 author: Sébastien Edet
 created: 2026-04-16
-updated: 2026-06-03
+updated: 2026-08-15
 supersedes: RFC-0003, RFC-0014
 ---
 
@@ -180,25 +180,51 @@ source:
   campaign: "commercial pilot Q2 2026"
 ```
 
-For datasets ingested from a device gateway, the adapter SHOULD report **row
-accounting** so a consumer can audit that valid data was not silently dropped
-upstream (the validator only sees the output file, never what the adapter discarded):
+### 3.5.1 Row Accounting — REQUIRED of any adapter that drops a row
+
+A validator only ever sees the output file. It can establish that every row
+present is well-formed; it can establish nothing at all about the rows that are
+absent, nor whether they deserved to be. The `metrics` block is the only
+channel through which that fact reaches a consumer, which is why it is a count
+**per reason** and not a total.
 
 ```yaml
 source:
   type: live
   metrics:
     raw_rows_in: 2693414            # frames read from the source
-    rows_out: 2681050              # rows written to the Telemachus file
-    raw_rows_dropped: 12364        # MUST be explained by drop_reasons
+    rows_out: 2681050               # rows written to the Telemachus file
+    raw_rows_dropped: 12364         # MUST be explained by drop_reasons
     drop_reasons:
       duplicate_ts: 12000
       no_position_and_no_imu: 364
 ```
 
-A non-zero `raw_rows_dropped` MUST be explained by `drop_reasons`. Dropping rows
-solely because the advisory `gnss_valid` flag is false is **NOT permitted**
-(SPEC-01 §2.5) — it discards valid positioned fixes.
+Rules, all checked by `tele validate`:
+
+1. An adapter that discards any row MUST report `metrics`. An adapter that
+   discards none SHOULD report it anyway, since "nothing was dropped" is itself
+   the useful statement.
+2. The block MUST balance: `rows_out + raw_rows_dropped == raw_rows_in`. An
+   adapter that cannot balance its own books has lost track of rows somewhere,
+   and a block that does not add up is worse than no block — it reads as an
+   audit that was performed.
+3. `drop_reasons` MUST sum to `raw_rows_dropped`, and a non-zero
+   `raw_rows_dropped` MUST NOT leave `drop_reasons` empty.
+4. Dropping rows solely because the advisory `gnss_valid` flag is false is
+   **NOT permitted** (SPEC-01 §2.5): it discards valid positioned fixes, and
+   the receivers that set the flag are the ones whose flag is least
+   trustworthy. The reason names `gnss_valid_false` and `gnss_invalid` are
+   refused outright rather than left for a reviewer to notice.
+5. Reason names are free text. `duplicate_ts`, `unparseable_ts`,
+   `no_timestamp`, `no_position`, `bad_checksum` and `no_position_and_no_imu`
+   are the ones the reference adapters emit.
+
+The unit being counted is the adapter's own row-equivalent, declared by the
+adapter: a frame for a gateway feed, a track point for GPX, a **fix epoch** for
+NMEA — where three sentences describe one instant and produce one row between
+them. What matters is that the same unit is counted on both sides of the
+identity.
 
 ### 3.6 Sensors
 
@@ -306,13 +332,15 @@ timeline
         2025-03-15 onwards : frame=raw : gravity_filter OFF
 ```
 
-### 3.8 Carrier States
+### 3.8 Carrier Profile & States
 
-Carrier state classifies each **trip** (not each sample) to determine
-whether data comes from a real driving context. This metadata lives
+Carrier state classifies each **trip** (not each sample) to determine whether
+the data comes from a context the analysis is about. This metadata lives
 exclusively in the manifest — not as record columns.
 
 ```yaml
+carrier_profile: vehicle          # default; may be omitted
+
 carrier_state_summary:
   mounted_driving: 23
   mounted_idle: 0
@@ -331,21 +359,109 @@ trip_carrier_states:
       vehicle_voltage_v: 13.8
 ```
 
-| State | Vehicle context | Use for analytics |
-|-------|-----------------|-------------------|
-| `mounted_driving` | YES — in motion | YES |
-| `mounted_idle` | YES — parked/idling | YES (ZUPT segments) |
-| `unplugged` | UNKNOWN | OPTIONAL |
-| `desk` | NO — stable surface | NO |
-| `handheld` | NO — hand manipulation | NO |
-| `unknown` | UNKNOWN | NO |
+**Default**: `carrier_profile` absent means `vehicle`. If neither
+`carrier_state_summary` nor `trip_carrier_states` is present, consumers MUST
+assume `carrier_state: "unknown"` globally.
 
-**Default**: if neither field is present, consumers MUST assume
-`carrier_state: "unknown"` globally.
+#### 3.8.1 Why a profile
+
+The record format is neutral about what carries the device. Position,
+timestamp, accelerometer, gyroscope, magnetometer, speed, GNSS quality,
+AccPeriods and the multi-rate convention of §2.11 all pass unchanged onto an
+animal collar, a bicycle or a rucksack — the multi-rate convention is *more*
+relevant in biologging than in fleet, where a fix every quarter of an hour
+meets accelerometer bursts at 20-50 Hz.
+
+This block was the exception. Its five states are vehicle states, and the
+detection tree below tests a vehicle battery voltage. None of them means
+anything on a collar, and a format that is neutral everywhere except in its
+manifest is not neutral.
+
+**The invariant is the declaration, not the vocabulary.** What a consumer needs
+from this block is one bit per state: may an analysis use the data recorded
+while the carrier was in it? A vehicle parked with the engine running is usable
+— it is where ZUPT segments come from. A device on a desk is not. Which words a
+domain uses for those situations is that domain's business; that it *says*
+which ones are usable is this format's requirement.
+
+| Usability | Meaning |
+|-----------|---------|
+| `analysable` | Use it |
+| `optional` | The carrier's situation is unknown; the consumer decides |
+| `excluded` | The data does not describe the phenomenon being studied |
+
+#### 3.8.2 Registered profiles
+
+A profile named here needs no further declaration: a manifest writes the name,
+or nothing at all.
+
+**`vehicle`** — the default, and exactly the taxonomy this specification
+carried before profiles existed. Nothing about it changes.
+
+| State | Vehicle context | Usability |
+|-------|-----------------|-----------|
+| `mounted_driving` | YES — in motion | `analysable` |
+| `mounted_idle` | YES — parked/idling | `analysable` (ZUPT segments) |
+| `unplugged` | UNKNOWN | `optional` |
+| `desk` | NO — stable surface | `excluded` |
+| `handheld` | NO — hand manipulation | `excluded` |
+| `unknown` | UNKNOWN | `excluded` |
+
+`vehicle` is the only registered profile. **No animal, pedestrian or bicycle
+profile is registered**, and none will be until a dataset carries one: the
+mechanism is what 1.0 owes, and a profile invented ahead of the data it
+describes is a promise the specification cannot keep. An unkept promise in a
+specification costs more than an absence.
+
+#### 3.8.3 Declaring a profile inline
+
+A carrier this specification does not cover declares its own states and what
+each is worth:
+
+```yaml
+carrier_profile:
+  name: collar
+  description: "Neck-mounted logger, large mammal"
+  states:
+    foraging:   analysable
+    resting:    analysable
+    handled:    excluded          # animal being handled by a human
+    detached:   excluded
+    unknown:    optional
+```
+
+Rules:
+
+1. An inline profile MUST declare `name` and `states`, and every state MUST map
+   to one of `analysable`, `optional`, `excluded`.
+2. At least one state MUST be `analysable`. A profile in which nothing is usable
+   would make every trip in the dataset unusable, which is a mistake rather
+   than a statement.
+3. A registered name MUST NOT be redefined inline. Two datasets naming the same
+   profile have to mean the same thing, or the name is worthless. Name the
+   variant something else.
+4. Every `carrier_state` appearing in `trip_carrier_states` or
+   `carrier_state_summary` MUST be a state of the resolved profile.
+5. A consumer reading an unrecognised state treats it as `excluded` rather than
+   failing: a dataset produced against a later profile revision should degrade,
+   not break. The validator, which has the profile in front of it, rejects.
+
+#### 3.8.4 `is_vehicle_data`
+
+SPEC-01 §2.13 lists `is_vehicle_data` as derived from `carrier_state`. Under
+the `vehicle` profile it derives exactly as it always did — true for
+`mounted_driving` and `mounted_idle` — because those are its `analysable`
+states. Under any other profile the question is the wrong one, and the general
+form replaces it: **is this state `analysable` under the declared profile?**
+
+The detection tree below is the `vehicle` profile's, and only its: the
+`vehicle_voltage_v` test is what makes it one. Another profile detects its own
+states its own way, and how it does so is not this specification's business
+(SPEC-04 §5.2) — only the resulting declaration is.
 
 ```mermaid
 graph TD
-    subgraph DETECT["Carrier State Detection"]
+    subgraph DETECT["Carrier State Detection — vehicle profile"]
         SPEED{"speed_moving_frac\n> 5% ?"}
         POWERED{"vehicle_voltage_v\n> 9V ?"}
         ACCEL_VAR{"accel_norm_std\n> 0.5 m/s² ?"}
@@ -368,7 +484,109 @@ graph TD
     style UNPLUG fill:#e0e0e0,stroke:#424242
 ```
 
-### 3.9 Volume (optional, informational)
+### 3.9 Acquisition Breaks (D0.5 — the state the device was in)
+
+`acc_periods` (§3.7) says which frame the accelerometer was in. `carrier_profile`
+(§3.8) says what the device was riding on. This block says the third thing, and
+it is the one most often missing when an analysis turns out to have been wrong:
+**was the acquisition itself intact?**
+
+#### 3.9.1 A hole in the data is not a hole in the movement
+
+A Telemachus file with no rows between two instants is ambiguous, and the
+ambiguity is not academic — each reading leads to a different, defensible, and
+incompatible conclusion:
+
+| What happened | What a consumer should conclude |
+|---|---|
+| The vehicle was parked in a covered car park | One trip, interrupted. The vehicle did not move |
+| The device lost power or restarted | Unknown. The vehicle may have moved |
+| The network dropped and the frames arrived three days later | Nothing yet — the data exists and is not here *yet* |
+| The GNSS receiver lost fix while the IMU kept running | The vehicle moved, and its path over that interval is not observed |
+| A sensor froze while still emitting | **Worse than a hole**: the rows are present, well-formed, and constant |
+
+Nothing in the record distinguishes these. Every consumer guesses, and they
+guess differently — which is how the same file yields two trip counts, two
+distances and two availability figures depending on who read it. The last row
+of that table is the dangerous one: a frozen sensor produces data that passes
+every validation rule in SPEC-01 §3.
+
+This block is the session sheet that travels with the tape. A master with four
+minutes of silence tells you nothing about whether the room was quiet, the
+console was patched wrong, or the second reel was recorded after the mic fell
+over. The tape cannot answer; only the note written at the time can. §3.7 and
+§3.8 record two other conditions of the take — which frame the accelerometer was
+in, what the device was riding on — and the three together are what make the
+signal interpretable years later by someone who was not there.
+
+Declaring the break is what removes the guess. It is a **statement of fact
+about the acquisition**, not an interpretation of the movement.
+
+#### 3.9.2 Declaration
+
+```yaml
+acquisition_breaks:
+  - start: 2026-05-21T14:03:11Z
+    end: 2026-05-21T14:07:52Z
+    kind: gnss_outage
+    scope: gnss                    # subsystem affected; `device` if all of it
+    detection_method: device-reported
+    notes: "Underground car park"
+
+  - start: 2026-06-02T08:11:00Z
+    end: 2026-06-05T19:40:00Z
+    kind: late_delivery
+    scope: device
+    detection_method: auto
+    notes: "Frames produced in this window arrived on 2026-06-05"
+```
+
+| Field | Required | Meaning |
+|-------|:--------:|---------|
+| `start` | yes | Beginning of the affected interval |
+| `end` | yes | End of it. `null` or `present` for an interval still open |
+| `kind` | yes | What happened, from §3.9.3 |
+| `scope` | no | Affected subsystem: `gnss`, `accelerometer`, `gyroscope`, `power`, `clock`, `link`, or `device`. Default `device` |
+| `detection_method` | no | `device-reported`, `auto`, `user`, `empirical` — same vocabulary as §3.7 |
+| `notes` | no | Free text |
+
+**How a break is detected is out of scope** (SPEC-04 §5.2), exactly as it is for
+`acc_periods`. `detection_method` records *that* a method was used and of what
+kind; the method itself belongs to whoever ran it.
+
+#### 3.9.3 Registered kinds
+
+An open vocabulary with a registered core. An unrecognised `kind` MUST be
+carried through and treated as `unknown` rather than rejected: a consumer
+reading a dataset produced against a later revision should degrade, not break.
+
+| `kind` | The acquisition was affected because |
+|--------|--------------------------------------|
+| `data_gap` | No rows were produced at all |
+| `gnss_outage` | The receiver had no fix. Other sensors may have kept running |
+| `sensor_frozen` | A sensor emitted, but its value stopped changing |
+| `device_restart` | The device rebooted; counters and state may discontinue |
+| `power_loss` | Supply interrupted |
+| `clock_jump` | The device clock stepped. Timestamps either side are not comparable |
+| `late_delivery` | The data exists and reached the store later than the window it covers |
+| `config_change` | Acquisition configuration changed mid-collection. Pairs with `config_history` (§3.13) and, for the accelerometer frame specifically, with `acc_periods` (§3.7) |
+| `unknown` | Something interrupted the acquisition and it is not known what |
+
+`late_delivery` deserves its own kind rather than being folded into `data_gap`,
+because the two demand opposite reactions. A gap is final: reprocessing will not
+fill it. A late delivery is transient: the same window, reprocessed after the
+data lands, is complete. Treating the second as the first is how a delivery
+delay gets diagnosed as data loss.
+
+#### 3.9.4 What this is not
+
+This block declares **absence and impairment**, never their consequences. It
+does not say which trips to discard, how to interpolate across a hole, or
+whether a reconstruction is trustworthy over the interval. Those are decisions,
+they belong to the consumer, and the format's job is to give them the facts
+they need to make them.
+
+### 3.10 Volume (optional, informational)
 
 ```yaml
 volume:
@@ -380,7 +598,7 @@ volume:
   duration_hours: 5.3
 ```
 
-### 3.10 Data Files
+### 3.11 Data Files
 
 Enumerates the parquet files covered by the manifest.
 
@@ -395,7 +613,7 @@ data_files:
     size_mb: 12
 ```
 
-### 3.11 Papers Using (optional)
+### 3.12 Papers Using (optional)
 
 ```yaml
 papers_using:
@@ -406,7 +624,7 @@ papers_using:
       - frame: raw
 ```
 
-### 3.12 Tags & Config History (optional)
+### 3.13 Tags & Config History (optional)
 
 ```yaml
 tags:
@@ -422,6 +640,41 @@ config_history:
         gravity_filter: false
 ```
 
+
+### 3.14 Corrections (optional)
+
+Declares, once per column rather than once per row, what produced a corrected
+value carried alongside its source (SPEC-01 §2.13.1).
+
+```yaml
+corrections:
+  - column: lat                    # the source column, kept unmodified
+    adjusted: lat_adj              # the corrected value
+    uncertainty: lat_sigma         # optional, same unit as `column`
+    produced_by: "acme-refine@2.3.1"
+    notes: "Post-processed against a reference station"
+```
+
+| Field | Required | Meaning |
+|-------|:--------:|---------|
+| `column` | yes | Source column. MUST be present in the data and unmodified |
+| `adjusted` | yes | Column holding the corrected value. Conventionally `<column>_adj` |
+| `uncertainty` | no | Column holding its uncertainty. Conventionally `<column>_sigma` |
+| `produced_by` | recommended | Identifier and version of whatever produced it |
+| `notes` | no | Free text |
+
+**Why here and not in the rows.** Attaching full provenance to every value is
+attractive on paper and unaffordable in practice: at 10 Hz, in a columnar file,
+repeating the same identifier string multiplies the volume many times over for
+no information. What is constant across a column — the producer, its version,
+the calibration identity — belongs in the manifest. What genuinely varies per
+sample — the uncertainty — belongs in a column. Same contract, two orders of
+magnitude less storage.
+
+**`produced_by` is opaque to this specification.** It is a string the producer
+chooses, and nothing here constrains or interprets it. A pipeline can therefore
+publish corrected data in an open format without publishing how it corrects —
+which is the intended arrangement, not a loophole (SPEC-04 §5.2).
 ---
 
 ## 4. Inheritance Rules
@@ -449,7 +702,8 @@ MUST resolve them using this priority chain:
 | Accelerometer frame at `ts` | First `acc_periods` entry where `start <= ts <= end`. If none match or list absent: `"raw"`. Validators SHOULD warn on incomplete time coverage |
 | Gyro unit conversion needed | `sensors.gyroscope.unit` — if `"deg/s"`, adapter converts to `rad/s` |
 | Carrier state for trip | `trip_carrier_states[].carrier_state` matched by `trip_id` |
-| `is_vehicle_data` | `carrier_state in {mounted_driving, mounted_idle}` |
+| Carrier profile | `carrier_profile`, or `vehicle` if absent (§3.8) |
+| `is_vehicle_data` | `carrier_state` is `analysable` under the resolved profile. Under `vehicle` this is `{mounted_driving, mounted_idle}`, unchanged (§3.8.4) |
 
 ### 4.3 Validation Precedence
 
@@ -470,11 +724,35 @@ A manifest is valid if:
    `device_id` per-row or use `<device_id>_*.parquet` filename convention.
 4. If `acc_periods` is present, each entry has `start`, `end`, `frame`
    in `{raw, compensated, partial}`. `residual_g` is OPTIONAL (an off-board hint, never required); a `partial` period need only satisfy `0 < |a|_rest < g`.
-5. If `trip_carrier_states` is present, each entry has `trip_id` and
-   `carrier_state` from §3.8.
+5. If `trip_carrier_states` is present, each entry has `trip_id` and a
+   `carrier_state` that is a state of the resolved carrier profile (§3.8.3
+   rule 4). Same for the keys of `carrier_state_summary`.
 6. `sensors.*.rate_hz` values are positive numbers.
 7. If `sensors.accelerometer.sampling_mode` is `burst`, then `burst_size`
    and `burst_rate_hz` MUST also be present.
+8. If `source.metrics` is present, it satisfies §3.5.1: it balances, its
+   `drop_reasons` sum to `raw_rows_dropped`, a non-zero drop is explained, and
+   no forbidden reason appears.
+9. `carrier_profile`, when present, resolves: a registered name, or an inline
+   declaration satisfying §3.8.3. Absent resolves to `vehicle`.
+10. If `acquisition_breaks` is present, each entry has `start`, `end` and
+    `kind`, with `end >= start` (or `end` null/`present` for an open interval).
+    An unregistered `kind` or `scope` is a warning, never an error: the
+    vocabulary of §3.9.3 is open by design.
+11. At `full` level, a declared `data_gap` MUST contain no rows. That is the one
+    kind whose claim the data can contradict, and a manifest asserting an
+    absence the file disproves is worse than no manifest.
+12. If `corrections` is present, each entry has `column` and `adjusted`; the
+    source `column` exists in the data, and both `adjusted` and any
+    `uncertainty` column exist too (SPEC-01 §3 rule 13).
+13. Every `_adj` / `_sigma` column present in the data is declared in
+    `corrections`. An undeclared one is a correction nobody can trace, which is
+    the situation §3.14 exists to prevent.
+14. Timestamps (`period.*`, `acc_periods[].*`, `acquisition_breaks[].*`) MAY be
+    written unquoted in YAML.
+   A validator MUST accept both the resulting `datetime` object and an ISO 8601
+   string; a field explicitly set to `null` MUST be accepted as "declared, does
+   not apply" and not treated as a type error.
 
 ---
 
@@ -484,7 +762,7 @@ A manifest is valid if:
 
 ```yaml
 dataset_id: at_aegis_zenodo_820576
-schema_version: "telemachus-0.8"
+schema_version: "telemachus-1.0"
 profile: full
 title: "AEGIS Automotive Sensor Data (Graz)"
 slug: aegis_graz
@@ -552,7 +830,7 @@ source:
 
 ```yaml
 dataset_id: xx_fleet_fmc880_2025
-schema_version: "telemachus-0.8"
+schema_version: "telemachus-1.0"
 profile: imu
 title: "Fleet Pilot — Teltonika FMC880"
 country: FR
@@ -611,7 +889,7 @@ config_history:
 
 ```yaml
 dataset_id: bd_stride_figshare_2024
-schema_version: "telemachus-0.8"
+schema_version: "telemachus-1.0"
 profile: full
 title: "STRIDE — Smartphone Sensors for Road Safety (Rajshahi)"
 country: BD

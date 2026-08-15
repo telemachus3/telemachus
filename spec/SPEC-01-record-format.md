@@ -1,10 +1,10 @@
 ---
 title: "SPEC-01: Telemachus Record Format — Open Telematics Data"
 status: Draft
-version: "0.9"
+version: "1.0"
 author: Sébastien Edet
 created: 2026-04-16
-updated: 2026-06-03
+updated: 2026-08-15
 supersedes: RFC-0001, RFC-0004, RFC-0013
 ---
 
@@ -21,6 +21,20 @@ Telemachus defines an **open pivot format** for high-frequency mobility
 and telematics data. A Telemachus dataset captures what a telematics
 device physically measures and transmits: GNSS position, inertial
 measurements, and optionally vehicle bus data.
+
+**This layer is the master.** The industry it serves has spent twenty years
+answering one question — *what should the dashboard show?* — and that question
+pushes every architecture to simplify early: one position a second, a few
+threshold events, a few indicators, a screen. Events replace measurements,
+aggregates replace trajectories, and the reduction is irreversible. Music went
+the same way in the 2000s, with one difference: it kept the master. Nobody
+presses a record from an MP3.
+
+A record conforming to this specification is what the studio keeps. Every layer
+above it — reconstruction, events, scores, dashboards — can be recomputed from
+it, and each is a projection made for one purpose. This layer cannot be
+recomputed from anything, which is the entire reason it is specified first and
+in the most detail.
 
 This specification consolidates and supersedes RFC-0001 (Core v0.2),
 RFC-0004 (Extended FieldGroups), and RFC-0013 (Device Layer v0.7).
@@ -441,6 +455,19 @@ Telemachus files are timestamped at the **highest sensor rate** (typically
 IMU rate, e.g. 10–100 Hz). Lower-rate columns (GNSS at 1 Hz) contain
 NaN on rows where no measurement is available.
 
+**Completeness rule.** The row set is the **union** of the sensor time axes,
+not the high-rate axis alone. Every native measurement present in the source
+MUST have a row in the file. In particular, a GNSS fix that falls in a hole in
+the accelerometer stream — an inter-burst gap, a sleeping IMU — is carried on a
+row of its own, with the accelerometer columns NaN. A file built by joining the
+low-rate stream onto the high-rate grid loses those fixes silently and still
+passes every other rule in §3; the rule is stated here because that is the
+failure it exists to name.
+
+The converse is equally required: a row created for a low-rate fix MUST NOT
+carry an interpolated high-rate value. Deciding which rows exist is the
+format's business; deciding what values fill them is not (SPEC-04 §5.2).
+
 ```mermaid
 sequenceDiagram
     participant IMU as IMU (10 Hz)
@@ -532,6 +559,31 @@ Telemachus dataset. They represent enriched or derived data:
 | `carrier_state` | Per-trip metadata — belongs in manifest (see SPEC-02) |
 | `is_vehicle_data` | Derived from carrier_state |
 
+#### 2.4.1 Enforcement
+
+The restriction above is checked, not merely stated. A validator MUST:
+
+1. **Report** any personal-data column carrying values, at every level. A
+   producer should never be surprised by what is in their own file.
+2. **Reject** the dataset when the manifest declares an intent to publish and a
+   personal-data column carries values. The declaration is an open `license`, a
+   `source.type` of `open_external`, or a `source.doi`/`source.url` — the moment
+   the intent is on record is the moment the check has standing to refuse.
+
+A column that is present but entirely null is neither: an adapter that creates
+the column and never fills it has done nothing wrong, and failing it would teach
+producers to avoid the standard name, which is the opposite of what §2.4 wants.
+
+**The remedy is removal, not hashing.** A hashed IMEI is still a per-device
+identifier and still joins against any other table holding the same hash. Drop
+the column and give `device_id` an opaque value.
+
+**What this does not claim to catch.** Identifiers are the easy half. A
+trajectory identifies a person on its own — four published positions are enough
+to re-identify most individuals in a mobility dataset — and no validator can
+decide whether a given trace is publishable. Removing `device_imei` makes a
+dataset compliant with this rule, not anonymous.
+
 > **Sensitive identifiers are NOT excluded from the format**: `device_imei` and
 > `sim_iccid` are defined optional PII fields (§2.4), governed by the *publication*
 > policy (omitted/anonymized in open datasets, SPEC-04) — not by this list.
@@ -555,6 +607,57 @@ Telemachus dataset. They represent enriched or derived data:
 
 ---
 
+### 2.13.1 Corrections — a corrected value never replaces its source
+
+§2.13 keeps derived and enriched values out of the record. It does not say what
+a producer should do when it legitimately has a *better* value for a column that
+already exists: a position refined by post-processing, an accelerometer
+rectified into the carrier's frame, a speed reconciled with an odometer.
+
+Today, nothing stops them overwriting `lat`. Once they have, the measurement is
+gone, and no later algorithm can recover it. That is the one loss this format
+exists to prevent, and it is currently unaddressed.
+
+**Lossless does not mean untransformed.** It means *no irreversible destruction
+of the source*. A lossless audio codec is not one that declines to touch the
+waveform; it is one from which the waveform comes back bit for bit. The same
+standard applies here, and it is the standard this section sets.
+
+**The rule.** Correcting is legitimate. Destroying is not. A correction is
+admissible when the raw value, the corrected value and the identity of what
+produced it coexist in the file:
+
+- the source column keeps its name and its measured values, **unmodified**;
+- the corrected value goes in `<column>_adj`;
+- its uncertainty, when the producer has one, goes in `<column>_sigma`, in the
+  same unit as the column;
+- the producer is declared once in the manifest (SPEC-02 §3.12), not repeated
+  on every row.
+
+```
+ts          lat         lat_adj     lat_sigma
+...         49.330121   49.330118   0.4
+```
+
+**The invariant, and it is mechanically checkable:** *removing every `_adj` and
+`_sigma` column declared in the manifest MUST leave exactly the source file.*
+A format that claims to be lossless and cannot demonstrate it is making a
+promise, not a guarantee.
+
+**What this specification does not say.** It says nothing about how a corrected
+value is obtained — which estimator, which calibration, which fusion. That is
+implementation, it is out of scope by SPEC-04 §5.2, and the convention is
+deliberately built so a producer can ship corrected data in an open format while
+its method stays its own. The contract is open; the method is not.
+
+Two consequences worth stating:
+
+- A file may carry `lat_adj` without `lat` only if no raw position was ever
+  measured. A correction with nothing to correct is not a correction.
+- `_adj` and `_sigma` are reserved suffixes on standard column names. They are
+  not vendor extras and do not take the `x_` prefix, because their relationship
+  to the source column is exactly what a consumer needs to be able to rely on.
+
 ## 3. Validation Rules
 
 A Telemachus file is valid if:
@@ -575,6 +678,8 @@ A Telemachus file is valid if:
 10. If gyro columns are present, all three (`gx`, `gy`, `gz`) MUST be present (no partial group). For profile `full`, they are mandatory
 11. If magneto columns are present, all three (`mx`, `my`, `mz`) MUST be present (no partial group)
 12. If `device_id` / `trip_id` are absent from columns, they MUST be resolvable from the manifest (SPEC-02 §4.1)
+13. Every `<column>_adj` / `<column>_sigma` present is declared in the manifest `corrections` block (SPEC-02 §3.14), and its source `<column>` is present (§2.13.1). Removing all declared `_adj` and `_sigma` columns leaves exactly the source columns
+14. No personal-data column (§2.4) carries values in a dataset whose manifest declares an intent to publish (§2.4.1)
 
 ---
 
@@ -716,6 +821,22 @@ Adapters MUST convert raw device units to Telemachus canonical units:
 | Timestamp | datetime64[ns, UTC] | epoch seconds | × 1e9 + to_datetime |
 | Timestamp | datetime64[ns, UTC] | epoch nanoseconds | to_datetime |
 | Timestamp | datetime64[ns, UTC] | ISO 8601 string | parse + ensure UTC |
+
+Two conventions apply to the whole table:
+
+- Constants are **exact**, not rounded. Standard gravity is `9.80665`, not
+  `9.81`: the 0.07 % difference is small enough to survive review and large
+  enough to matter when it is applied to every sample of every dataset.
+- A naive timestamp — no offset, no `Z` — is read as **UTC**. Inferring a local
+  offset from a filename, a hostname or a country field is how a dataset
+  acquires a whole-hour bias that no validator can see.
+
+**Units are declared, not inferred.** An adapter states the unit its source
+carries at the point where it names the column; it does not decide from
+magnitudes. A correct column name over values in the wrong unit passes every
+schema check there is — right name, right type, positive, finite — and the
+magnitude check of SPEC-03 §4.6 is a backstop for data that arrives already
+converted, not a substitute for the declaration.
 
 ---
 

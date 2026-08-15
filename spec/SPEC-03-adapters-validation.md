@@ -1,10 +1,10 @@
 ---
 title: "SPEC-03: Adapters & Validation — Tooling"
 status: Draft
-version: "0.9"
+version: "1.0"
 author: Sébastien Edet
 created: 2026-04-16
-updated: 2026-06-03
+updated: 2026-08-15
 supersedes: RFC-0002, RFC-0005, RFC-0007, RFC-0009
 ---
 
@@ -110,11 +110,31 @@ def convert(source_path: Path, output_dir: Path) -> Path:
 telemachus/
 └── adapters/
     ├── __init__.py          # registry of available adapters
+    │                        # -- format adapters: any source of this shape
+    ├── csv_mapping.py       # CSV, driven by a declarative mapping
+    ├── gpx.py               # GPX 1.0 / 1.1 track points
+    ├── nmea.py              # NMEA 0183 RMC / GGA / VTG
+    │                        # -- dataset adapters: one named dataset each
     ├── aegis.py             # AEGIS (Zenodo, Austria)
     ├── pvs.py               # PVS (Kaggle, Brazil)
-    ├── stride.py            # STRIDE (Figshare, Bangladesh)
-    └── uah.py               # UAH DriveSet (Spain)
+    └── stride.py            # STRIDE (Figshare, Bangladesh)
 ```
+
+The distinction matters more than the file count. A **dataset adapter** knows
+one dataset's layout by heart and exists so a published result can be
+reproduced. A **format adapter** works on data this project has never seen,
+which is the only kind of adapter that helps someone adopt the format without
+talking to its author. Nobody adopts a format by writing new data into it; they
+adopt it by converting what they already have. No lossless audio format won on
+the strength of its own recordings — it won because ripping a disc into it took
+one command and lost nothing.
+
+There is one thing a converter must never do, and it is the reason units are
+declared rather than inferred (§3.0.1): **you cannot rip above the source.** An
+adapter's job is to carry the measurement across intact, in its own units, with
+what was discarded written down. Anything it invents on the way — a speed GPX
+never carried, an accelerometer reading derived from GNSS — is a value that will
+be read as a measurement by everyone downstream, forever.
 
 Proprietary adapters live in a **private pipeline module**, not telemachus-py:
 
@@ -181,6 +201,74 @@ graph TD
 
 ## 3. Adapter Specifications
 
+### 3.0 Format Adapters
+
+#### 3.0.1 CSV — declarative mapping
+
+The CSV adapter takes its column and unit mapping as **data**, not as code:
+
+```yaml
+dataset_id: FR_myfleet_2026
+device_id: truck_07
+read:
+  sep: ";"
+  decimal: ","
+columns:
+  ts:        {column: "Date UTC",  unit: iso8601}
+  lat:       {column: "Latitude",  unit: deg}
+  lon:       {column: "Longitude", unit: deg}
+  speed_mps: {column: "Vitesse",   unit: km/h}
+  ax_mps2:   {column: "AccX",      unit: g}
+  hdop:      {column: "HDOP"}
+```
+
+Rules:
+
+1. **`unit` is REQUIRED on every column that carries one** (SPEC-01 §5),
+   including when the source is already canonical. This is the point of the
+   mechanism, not a formality: it moves the unit question to the moment the
+   column is named, in front of the source's documentation, instead of leaving
+   it to be inferred from magnitudes afterwards.
+2. `unit` is REFUSED on a column that carries none (`hdop`, `n_satellites`) and
+   on an `x_*` extra, which keeps its source unit by definition.
+3. A target that is neither a SPEC-01 column nor an `x_*` extra is an error,
+   and the error names the closest standard column.
+4. `columns.ts` is required.
+5. Unmapped source columns are dropped, or carried as `x_csv_<name>` when the
+   caller asks — the coverage rule of §2.13 is then satisfied by construction.
+
+A mapping is a file: reviewable, diffable, and returnable to whoever produced
+the export for correction.
+
+#### 3.0.2 GPX
+
+| Property | Value |
+|----------|-------|
+| Source | `.gpx` 1.0 / 1.1, one file or a directory |
+| Raw units | decimal degrees, metres, ISO 8601 |
+| Trips | one per `<trkseg>` — a boundary the device recorded, not one a threshold inferred |
+| Extensions | Garmin TrackPointExtension and Cluetrust leaves, as `x_gpx_*` |
+| Not produced | `speed_mps`, present and NaN |
+
+GPX has no speed in its base schema. Deriving one from consecutive positions
+would place a computed value in a measurement column, which SPEC-04 §5.2 rules
+out; the column is therefore present and empty, and a consumer who wants that
+speed computes it knowing they did.
+
+#### 3.0.3 NMEA 0183
+
+| Property | Value |
+|----------|-------|
+| Sentences read | `RMC` (date, time, position, speed, course), `GGA` (quality, satellites, HDOP, altitude), `VTG` (course, ground speed) |
+| Raw units | `DDMM.MMMM` + hemisphere, knots, km/h |
+| Row unit | the **fix epoch** — the three sentence types describe one instant and produce one row between them |
+| Checksum | verified; a corrupt `RMC`/`GGA` counts as a dropped row, a corrupt `GSV` was never a row |
+| `gnss_valid` | recorded from RMC status and GGA quality, never acted upon (§2.5) |
+
+`GGA` carries a time of day and no date. A log with `GGA` and no preceding
+`RMC` is **refused** unless the caller supplies the date: a dataset off by an
+arbitrary number of days is worse than a conversion that failed.
+
 ### 3.1 AEGIS Adapter
 
 | Property | Value |
@@ -229,7 +317,7 @@ graph TD
 
 | Level | Checks | Use Case |
 |-------|--------|----------|
-| `basic` | Mandatory columns for declared profile present, correct types, value ranges (lat/lon bounds, speed >= 0, `hdop`/`pdop` > 0, `n_satellites` >= 0, `heading_deg` in [0, 360), \|a\| finite) | Quick conformance |
+| `basic` | Mandatory columns for declared profile present, correct types, value ranges (lat/lon bounds, speed >= 0, `hdop`/`pdop` > 0, `n_satellites` >= 0, `heading_deg` in [0, 360), \|a\| finite), **unit plausibility (§4.6)** | Quick conformance |
 | `strict` | All of `basic` + monotonic ts, AccPeriod gravity check (profiles `imu`/`full`). NaN is allowed in GNSS columns between ticks (multi-rate convention) but at least one non-NaN GPS fix MUST exist | Research-grade |
 | `manifest` | SPEC-02 §5 rules (required fields, acc_periods consistency, sensor config) | Manifest-only check |
 | `full` | `strict` + `manifest` + cross-validation (manifest vs parquet agreement) | Publication-ready |
@@ -315,6 +403,61 @@ graph TD
 | `2` | Manifest missing or corrupted |
 | `3` | Schema invalid or unavailable |
 
+### 4.6 Unit Plausibility
+
+A wrong unit is the defect this format is least able to survive and most likely
+to meet, and it is invisible to every rule above: the column is named
+`speed_mps`, its type is float32, its values are positive and finite, and they
+are in km/h. Only the magnitudes are wrong.
+
+Two families of test, and the difference decides the severity.
+
+**Cross-checks** compare a column against an independent measurement of the
+same quantity, and return a ratio that names the wrong unit outright. A ratio
+of 3.60 between `speed_mps` and the speed its own positions imply is not a
+suspicion. These are **errors**.
+
+| Check | Independent reference | Ratios named |
+|-------|----------------------|--------------|
+| `speed_mps` | great-circle distance between consecutive fixes | 3.6 km/h, 1.94 knots, 2.24 mph, 100 cm/s |
+
+**A cross-check must know when it is looking at a mirror.** The strength of the
+one above depends entirely on `speed_mps` being an independent measurement, and
+nothing guarantees that: an adapter that fills it by differentiating the very
+positions it will be compared against turns the test into a tautology. The
+ratio comes out at exactly 1, the report is empty, and the silence reads as a
+pass.
+
+The two cases are told apart by the *scatter* of the ratio, not its median. A
+Doppler reading disagrees with its own positions sample by sample — curvature,
+receiver noise, timing — so the ratio spreads by several percent. A derived
+column tracks them exactly and spreads by nothing. Below an interquartile
+spread of 0.01 the validator reports that it **cannot** validate the column,
+which is a different statement from finding it correct.
+
+A wrong unit is still named whatever the provenance: derived and scaled by 3.6
+is still km/h, and the ratio still says so.
+
+**Magnitude checks** compare a column against what physics allows. A plausible
+magnitude can still be wrong and an implausible one can be genuine, so these
+**warn**, except where a named unit accounts for the discrepancy exactly.
+
+| Column | Expected | Error when |
+|--------|----------|-----------|
+| \|a\| | per declared AccPeriod frame (§3 rule 3): ~9.81 `raw`, ~0 `compensated` | median ≈ 1.0 under `raw` (still in g); ≈ 9.81 under `compensated` (gravity present) |
+| \|ω\| | < 8 rad/s for a mounted sensor | p99 > 17 rad/s, beyond MEMS full scale (deg/s) |
+| \|m\| | 25–65 µT, the Earth's field | median matches nT, mT or gauss instead |
+| `speed_mps` | < 100 m/s for a ground carrier | p99.9 above it |
+| `altitude_gps_m` | below any road on Earth | p99 > 9000 m (feet) |
+
+The accelerometer check is **frame-aware and refuses to guess**. Without a
+declared AccPeriod, a median \|a\| of 1.0 m/s² is both a raw signal left in g
+and a perfectly correct compensated frame; the validator reports what it sees
+and asks for the declaration rather than picking one.
+
+Every check needs at least 30 usable samples. Below that it stays silent:
+silence is more useful than a coin toss.
+
 ---
 
 ## 5. Dataset Generation Workflow
@@ -342,6 +485,12 @@ graph TD
 ### 5.2 CLI for Conversion
 
 ```bash
+# Convert your own data (format adapters)
+tele mapping-template myexport.csv > mapping.yaml      # then fill in the units
+tele convert csv myexport.csv --mapping mapping.yaml --outdir out/
+tele convert gpx rides/ --outdir out/
+tele convert nmea track.nmea --outdir out/
+
 # Convert an Open dataset to Telemachus parquet + manifest
 tele convert aegis /path/to/aegis/csvs --outdir datasets/aegis/
 tele convert pvs /path/to/pvs/trips --outdir datasets/pvs/ --placement dashboard
