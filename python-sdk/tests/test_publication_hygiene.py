@@ -52,7 +52,7 @@ def _public_docstrings(path: Path):
     if (doc := ast.get_docstring(tree)):
         yield 1, doc
     for node in ast.walk(tree):
-        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
             continue
         if node.name.startswith("_"):
             continue
@@ -200,6 +200,7 @@ def test_the_guard_would_catch_the_thing_it_is_for():
 
 def test_pii_is_reported_in_an_internal_dataset():
     import pandas as pd
+
     from telemachus.core.privacy import check_pii
 
     df = pd.DataFrame({"ts": pd.date_range("2026-03-01T08:00:00Z", periods=5, freq="1s"),
@@ -211,6 +212,7 @@ def test_pii_is_reported_in_an_internal_dataset():
 
 def test_pii_is_refused_once_the_manifest_declares_publication():
     import pandas as pd
+
     from telemachus.core.privacy import check_pii
 
     df = pd.DataFrame({"ts": pd.date_range("2026-03-01T08:00:00Z", periods=5, freq="1s"),
@@ -226,6 +228,7 @@ def test_an_empty_pii_column_is_not_a_leak():
     """An adapter that creates the column and never fills it did nothing wrong."""
     import numpy as np
     import pandas as pd
+
     from telemachus.core.privacy import check_pii
 
     df = pd.DataFrame({"ts": pd.date_range("2026-03-01T08:00:00Z", periods=5, freq="1s"),
@@ -235,6 +238,7 @@ def test_an_empty_pii_column_is_not_a_leak():
 
 def test_the_advice_is_to_drop_not_to_hash():
     import pandas as pd
+
     from telemachus.core.privacy import check_pii
 
     df = pd.DataFrame({"ts": pd.date_range("2026-03-01T08:00:00Z", periods=5, freq="1s"),
@@ -246,6 +250,7 @@ def test_the_advice_is_to_drop_not_to_hash():
 def test_no_published_dataset_carries_pii():
     """The four datasets this project ships, checked rather than assumed."""
     import yaml
+
     from telemachus.core.privacy import PII_COLUMNS
 
     manifests = sorted((REPO / "datasets").glob("*/manifest.yaml"))

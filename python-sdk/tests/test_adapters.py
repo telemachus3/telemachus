@@ -5,7 +5,8 @@ import pandas as pd
 import pytest
 
 import telemachus as tele
-from telemachus.adapters import REGISTRY, load as adapter_load
+from telemachus.adapters import REGISTRY
+from telemachus.adapters import load as adapter_load
 
 
 def test_registry_contains_all_adapters():

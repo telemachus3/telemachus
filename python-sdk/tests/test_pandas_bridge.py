@@ -4,10 +4,10 @@ import numpy as np
 import pandas as pd
 
 from telemachus.pandas import (
-    read_parquet_df,
-    write_parquet_df,
-    validate_df_against_arrow_schema,
     Frame,
+    read_parquet_df,
+    validate_df_against_arrow_schema,
+    write_parquet_df,
 )
 
 # For tests, we assume 'trajectory' is a known table in TABLE_SCHEMAS with at least:

@@ -15,7 +15,6 @@ import telemachus as tele
 from telemachus.adapters import csv_mapping, gpx, nmea
 from telemachus.adapters.csv_mapping import MappingError
 
-
 # ---------------------------------------------------------------------------
 # CSV, declarative mapping
 # ---------------------------------------------------------------------------

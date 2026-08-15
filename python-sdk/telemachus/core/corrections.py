@@ -101,7 +101,7 @@ def strip_corrections(df: pd.DataFrame, manifest: dict | None = None) -> pd.Data
 
 
 def check_corrections(manifest: dict | None,
-                      df: "pd.DataFrame | None" = None) -> tuple[list[str], list[str]]:
+                      df: pd.DataFrame | None = None) -> tuple[list[str], list[str]]:
     """Validate the declaration against the data. Returns ``(errors, warnings)``."""
     errors: list[str] = []
     warnings: list[str] = []

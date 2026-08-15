@@ -158,7 +158,7 @@ def resolve_acquisition_breaks(manifest: dict | None) -> list[AcquisitionBreak]:
 
 
 def check_acquisition_breaks(manifest: dict | None,
-                             df: "pd.DataFrame | None" = None) -> tuple[list[str], list[str]]:
+                             df: pd.DataFrame | None = None) -> tuple[list[str], list[str]]:
     """Validate the block, and cross-check it against the data when supplied.
 
     Returns ``(errors, warnings)``.

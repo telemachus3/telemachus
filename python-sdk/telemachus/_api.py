@@ -8,7 +8,6 @@ Aligned with SPEC-01 (Record Format) and SPEC-02 (Manifest).
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional, Union
 
 import pandas as pd
 import yaml
@@ -20,12 +19,12 @@ from telemachus.core.corrections import check_corrections
 from telemachus.core.plausibility import check_units
 from telemachus.core.privacy import check_pii
 from telemachus.core.schemas import (
-    MANDATORY_BY_PROFILE,
-    GYRO_COLUMN_NAMES,
-    MAGNETO_COLUMN_NAMES,
-    OBD_COLUMN_NAMES,
-    IO_COLUMN_NAMES,
     ALL_KNOWN_COLUMNS,
+    GYRO_COLUMN_NAMES,
+    IO_COLUMN_NAMES,
+    MAGNETO_COLUMN_NAMES,
+    MANDATORY_BY_PROFILE,
+    OBD_COLUMN_NAMES,
 )
 
 # ---------------------------------------------------------------------------
@@ -33,7 +32,7 @@ from telemachus.core.schemas import (
 # ---------------------------------------------------------------------------
 
 
-def read(path: Union[str, Path]) -> pd.DataFrame:
+def read(path: str | Path) -> pd.DataFrame:
     """Read a Telemachus dataset from a manifest or parquet file.
 
     Parameters
@@ -59,7 +58,7 @@ def read(path: Union[str, Path]) -> pd.DataFrame:
 
 def _read_from_manifest(manifest_path: Path) -> pd.DataFrame:
     """Read parquet files referenced in a manifest.yaml."""
-    with open(manifest_path, "r", encoding="utf-8") as f:
+    with open(manifest_path, encoding="utf-8") as f:
         manifest = yaml.safe_load(f)
 
     root = manifest_path.parent
@@ -187,9 +186,9 @@ def is_full_imu(df: pd.DataFrame) -> bool:
 def validate(
     df: pd.DataFrame,
     level: str = "basic",
-    profile: Optional[str] = None,
-    acc_frame: Optional[str] = None,
-) -> "ValidationReport":
+    profile: str | None = None,
+    acc_frame: str | None = None,
+) -> ValidationReport:
     """Validate a DataFrame against Telemachus record format.
 
     Parameters
@@ -302,9 +301,11 @@ def validate(
     )
 
 
-def validate_manifest(path: Union[str, Path]) -> "ValidationReport":
+def validate_manifest(path: str | Path) -> ValidationReport:
     """Validate a manifest.yaml against SPEC-02."""
-    from jsonschema import validate as json_validate, ValidationError
+    from jsonschema import ValidationError
+    from jsonschema import validate as json_validate
+
     from telemachus.schemas.manifest_schema import MANIFEST_SCHEMA
 
     p = Path(path)
@@ -313,7 +314,7 @@ def validate_manifest(path: Union[str, Path]) -> "ValidationReport":
     if not p.exists():
         return ValidationReport(ok=False, errors=[f"Manifest not found: {p}"])
 
-    with open(p, "r", encoding="utf-8") as f:
+    with open(p, encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
     try:
@@ -394,9 +395,9 @@ def validate_manifest(path: Union[str, Path]) -> "ValidationReport":
 
 
 def validate_dataset(
-    path: Union[str, Path],
+    path: str | Path,
     level: str = "full",
-) -> "ValidationReport":
+) -> ValidationReport:
     """Validate a complete dataset (manifest + parquet files)."""
     p = Path(path)
     manifest_path = p / "manifest.yaml" if p.is_dir() else p
@@ -405,7 +406,7 @@ def validate_dataset(
     manifest_report = validate_manifest(manifest_path)
 
     # Read manifest for profile
-    with open(manifest_path, "r", encoding="utf-8") as f:
+    with open(manifest_path, encoding="utf-8") as f:
         manifest = yaml.safe_load(f)
 
     profile = manifest.get("profile", "imu")
@@ -467,8 +468,8 @@ class ValidationReport:
     def __init__(
         self,
         ok: bool,
-        errors: Optional[list[str]] = None,
-        warnings: Optional[list[str]] = None,
+        errors: list[str] | None = None,
+        warnings: list[str] | None = None,
         profile: str = "imu",
         level: str = "basic",
     ):

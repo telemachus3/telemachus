@@ -35,8 +35,8 @@ because an unkept promise in a specification costs more than an absence.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Mapping
 
 __all__ = [
     "REGISTERED_PROFILES",

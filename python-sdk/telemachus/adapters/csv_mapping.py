@@ -71,10 +71,10 @@ def load_mapping(mapping) -> dict:
     """Accept a mapping as a path, a YAML string, or an already-parsed dict."""
     if isinstance(mapping, dict):
         return mapping
-    if isinstance(mapping, (str, Path)):
+    if isinstance(mapping, str | Path):
         p = Path(mapping)
         if p.exists():
-            with open(p, "r", encoding="utf-8") as f:
+            with open(p, encoding="utf-8") as f:
                 return yaml.safe_load(f) or {}
         if isinstance(mapping, str) and ("\n" in mapping or ":" in mapping):
             return yaml.safe_load(mapping) or {}
@@ -177,7 +177,7 @@ def load(source_path, *, mapping, account: RowAccount | None = None,
     _check_targets(columns)
 
     read_opts = {k: v for k, v in (spec.get("read") or {}).items() if k in _READ_KEYS}
-    unknown_opts = set((spec.get("read") or {})) - _READ_KEYS
+    unknown_opts = set(spec.get("read") or {}) - _READ_KEYS
     if unknown_opts:
         raise MappingError(
             f"read: unsupported option(s) {sorted(unknown_opts)}. "

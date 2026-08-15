@@ -25,19 +25,19 @@ __version__ = "1.0.0a1"
 __spec_version__ = "telemachus-1.0"
 
 from telemachus._api import (
-    read,
-    validate,
-    validate_manifest,
-    validate_dataset,
     has_gps,
-    has_imu,
     has_gyro,
+    has_imu,
+    has_io,
     has_magneto,
     has_obd,
-    has_io,
-    sensor_profile,
-    is_gps_only,
     is_full_imu,
+    is_gps_only,
+    read,
+    sensor_profile,
+    validate,
+    validate_dataset,
+    validate_manifest,
 )
 from telemachus.core.accounting import RowAccount, check_row_accounting, drop_duplicate_ts
 from telemachus.core.breaks import (

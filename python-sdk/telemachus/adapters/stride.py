@@ -11,7 +11,6 @@ Reference: Naznine et al. (2024), Nature Scientific Data, CC-BY-4.0
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import pandas as pd
 
@@ -20,7 +19,7 @@ def load(
     source_path: str | Path,
     *,
     category: str = "driving",
-    session_idx: Optional[int] = None,
+    session_idx: int | None = None,
     with_gyro: bool = True,
     with_magneto: bool = True,
 ) -> pd.DataFrame:

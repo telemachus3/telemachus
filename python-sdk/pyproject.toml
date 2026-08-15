@@ -48,7 +48,7 @@ dev = [
     "pytest",
     "pytest-cov",
     "black",
-    "ruff",
+    "ruff>=0.12",
     "ipykernel"
 ]
 viz = [
@@ -62,6 +62,37 @@ geo = [
 
 [tool.setuptools.packages.find]
 include = ["telemachus*"]
+
+# Explicit rule set and a pinned floor. An unconfigured linter means "whatever
+# the latest version thinks today", which is how a green build turns red with
+# nobody having touched the code — it happened on the first CI run of 1.0, where
+# a newer ruff than the author's enabled import sorting and reported 56
+# findings in files nobody had edited.
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+# E/W pycodestyle, F pyflakes, I import sorting, UP pyupgrade, B bugbear.
+select = ["E", "W", "F", "I", "UP", "B"]
+ignore = [
+    "E501",   # line length: the prose in these modules is the documentation
+    "B008",   # call in default argument: intentional in the CLI decorators
+]
+
+[tool.ruff.lint.per-file-ignores]
+# The v0.1 modules deprecated in 1.0 are scheduled for removal in 1.1. Bringing
+# them up to the current rule set would mean editing code that is leaving.
+"telemachus/io.py" = ["ALL"]
+"telemachus/io_import.py" = ["ALL"]
+"telemachus/io_export.py" = ["ALL"]
+"telemachus/models.py" = ["ALL"]
+"telemachus/_validate_legacy.py" = ["ALL"]
+"telemachus/core/models.py" = ["ALL"]
+"telemachus/core/dataset.py" = ["ALL"]
+"telemachus/core/semantics.py" = ["ALL"]
+"telemachus/core/validate_tables.py" = ["ALL"]
+"telemachus/pandas/*" = ["ALL"]
 
 [tool.pytest.ini_options]
 addopts = "-q"

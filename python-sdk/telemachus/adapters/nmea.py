@@ -119,7 +119,7 @@ def load(source_path, *, account: RowAccount | None = None,
 
     for log in files:
         stem_trip = trip_id or log.stem
-        with open(log, "r", encoding="utf-8", errors="replace") as handle:
+        with open(log, encoding="utf-8", errors="replace") as handle:
             for line in handle:
                 line = line.strip()
                 if not line.startswith(("$", "!")):

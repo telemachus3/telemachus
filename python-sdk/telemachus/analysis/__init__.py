@@ -16,10 +16,10 @@ Everything here reads a Telemachus-conformant frame and returns a frame or a
 series. Nothing here writes one.
 """
 
-from .sampling import decimation_loss, session_contiguity, session_profile, stops
-from .describe import stream_summary
-from .trips import TripSegmenter, by_gap, by_stop, segment_trips, trip_profile
 from .derived import compute_dt, speed_from_pos
+from .describe import stream_summary
+from .sampling import decimation_loss, session_contiguity, session_profile, stops
+from .trips import TripSegmenter, by_gap, by_stop, segment_trips, trip_profile
 
 __all__ = [
     # trip reconstruction — a decision, not a property

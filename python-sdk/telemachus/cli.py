@@ -13,11 +13,11 @@ from pathlib import Path
 import click
 import yaml
 
-from .io_export import export_rs3_to_telemachus
-from ._validate_legacy import validate_manifest as validate_manifest_legacy
 from ._validate_legacy import summarize_dataset
-from .io_import import load_dataset
+from ._validate_legacy import validate_manifest as validate_manifest_legacy
 from .core.validate_tables import validate_all_tables
+from .io_export import export_rs3_to_telemachus
+from .io_import import load_dataset
 
 
 @click.group()
@@ -102,7 +102,7 @@ def convert_cmd(adapter_name, source_path, outdir, mapping, extras, date, device
     SOURCE_PATH: the file or directory to read.
     """
     import telemachus as tele_api
-    from telemachus.adapters import REGISTRY, FORMAT_ADAPTERS, _module
+    from telemachus.adapters import FORMAT_ADAPTERS, REGISTRY, _module
 
     if adapter_name not in REGISTRY:
         click.echo(f"Unknown adapter {adapter_name!r}. Available: {sorted(REGISTRY)}")

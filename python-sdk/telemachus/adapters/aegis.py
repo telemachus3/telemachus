@@ -10,7 +10,6 @@ Reference: Brunner et al. (2017), CC-BY-4.0
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -29,7 +28,7 @@ def _nmea_to_decimal(nmea_val: float) -> float:
 def load(
     source_path: str | Path,
     *,
-    top_n_trips: Optional[int] = 5,
+    top_n_trips: int | None = 5,
     with_gyro: bool = True,
     with_obd: bool = False,
 ) -> pd.DataFrame:

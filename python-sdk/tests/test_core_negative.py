@@ -7,12 +7,12 @@ import pandas as pd
 import pytest
 
 from telemachus.core.errors import SemanticError, UnitsError
+from telemachus.core.semantics import AlignmentWarning, assert_units, check_alignment
 from telemachus.core.validate_tables import (
-    validate_trajectory_df,
-    validate_imu_df,
     validate_events_df,
+    validate_imu_df,
+    validate_trajectory_df,
 )
-from telemachus.core.semantics import assert_units, check_alignment, AlignmentWarning
 
 
 def test_invalid_lat_lon_out_of_bounds():

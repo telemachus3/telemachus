@@ -118,7 +118,7 @@ def test_decimation_loss_grows_monotonically_on_a_zigzag():
     res = decimation_loss(df, [1, 2, 10, 60]).set_index("step_s")
     losses = [res.loc[s, "loss_pct"] for s in (1, 2, 10, 60)]
     assert losses[0] == 0.0
-    assert all(a <= b + 1e-9 for a, b in zip(losses, losses[1:])), losses
+    assert all(a <= b + 1e-9 for a, b in zip(losses, losses[1:], strict=False)), losses
     assert losses[-1] > 50.0
 
 

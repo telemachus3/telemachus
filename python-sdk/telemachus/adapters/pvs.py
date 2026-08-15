@@ -11,7 +11,6 @@ Reference: CC-BY-NC-ND-4.0 (data not redistributable)
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -22,7 +21,7 @@ DEG2RAD = np.pi / 180.0
 def load(
     source_path: str | Path,
     *,
-    trip_idx: Optional[int] = None,
+    trip_idx: int | None = None,
     placement: str = "dashboard",
     side: str = "left",
 ) -> pd.DataFrame:

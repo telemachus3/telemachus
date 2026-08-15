@@ -2,10 +2,11 @@
 
 import os
 import tempfile
+
 import pandas as pd
 
+from telemachus._validate_legacy import summarize_dataset, validate_manifest
 from telemachus.io_export import export_rs3_to_telemachus
-from telemachus._validate_legacy import validate_manifest, summarize_dataset
 
 
 def _make_minimal_rs3_csvs(tmpdir: str):

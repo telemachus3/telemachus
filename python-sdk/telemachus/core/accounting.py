@@ -72,7 +72,7 @@ class RowAccount:
     raw_rows_in: int
     drop_reasons: dict[str, int] = field(default_factory=dict)
 
-    def drop(self, reason: str, n: int) -> "RowAccount":
+    def drop(self, reason: str, n: int) -> RowAccount:
         """Record ``n`` rows discarded for ``reason``. Returns self, to chain.
 
         A zero count is accepted and not recorded: an adapter should be able to
@@ -167,9 +167,9 @@ def check_row_accounting(metrics: dict) -> list[str]:
     return problems
 
 
-def drop_duplicate_ts(df: pd.DataFrame, account: "RowAccount | None" = None, *,
+def drop_duplicate_ts(df: pd.DataFrame, account: RowAccount | None = None, *,
                       ts: str = "ts", by: str | None = "device_id",
-                      keep: str = "first") -> tuple[pd.DataFrame, "RowAccount | None"]:
+                      keep: str = "first") -> tuple[pd.DataFrame, RowAccount | None]:
     """Remove rows repeating a timestamp already seen for the same entity.
 
     SPEC-01 §3 rule 2 requires ``ts`` to be strictly increasing, so a duplicate
