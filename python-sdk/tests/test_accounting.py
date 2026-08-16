@@ -102,3 +102,17 @@ def test_two_devices_may_report_at_the_same_instant():
                     _frame(["2026-01-01T00:00:00Z"], "d2")], ignore_index=True)
     out, _ = drop_duplicate_ts(df, RowAccount(raw_rows_in=2))
     assert len(out) == 2, "a global drop_duplicates would delete one device's row"
+
+def test_the_default_is_safe_because_finish_refuses_to_balance():
+    """`raw_rows_in` defaults to zero so an adapter that counts as it reads need
+    not write a value only to overwrite it. That is safe rather than merely
+    convenient: a zero left in place by mistake cannot pass unnoticed."""
+    account = RowAccount()
+    assert account.raw_rows_in == 0
+
+    account.drop("duplicate_ts", 2)
+    with pytest.raises(RowAccountError, match="does not balance"):
+        account.finish(rows_out=10)          # 10 + 2 != 0
+
+    account.raw_rows_in = 12                 # what an adapter actually does
+    assert account.finish(rows_out=10)["raw_rows_in"] == 12

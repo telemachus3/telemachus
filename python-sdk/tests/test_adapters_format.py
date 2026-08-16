@@ -66,7 +66,7 @@ def test_conversion_applies_the_declared_units(export):
 
 
 def test_conversion_reports_what_it_dropped(export):
-    account = tele.RowAccount(raw_rows_in=0)
+    account = tele.RowAccount()
     df = csv_mapping.load(export, mapping=MAPPING, account=account)
     metrics = account.finish(rows_out=len(df))
     assert metrics["raw_rows_in"] == 203
@@ -203,7 +203,7 @@ def test_a_mapping_can_be_a_yaml_file(export, tmp_path):
 
 
 def test_manifest_carries_the_accounting_and_the_declared_metadata(export):
-    account = tele.RowAccount(raw_rows_in=0)
+    account = tele.RowAccount()
     df = csv_mapping.load(export, mapping=MAPPING, account=account)
     manifest = csv_mapping.manifest(MAPPING, account=account, rows_out=len(df))
     assert manifest["dataset_id"] == "FR_demo_2026"
@@ -266,7 +266,7 @@ def test_gpx_extensions_become_vendor_extras(ride):
 
 
 def test_gpx_accounts_for_what_it_dropped(ride):
-    account = tele.RowAccount(raw_rows_in=0)
+    account = tele.RowAccount()
     df = gpx.load(ride, account=account)
     assert account.finish(rows_out=len(df))["drop_reasons"] == {
         "duplicate_ts": 1, "no_timestamp": 1}
@@ -360,7 +360,7 @@ def test_nmea_converts_ddmm_and_knots(track):
 
 
 def test_nmea_counts_a_corrupt_position_sentence(track):
-    account = tele.RowAccount(raw_rows_in=0)
+    account = tele.RowAccount()
     df = nmea.load(track, account=account)
     metrics = account.finish(rows_out=len(df))
     assert metrics["drop_reasons"] == {"bad_checksum": 1}

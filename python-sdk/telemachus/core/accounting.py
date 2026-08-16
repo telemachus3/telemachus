@@ -67,9 +67,19 @@ class RowAccount:
         Frames read from the source, counted before any filtering. For a
         multi-file source this is the sum over files; for a multi-rate source
         it is the total across streams, so that the identity below still holds.
+
+        Defaults to zero, because the common case is an adapter that counts as
+        it reads and sets the field itself — `RowAccount(raw_rows_in=0)` at the
+        call site is a value written only to be overwritten three lines later.
+
+        The default is safe rather than merely convenient: a zero left in place
+        by mistake cannot pass unnoticed, since :meth:`finish` refuses a tally
+        where `rows_out + raw_rows_dropped` does not equal `raw_rows_in`. An
+        adapter that forgets gets an error naming the discrepancy, not a
+        manifest quietly claiming it read nothing.
     """
 
-    raw_rows_in: int
+    raw_rows_in: int = 0
     drop_reasons: dict[str, int] = field(default_factory=dict)
 
     def drop(self, reason: str, n: int) -> RowAccount:
