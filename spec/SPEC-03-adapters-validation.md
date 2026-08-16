@@ -421,6 +421,14 @@ suspicion. These are **errors**.
 |-------|----------------------|--------------|
 | `speed_mps` | great-circle distance between consecutive fixes | 3.6 km/h, 1.94 knots, 2.24 mph, 100 cm/s |
 
+**A declaration turns the cross-check into something stronger.** When the
+manifest states `column_provenance.speed_mps` (SPEC-02 §3.15), the dispersion
+below stops being a guess about the data and becomes a check on the
+declaration: a column declared `measured` that tracks its own positions exactly
+is a contradiction, not a suspicion, and is an **error**. A column declared
+`derived` is expected to agree, so the checker says nothing — declaring buys
+silence. The table is in SPEC-02 §3.15.1.
+
 **A cross-check must know when it is looking at a mirror.** The strength of the
 one above depends entirely on `speed_mps` being an independent measurement, and
 nothing guarantees that: an adapter that fills it by differentiating the very

@@ -58,6 +58,10 @@ from telemachus.core.corrections import (
 from telemachus.core.multirate import merge_multirate
 from telemachus.core.plausibility import check_timestamps, check_units
 from telemachus.core.privacy import check_pii, strip_pii
+from telemachus.core.provenance import (
+    check_provenance_declaration,
+    resolve_column_provenance,
+)
 from telemachus.core.units import convert as convert_unit
 
 __all__ = [
@@ -72,6 +76,8 @@ __all__ = [
     "check_units",
     "check_timestamps",
     "check_row_accounting",
+    "check_provenance_declaration",
+    "resolve_column_provenance",
     "check_pii",
     "strip_pii",
     # carrier profiles

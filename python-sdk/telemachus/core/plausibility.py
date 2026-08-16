@@ -113,7 +113,9 @@ def _name_ratio(ratio: float, table) -> str | None:
 # Individual checks
 # ---------------------------------------------------------------------------
 
-def _check_speed_against_positions(df: pd.DataFrame) -> list[Finding]:
+def _check_speed_against_positions(df: pd.DataFrame,
+                                   declared_origin: str | None = None,
+                                   ) -> list[Finding]:
     """Compare the declared speed with the speed the positions imply.
 
     Only pairs of consecutive fixes closer than 10 s and actually moving are
@@ -175,7 +177,32 @@ def _check_speed_against_positions(df: pd.DataFrame) -> list[Finding]:
     # health it has no grounds to give. Real independent speeds show an
     # interquartile spread of several percent; a derived one shows none.
     spread = float(np.subtract(*np.percentile(ratios, [75, 25])))
-    if spread < 0.01:
+    tracks_its_own_positions = spread < 0.01
+
+    # What that dispersion MEANS depends on what the manifest claims, and this
+    # is where a declaration earns its keep. Alone, the measurement can only
+    # hedge: "tracks its positions exactly" has an innocent reading, since a
+    # constant speed on a straight road is indistinguishable from a derivation.
+    # Beside a declaration, the same number stops being a guess about the data
+    # and becomes a check ON the declaration.
+    if declared_origin == "measured" and tracks_its_own_positions:
+        return [Finding(
+            "speed_mps", "error",
+            f"speed_mps is declared `measured` but tracks the speed its own "
+            f"positions imply exactly (ratio spread {spread:.4f}; an independent "
+            f"measurement scatters by several percent). Two sensors do not agree "
+            f"to that precision. Either the column was computed from the "
+            f"positions and the declaration is false, or it was measured and "
+            f"something upstream overwrote it — either way the dataset is not "
+            f"what it says it is (SPEC-02 §3.15)")]
+
+    if declared_origin in ("derived", "absent"):
+        # Declared derived: the agreement is expected, the cross-check cannot
+        # run, and repeating that on every file would be noise. Silence is what
+        # declaring buys.
+        return []
+
+    if tracks_its_own_positions:
         return [Finding(
             "speed_mps", "warning",
             f"speed_mps tracks the speed its own positions imply too closely "
@@ -183,7 +210,8 @@ def _check_speed_against_positions(df: pd.DataFrame) -> list[Finding]:
             f"appears to be derived from them. This check therefore cannot "
             f"validate it — a derived column always agrees with its source. "
             f"Nothing here says the values are wrong, only that they are "
-            f"unverified",
+            f"unverified. Declaring `column_provenance.speed_mps` settles it "
+            f"(SPEC-02 §3.15)",
         )]
 
     if ratio > 1.5 or ratio < 0.67:
@@ -444,7 +472,8 @@ def check_timestamps(df: pd.DataFrame, *, ts: str = "ts",
 # Entry point
 # ---------------------------------------------------------------------------
 
-def check_units(df: pd.DataFrame, *, acc_frame: str | None = None) -> list[Finding]:
+def check_units(df: pd.DataFrame, *, acc_frame: str | None = None,
+                provenance: dict[str, str] | None = None) -> list[Finding]:
     """Check that the magnitudes in a frame match the units its columns claim.
 
     Parameters
@@ -458,14 +487,21 @@ def check_units(df: pd.DataFrame, *, acc_frame: str | None = None) -> list[Findi
         Without it the accelerometer check cannot separate a correct
         compensated frame from a raw one left in g, and says so instead of
         picking one.
+    provenance : dict or None
+        `column_provenance` from the manifest (SPEC-02 §3.15), mapping a column
+        to `measured`, `derived` or `absent`. Without it the speed cross-check
+        can only hedge; with it the same measurement becomes a check on the
+        declaration, and a column declared `measured` that tracks its own
+        positions exactly is a contradiction rather than a suspicion.
 
     Returns
     -------
     list[Finding]
         Empty when nothing is suspect. Errors first.
     """
+    provenance = provenance or {}
     findings: list[Finding] = []
-    findings += _check_speed_against_positions(df)
+    findings += _check_speed_against_positions(df, provenance.get("speed_mps"))
     # The magnitude bound and the cross-check have the same cause when both
     # fire. Reporting it once, from the test that names the unit, is more use
     # than reporting it twice.
