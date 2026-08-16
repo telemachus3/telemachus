@@ -18,6 +18,10 @@ from telemachus.core.carrier import CarrierProfileError, resolve_carrier_profile
 from telemachus.core.corrections import check_corrections
 from telemachus.core.plausibility import check_timestamps, check_units
 from telemachus.core.privacy import check_pii
+from telemachus.core.provenance import (
+    check_provenance_declaration,
+    resolve_column_provenance,
+)
 from telemachus.core.schemas import (
     ALL_KNOWN_COLUMNS,
     GYRO_COLUMN_NAMES,
@@ -188,6 +192,7 @@ def validate(
     level: str = "basic",
     profile: str | None = None,
     acc_frame: str | None = None,
+    provenance: dict[str, str] | None = None,
 ) -> ValidationReport:
     """Validate a DataFrame against Telemachus record format.
 
@@ -202,6 +207,11 @@ def validate(
         Declared AccPeriod frame (SPEC-02 §3.7), passed to the unit
         plausibility check so it can tell a compensated frame from a raw one
         left in g. :func:`validate_dataset` supplies it from the manifest.
+    provenance : dict or None
+        `column_provenance` from the manifest (SPEC-02 §3.15). It turns the
+        speed cross-check from a guess into a check on the declaration: a
+        column declared `measured` that tracks its own positions exactly is a
+        contradiction, not a suspicion. :func:`validate_dataset` supplies it.
 
     Returns
     -------
@@ -282,7 +292,7 @@ def validate(
     # columns are correctly named, correctly typed and in the wrong unit; this
     # is the one that does not. Findings that name the wrong unit outright are
     # errors, the rest are warnings — see telemachus.core.plausibility.
-    for finding in check_units(df, acc_frame=acc_frame):
+    for finding in check_units(df, acc_frame=acc_frame, provenance=provenance):
         (errors if finding.severity == "error" else warnings).append(finding.message)
 
     # Rule 12b: the instants themselves. Every rule above accepts a row dated
@@ -437,7 +447,9 @@ def validate_dataset(
             level=level,
         )
 
-    data_report = validate(df, level=level, profile=profile, acc_frame=acc_frame)
+    provenance = resolve_column_provenance(manifest)
+    data_report = validate(df, level=level, profile=profile, acc_frame=acc_frame,
+                           provenance=provenance)
 
     # SPEC-02 §5 rule 11 — only reachable here, where manifest and data meet.
     cross_errors: list[str] = []
@@ -448,6 +460,11 @@ def validate_dataset(
         # declaration and the columns it describes only meet here.
         correction_errors, cross_warnings = check_corrections(manifest, df)
         cross_errors += correction_errors
+        # SPEC-02 §3.15: the declaration itself, before anything is inferred.
+        prov_errors, prov_warnings = check_provenance_declaration(
+            manifest, df, profile=profile)
+        cross_errors += prov_errors
+        cross_warnings += prov_warnings
 
     # SPEC-01 §2.4 / SPEC-04 §5.1. The manifest is where the intent to publish
     # is on record, so this is the only place the check has standing to refuse.

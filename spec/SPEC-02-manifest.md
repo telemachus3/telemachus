@@ -695,8 +695,36 @@ Only columns whose origin is not obvious need declaring; `lat` and `lon` are
 always measured. In practice the columns that matter are `speed_mps` and
 `heading_deg`, which adapters commonly compute, and any IMU column.
 
+#### 3.15.1 What a validator does with it
+
+The declaration is not decoration. A validator already has an independent way
+to tell a measured speed from a computed one — the dispersion of its ratio
+against the speed the positions imply (SPEC-03 §4.6) — and on its own that
+measurement can only ever hedge, because *tracks its positions exactly* has an
+innocent reading: a constant speed on a straight road is indistinguishable from
+a derivation.
+
+Beside a declaration the same measurement stops being a guess about the data
+and becomes a **check on the declaration**:
+
+| Declared | The dispersion says | Verdict |
+|----------|--------------------|---------|
+| `measured` | independent | nothing to say |
+| `measured` | tracks its own positions | **error**: two sensors do not agree to that precision. Either the column was computed and the declaration is false, or it was measured and something overwrote it |
+| `derived` | tracks its own positions | silent — expected, and the cross-check cannot run |
+| `derived` | independent | silent — derived from another source, which is legitimate |
+| `absent` | the column carries values | **error**: the sensor is declared missing |
+| not declared | tracks its own positions | warning, and ask for the declaration |
+
+Declaring is therefore **rewarded**: it removes the hedging. Misdeclaring is
+caught. That asymmetry is deliberate, because a field nobody fills is a field
+that does not exist.
+
+A wrong unit outranks all of it. A column declared `derived` and carrying km/h
+is still carrying km/h, and §4.6 says so before provenance is consulted.
+
 A validator SHOULD warn when a dataset declares a `core` profile and provides
-`speed_mps` without declaring its provenance.
+`speed_mps` or `heading_deg` without declaring its provenance.
 
 ---
 
