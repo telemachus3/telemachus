@@ -73,6 +73,14 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -e ./python-sdk
+      - name: Changelog fragments are well-formed
+        # Cheap, and it runs on every PR: a fragment naming a section that does
+        # not exist would otherwise surface at release time, when the person
+        # cutting it has the least appetite for a surprise.
+        run: |
+          pip install pytest
+          pytest tools/test_changelog.py -q
+          python3 tools/changelog.py check
       - name: Validate every published manifest
         run: |
           python - <<'PY'
