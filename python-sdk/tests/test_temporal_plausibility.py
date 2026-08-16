@@ -6,6 +6,7 @@ fifty-six years, and nothing in between says anything.
 """
 
 import pandas as pd
+import pytest
 
 import telemachus as tele
 from telemachus.core.plausibility import GPS_EPOCH, check_timestamps
@@ -54,14 +55,41 @@ def test_epoch_seconds_read_as_milliseconds():
     assert "before GPS time began" in findings[0].message
 
 
+def test_the_future_is_refused_at_a_representable_date():
+    """Year 2200 fits in every datetime64 resolution, so this holds on any
+    supported pandas."""
+    ts = pd.Series(pd.date_range("2200-01-01T00:00:00Z", periods=5, freq="1s"))
+    findings = check_timestamps(_frame(ts), now=NOW)
+    assert findings and findings[0].severity == "error"
+    assert "in the future" in findings[0].message
+
+
+def _far_future_or_skip():
+    """Year 58566, or a skip.
+
+    Whether a timestamp beyond year 2262 can exist in a column is a property of
+    pandas, not of this library: with non-nanosecond resolution it is an
+    ordinary value, with nanoseconds only it cannot be represented and the
+    conversion raises. The check's behaviour is worth testing where the case can
+    occur; asserting it everywhere would test pandas.
+    """
+    try:
+        return pd.Series(pd.to_datetime([1786000000000 + i for i in range(50)],
+                                        unit="s", utc=True))
+    except Exception:                                    # OutOfBoundsDatetime
+        pytest.skip("this pandas cannot represent a date beyond year 2262, so "
+                    "epoch milliseconds read as seconds raises at construction "
+                    "and never reaches a validator")
+
+
 def test_epoch_milliseconds_read_as_seconds_names_the_unit():
-    ts = pd.to_datetime([1786000000000 + i for i in range(50)], unit="s", utc=True)
-    findings = check_timestamps(_frame(pd.Series(ts)), now=NOW)
+    findings = check_timestamps(_frame(_far_future_or_skip()), now=NOW)
     assert findings[0].severity == "error"
     assert "milliseconds read as seconds" in findings[0].message
 
 
-def test_the_future_is_refused():
+def test_a_clock_three_days_ahead_is_refused():
+    """Just past the tolerance, the everyday case: a device clock that ran away."""
     findings = check_timestamps(_frame(_clean(start="2026-08-19T00:00:00Z")), now=NOW)
     assert findings and "in the future" in findings[0].message
 
