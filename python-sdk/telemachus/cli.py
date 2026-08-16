@@ -114,7 +114,7 @@ def convert_cmd(adapter_name, source_path, outdir, mapping, extras, date, device
                    "carry. Start from `tele mapping-template <file.csv>`.")
         raise SystemExit(2)
 
-    account = tele_api.RowAccount(raw_rows_in=0)
+    account = tele_api.RowAccount()
     kwargs: dict = {}
     if adapter_name == "csv":
         kwargs = {"mapping": mapping, "extras": extras, "account": account}
