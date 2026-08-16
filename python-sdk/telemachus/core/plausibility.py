@@ -129,17 +129,39 @@ def _check_speed_against_positions(df: pd.DataFrame,
 
     from ..metrics.basic import haversine_m
 
+    # Grouped by entity, and that is not a detail. This function differences
+    # two consecutive rows, so on a frame carrying several devices sorted by
+    # time the rows interleave and every step jumps between vehicles. Measured
+    # on two devices forty kilometres apart: the implied speed explodes, the
+    # median ratio collapses to 0.00, and a checker built to catch wrong units
+    # raises a false alarm on data that is perfectly sound.
+    #
+    # The invariant, which applies to every function in the library that
+    # differences consecutive rows: either group by the entity, or say in the
+    # signature that you do not.
+    keep = ["ts", "lat", "lon", "speed_mps"]
+    by = "device_id" if "device_id" in df.columns else None
+    if by:
+        keep.append(by)
+
     fixes = df.loc[df["lat"].notna() & df["lon"].notna() & df["speed_mps"].notna(),
-                   ["ts", "lat", "lon", "speed_mps"]].copy()
+                   keep].copy()
     if len(fixes) < 30:
         return []
     fixes["ts"] = pd.to_datetime(fixes["ts"], utc=True, errors="coerce")
-    fixes = fixes.dropna(subset=["ts"]).sort_values("ts")
+    fixes = fixes.dropna(subset=["ts"])
+    fixes = fixes.sort_values([by, "ts"] if by else ["ts"])
     if len(fixes) < 30:
         return []
 
-    dt = fixes["ts"].diff().dt.total_seconds().to_numpy()
-    dist = np.asarray(haversine_m(fixes["lat"].shift(), fixes["lon"].shift(),
+    if by:
+        grp = fixes.groupby(by, sort=False)
+        dt = grp["ts"].diff().dt.total_seconds().to_numpy()
+        prev_lat, prev_lon = grp["lat"].shift(), grp["lon"].shift()
+    else:
+        dt = fixes["ts"].diff().dt.total_seconds().to_numpy()
+        prev_lat, prev_lon = fixes["lat"].shift(), fixes["lon"].shift()
+    dist = np.asarray(haversine_m(prev_lat, prev_lon,
                                   fixes["lat"], fixes["lon"]), dtype=float)
     declared = fixes["speed_mps"].to_numpy(dtype=float)
 
