@@ -265,3 +265,124 @@ def test_no_published_dataset_carries_pii():
         for column in PII_COLUMNS:
             assert f"{column}:" not in text or "EXAMPLE" in text, \
                 f"{path}: manifest mentions {column}"
+
+
+# ---------------------------------------------------------------------------
+# The specification against the table the validator consults
+# ---------------------------------------------------------------------------
+#
+# These belong in the hygiene file for the same reason as everything above it:
+# they are release-checklist items (SPEC-04 §6) about the gap between what the
+# project publishes and what it does. The other tests check that a docstring
+# says nothing it should not. These check that the specification and the code
+# say the same thing.
+#
+# 1.0.0a3 is why they exist. §2.3.1 was rewritten to make `speed_mps` optional
+# for a receiver that does not measure it; the table in §2.3 still listed it
+# under "All profiles"; and the validator followed the table. The release
+# converted exactly the datasets the previous one converted and refused exactly
+# the ones it refused. The relaxation existed only in a sentence, and every
+# test was green — because nothing compared the two.
+
+from telemachus.core.schemas import (  # noqa: E402
+    CONDITIONAL_CORE,
+    MANDATORY_BY_PROFILE,
+)
+
+#: The tables of SPEC-01 §2.3, keyed on the bold line that introduces each one,
+#: and the profiles that line binds.
+#:
+#: Keying on the *heading* is the design, not an implementation detail. A
+#: parser that looks for a word inside a description cell — "conditional",
+#: "optional" — inherits exactly the ambiguity that produced a3, because a cell
+#: can say one thing while the table it sits in says another. A heading cannot:
+#: a row is under one heading or another, and §2.3.2 exists to keep it that way.
+SPEC_TABLES = {
+    "All profiles (core, imu, full):": ("core", "imu", "full"),
+    "Conditional — required only when the receiver measures it (§2.3.1):": (),
+    "Profile `imu` and `full` add:": ("imu", "full"),
+    "Profile `full` adds:": ("full",),
+}
+
+CONDITIONAL_TABLE = "Conditional — required only when the receiver measures it (§2.3.1):"
+
+
+def _tables_in_the_spec() -> dict[str, list[str]]:
+    """Every bold-introduced table of §2.3, as ``{heading: [column, ...]}``."""
+    text = (REPO / "spec" / "SPEC-01-record-format.md").read_text(encoding="utf-8")
+    section = text[text.index("### 2.3 Mandatory Fields"):text.index("### 2.4 ")]
+    parts = re.split(r"^\*\*(.+?)\*\*\s*$", section, flags=re.M)[1:]
+    return {heading.strip(): re.findall(r"^\| `([a-z_0-9]+)` \|", body, re.M)
+            for heading, body in zip(parts[::2], parts[1::2], strict=True)}
+
+
+def test_every_table_in_the_section_is_accounted_for():
+    """The canary — and deliberately not "did the parser find any rows".
+
+    A parser that finds rows can still be blind. Add a fifth table tomorrow and
+    one keyed on four known headings skips it without a word: the columns it
+    makes mandatory are compared against nothing, and every assertion below
+    stays green while measuring less than it claims. That is the failure mode
+    that cost the a3, in a different disguise.
+
+    So the assertion is about coverage of the *section*, not of the rows. A
+    table nobody reads is a rule nobody enforces.
+    """
+    found = {heading for heading, columns in _tables_in_the_spec().items() if columns}
+    unknown = found - set(SPEC_TABLES)
+    missing = set(SPEC_TABLES) - found
+    assert not unknown, (
+        f"SPEC-01 §2.3 carries table(s) this test does not know: {sorted(unknown)}. "
+        f"Whatever they make mandatory is currently compared against nothing — "
+        f"add them to SPEC_TABLES with the profiles they bind.")
+    assert not missing, (
+        f"SPEC-01 §2.3 no longer carries table(s) this test expects: "
+        f"{sorted(missing)}. Either they were renamed or the section was "
+        f"restructured; either way this file measures less than it claims.")
+
+
+@pytest.mark.parametrize("profile", ["core", "imu", "full"])
+def test_the_code_requires_exactly_what_the_specification_requires(profile):
+    """SPEC-01 §2.3 and ``MANDATORY_BY_PROFILE``, held to each other."""
+    tables = _tables_in_the_spec()
+    declared = {column
+                for heading, profiles in SPEC_TABLES.items()
+                for column in tables.get(heading, [])
+                if profile in profiles}
+    assert MANDATORY_BY_PROFILE[profile] == declared, (
+        f"profile {profile!r}: SPEC-01 §2.3 requires {sorted(declared)}, the "
+        f"validator requires {sorted(MANDATORY_BY_PROFILE[profile])}. "
+        f"Only in the spec: {sorted(declared - MANDATORY_BY_PROFILE[profile])}; "
+        f"only in the code: {sorted(MANDATORY_BY_PROFILE[profile] - declared)}")
+
+
+def test_the_conditional_columns_agree_too():
+    """The half a mandatory-only comparison cannot see.
+
+    Drop a column from ``CONDITIONAL_CORE`` without moving it out of the
+    conditional table and no mandatory set changes, so the check above stays
+    green while the validator has quietly stopped treating it as conditional
+    at all.
+    """
+    in_the_spec = set(_tables_in_the_spec().get(CONDITIONAL_TABLE, []))
+    assert in_the_spec == set(CONDITIONAL_CORE), (
+        f"SPEC-01 §2.3 marks {sorted(in_the_spec)} conditional, the validator "
+        f"marks {sorted(CONDITIONAL_CORE)}")
+
+
+def test_no_column_is_both_mandatory_and_conditional():
+    """The contradiction §2.3.2 was written to make unrepresentable.
+
+    Not reachable from the two comparisons above: a column listed in both the
+    conditional table and a profile table satisfies each of them separately.
+    """
+    tables = _tables_in_the_spec()
+    conditional = set(tables.get(CONDITIONAL_TABLE, []))
+    for heading, profiles in SPEC_TABLES.items():
+        if not profiles:
+            continue
+        clash = conditional & set(tables.get(heading, []))
+        assert not clash, (
+            f"{sorted(clash)} sits in the conditional table and under "
+            f"{heading!r}. A column's obligation is carried by the heading "
+            f"above it, so it may sit under exactly one (SPEC-01 §2.3.2)")

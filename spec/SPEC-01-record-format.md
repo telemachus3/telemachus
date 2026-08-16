@@ -187,7 +187,10 @@ without IMU columns.
 
 ### 2.3 Mandatory Fields
 
-Mandatory columns depend on the declared profile:
+Mandatory columns depend on the declared profile. A column is listed under
+exactly one heading, and the heading — not a note inside a cell — is what says
+whether it is required. That is a deliberate constraint on how this section is
+written, and §2.3.2 explains what it cost to learn.
 
 **All profiles (core, imu, full):**
 
@@ -196,9 +199,14 @@ Mandatory columns depend on the declared profile:
 | `ts` | datetime64[ns, UTC] | UTC | Datetime | Timestamp at highest sensor rate |
 | `lat` | float64 | degrees WGS84 | GNSS | Latitude. NaN between GNSS ticks |
 | `lon` | float64 | degrees WGS84 | GNSS | Longitude. NaN between GNSS ticks |
-| `speed_mps` | float32 | m/s | GNSS | Ground speed. **Conditional — see §2.3.1.** NaN between GNSS ticks |
 
-### 2.3.1 `speed_mps` is conditional, and never back-filled
+**Conditional — required only when the receiver measures it (§2.3.1):**
+
+| Column | Type | Unit | Group | Description |
+|--------|------|------|-------|-------------|
+| `speed_mps` | float32 | m/s | GNSS | Ground speed, Doppler. NaN between GNSS ticks |
+
+#### 2.3.1 `speed_mps` is conditional, and never back-filled
 
 A Doppler solution costs energy. Many low-power receivers — wildlife collars,
 asset tags, long-life trackers — emit position without ever emitting speed.
@@ -221,6 +229,35 @@ Therefore:
   SHOULD of §2.14 to a MUST;
 - a position-differentiated speed MUST be declared `derived`, never `measured`;
 - a consumer MUST NOT assume `measured` in the absence of a declaration.
+
+#### 2.3.2 Why the heading carries the rule, and not a note in a cell
+
+This constraint on how §2.3 is written was learned from a released version that
+contradicted itself, and it is recorded here so the shape does not drift back.
+
+Version 1.0.0a3 relaxed `speed_mps` in prose — §2.3.1 said plainly that it MAY
+be absent — while the table above still listed it under **All profiles**, with
+the conditionality carried only by a note inside its Description cell. The
+implementation followed the table. On the reference corpus the release changed
+nothing at all: the same 388 datasets converted, the same 273 refused for the
+absence of `speed_mps` alone, not one dataset more than the version before it.
+A relaxation that existed only in a sentence.
+
+What makes it worth a section is how it survived review. A human reads the note
+and concludes the matter is settled; a parser reads the structure and concludes
+the opposite; the code followed the structure. Two readers of the same table
+came away with different rules, and both were reading correctly. The
+specification was not ambiguous to people — it was ambiguous *between* people
+and machines, which no amount of careful prose repairs.
+
+Hence the rule: **a column's obligation is expressed by the heading it sits
+under, never by prose inside a cell.** A cell may explain; it may not qualify.
+A column whose obligation depends on something belongs under its own heading,
+as `speed_mps` now does.
+
+The benefit is not tidiness. It makes the section machine-comparable against
+the table the validator consults, so the two can be held to each other by a
+test instead of by attention.
 
 **Profile `imu` and `full` add:**
 
