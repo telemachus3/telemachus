@@ -4,7 +4,7 @@ Questions courantes autour du **Dataset Manifest** (SPEC-02, v0.8 brouillon).
 
 ## Pourquoi un manifest ?
 
-Le contrat Telemachus (SPEC-01 §3.1) déclare `device_id`, `trip_id`,
+Le contrat Telemachus (SPEC-01 §2.4) déclare `device_id`, `trip_id`,
 `acc_periods` et `trip_carrier_states` comme des champs
 **par-fichier**, pas par-ligne. Il faut bien qu'ils vivent quelque
 part. Avant SPEC-02, les producteurs les mettaient un peu où ils
@@ -44,7 +44,7 @@ présent par ligne, soit encodé dans le nom de fichier
 Pour chaque ligne au timestamp `ts`, le consommateur cherche la
 première entrée `acc_periods` qui satisfait `start ≤ ts ≤ end` et
 utilise son `frame` (`raw`, `compensated` ou `partial`). Si
-`acc_periods` n'est pas déclaré, le défaut est `raw` (SPEC-01 §3.6).
+`acc_periods` n'est pas déclaré, le défaut est `raw` (SPEC-01 §2.12).
 
 ## Licences dataset
 

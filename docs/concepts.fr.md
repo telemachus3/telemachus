@@ -61,7 +61,7 @@ ambiguïté si plusieurs fabricants sont mélangés dans un même dataset.
 | **events layer** | Événements et situations | enriched | enriched + colonne `event` + table d'événements (freinages, nids-de-poule, virages…) |
 
 La spec Telemachus est **normative sur Telemachus** (SPEC-01). Les contrats
-de colonnes enriched et events layer sont documentés en SPEC-01 §4, mais leurs
+de colonnes enriched et events layer sont documentés en SPEC-01 §2.13, mais leurs
 *algorithmes* restent volontairement hors scope — deux consommateurs
 peuvent calculer un enriched différemment tant que le schéma de sortie reste
 conforme.
@@ -125,7 +125,7 @@ acc_periods:
 
 Par défaut (si le manifest ne déclare rien) : une seule période
 implicite avec `frame: "raw"`. La définition normative complète se
-trouve dans SPEC-01 §3.6.
+trouve dans SPEC-01 §2.12.
 
 ## CarrierState : ce trip, c'est vraiment de la conduite ?
 
@@ -147,7 +147,7 @@ Le `carrier_state` classe chaque trip dans l'un des six contextes :
 
 La classification combine quatre indicateurs : tension d'alim
 externe, vitesse GPS, variance de la norme accéléromètre, dérive de
-position GPS. L'arbre de décision complet est en SPEC-01 §3.7.
+position GPS. L'arbre de décision complet est en SPEC-02 §3.8.
 
 Dans le manifest, on déclare les états via `trip_carrier_states` :
 

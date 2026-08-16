@@ -33,9 +33,9 @@ stream actually contains:
 
 If any expected Telemachus column is missing, plan how you'll handle it:
 
-- **GPS columns absent** at IMU rate → leave as `NaN` (multi-rate convention, SPEC-01 §3.5)
+- **GPS columns absent** at IMU rate → leave as `NaN` (multi-rate convention, SPEC-01 §2.11)
 - **Heading missing** → recompute from consecutive GPS points (Haversine bearing)
-- **Gyro missing** → simply leave the gyro columns absent (SPEC-01 §3.3: must be absent OR all-NaN, never zero-filled)
+- **Gyro missing** → simply leave the gyro columns absent (SPEC-01 §2.6: must be absent OR all-NaN, never zero-filled)
 
 ## 2. Fetch & unpack
 

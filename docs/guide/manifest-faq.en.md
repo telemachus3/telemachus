@@ -4,7 +4,7 @@ Common questions about the **Dataset Manifest** (SPEC-02, v0.8 Draft).
 
 ## Why a manifest?
 
-The Telemachus contract (SPEC-01 §3.1) declares `device_id`, `trip_id`,
+The Telemachus contract (SPEC-01 §2.4) declares `device_id`, `trip_id`,
 `acc_periods` and `trip_carrier_states` as **per-file** rather than
 per-row. They have to live somewhere. Before SPEC-02, producers
 emitted them ad-hoc (env var, config, sidecar JSON…). The manifest
@@ -42,7 +42,7 @@ encoded in the filename (`<device>_*.parquet`). See SPEC-02 §4.1.
 For each row at timestamp `ts`, the consumer finds the first
 `acc_periods` entry where `start ≤ ts ≤ end` and uses its `frame`
 (`raw`, `compensated` or `partial`). If no `acc_periods` declared,
-the default is `raw` (SPEC-01 §3.6).
+the default is `raw` (SPEC-01 §2.12).
 
 ## Dataset licenses
 

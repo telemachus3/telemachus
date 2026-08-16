@@ -29,7 +29,7 @@ from pathlib import Path
 def adapt(input_csv: Path, output_dir: Path) -> None:
     df = pd.read_csv(input_csv)
 
-    # Map vendor columns → Telemachus column names + units (SPEC-01 §3)
+    # Map vendor columns → Telemachus column names + units (SPEC-01 §2, §5)
     df = pd.DataFrame({
         "ts":         pd.to_datetime(df["timestamp"], utc=True),
         "lat":        df["latitude"],
@@ -77,7 +77,7 @@ def adapt(input_csv: Path, output_dir: Path) -> None:
 
 ## Checklist
 
-- [ ] All SPEC-01 §3.1 mandatory columns present (or NaN where allowed)
+- [ ] All SPEC-01 §2.3 mandatory columns present (or NaN where allowed)
 - [ ] Units converted to SI (`m/s²`, `rad/s`, `m/s`, degrees WGS84)
 - [ ] `ts` monotonically increasing, UTC
 - [ ] `acc_periods` declared correctly (`raw` if device emits gravity, `compensated` if firmware-stripped)

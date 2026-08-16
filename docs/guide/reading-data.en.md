@@ -11,7 +11,7 @@ my-dataset/
 ```
 
 The signal parquet is "pure" — only the columns defined by SPEC-01
-§3 (`ts`, `lat`, `lon`, `speed_mps`, `ax/ay/az_mps2`, optional `gx/gy/gz_rad_s`,
+§2 (`ts`, `lat`, `lon`, `speed_mps`, `ax/ay/az_mps2`, optional `gx/gy/gz_rad_s`,
 recommended `heading_deg`, `hdop`, `n_satellites`).
 
 Everything else lives in the manifest.
