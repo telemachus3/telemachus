@@ -675,6 +675,7 @@ magnitude less storage.
 chooses, and nothing here constrains or interprets it. A pipeline can therefore
 publish corrected data in an open format without publishing how it corrects —
 which is the intended arrangement, not a loophole (SPEC-04 §5.2).
+
 ### 3.15 Column Provenance (recommended)
 
 Declares, per column, whether the value was measured by the sensor or computed
