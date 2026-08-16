@@ -43,7 +43,7 @@ import pandas as pd
 
 from .units import G0
 
-__all__ = ["Finding", "check_timestamps", "check_units"]
+__all__ = ["Finding", "check_heading_convention", "check_timestamps", "check_units"]
 
 # Ratios worth naming when a cross-check finds one. Half a percent of tolerance
 # either side: a real unit error lands on the ratio almost exactly, while a
@@ -369,6 +369,72 @@ def _check_altitude(df: pd.DataFrame) -> list[Finding]:
             f"road on Earth: the column is most likely in feet",
         )]
     return []
+
+
+def check_heading_convention(values) -> Finding | None:
+    """Classify a `heading_deg` column that falls outside [0, 360).
+
+    SPEC-01 §2.5 fixes the canonical range, and a validator that reports only
+    "out of range" sends the producer looking for corrupt data when the usual
+    cause is neither corruption nor a bug: Movebank and many receivers express
+    course over ground on [-180, 180]. It is the same measurement in a
+    different convention, and `% 360` converts it exactly.
+
+    **Why this needs no declaration, where a unit does.** The two cases are not
+    symmetric. A speed of 50 does not say whether it is m/s or km/h, so only the
+    producer can tell you. A heading does say: a negative value can only be the
+    signed convention, and where no value is negative the two conventions
+    produce identical numbers, so the question does not arise. The convention is
+    self-evident in exactly the case where it matters.
+
+    What makes this worth a function rather than an inequality is the third
+    case, which the same negative sign hides: a sentinel. A file whose headings
+    reach 350 and also contain a few -1 is not using the signed convention — it
+    is using -1 to mean "unknown", and `% 360` would turn every one of them into
+    a heading of 359, due north. Told apart by the positive side: a signed
+    column never exceeds 180.
+
+    Returns
+    -------
+    Finding or None
+        None when the column is canonical, or when it is empty.
+    """
+    h = _finite(pd.Series(values))
+    if h.empty:
+        return None
+
+    lo, hi = float(h.min()), float(h.max())
+    if lo >= 0 and hi < 360:
+        return None
+
+    n_neg = int((h < 0).sum())
+
+    if lo < -180 or hi >= 360:
+        # Outside both conventions. Not a convention question at all.
+        return Finding(
+            "heading_deg", "error",
+            f"heading_deg spans {lo:.1f} to {hi:.1f}, outside both the canonical "
+            f"range [0, 360) and the signed convention [-180, 180]. These are not "
+            f"a convention, they are values no course over ground can take")
+
+    if n_neg and hi >= 180:
+        # Negatives beside values above 180: the negatives cannot be a signed
+        # heading, because a signed column stops at 180.
+        return Finding(
+            "heading_deg", "error",
+            f"heading_deg carries {n_neg} negative value(s) alongside headings "
+            f"above 180 (up to {hi:.1f}). A signed convention never exceeds 180, "
+            f"so these negatives are sentinels for a missing heading, not a "
+            f"convention. Do NOT take them modulo 360 — that turns every one "
+            f"into 359, due north. Write NaN (SPEC-01 §2.5)")
+
+    return Finding(
+        "heading_deg", "error",
+        f"heading_deg spans {lo:.1f} to {hi:.1f}: this is course over ground on "
+        f"[-180, 180], the convention Movebank and many receivers use. It is the "
+        f"same measurement as the canonical [0, 360) and converts exactly with "
+        f"`heading_deg % 360` — no information is lost and it is a change of "
+        f"representation, not a correction (SPEC-01 §2.5)")
 
 
 def check_timestamps(df: pd.DataFrame, *, ts: str = "ts",

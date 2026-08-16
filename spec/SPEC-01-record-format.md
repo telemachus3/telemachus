@@ -274,6 +274,38 @@ These fields SHOULD be present when the hardware provides them:
 | Column | Type | Unit | Description |
 |--------|------|------|-------------|
 | `heading_deg` | float32 | degrees [0, 360) | Course over ground (COG). NaN when stationary |
+
+> **The canonical range is a representation, and the signed one is the same
+> measurement.** Movebank and many receivers express course over ground on
+> [-180, 180]; this specification requires [0, 360). Neither is wrong, and
+> `heading_deg % 360` converts between them exactly. Because no information
+> moves, that conversion is a change of representation and **not a correction**
+> in the sense of §2.13.1: it needs no `heading_deg_adj`, no declaration, and
+> no provenance entry.
+>
+> **It also needs no declaration, where a unit does**, and the asymmetry is
+> worth stating because it looks arbitrary otherwise. A speed of `50` does not
+> say whether it is m/s or km/h, so only the producer can tell you — hence the
+> mandatory `unit` of SPEC-03 §3.0.1. A heading does say: a negative value can
+> only be the signed convention, and where no value is negative the two
+> conventions produce identical numbers, so the question does not arise. The
+> convention is self-evident in exactly the case where it matters. An adapter
+> therefore normalises, and a producer who prefers to be explicit may declare
+> `unit: deg_signed`.
+>
+> **One negative sign has three readings, and only one of them may be
+> normalised.** A signed heading never exceeds 180, which is what tells them
+> apart:
+>
+> | The column | Reading | What to do |
+> |---|---|---|
+> | negatives, nothing above 180 | the signed convention | `% 360` |
+> | negatives beside headings above 180 | the negatives are sentinels for "unknown" | write `NaN` — `% 360` would make every one of them 359, due north |
+> | anything below -180 or at/above 360 | neither convention | no course over ground takes those values |
+>
+> A validator MUST tell the three apart rather than report "out of range",
+> which sends a producer looking for corrupt data when the file is merely
+> written in another convention.
 | `altitude_gps_m` | float32 | m | GNSS altitude (NMEA GGA). Typical accuracy: 10–30 m |
 | `hdop` | float32 | — (ratio) | Horizontal Dilution of Precision. < 2.0 = good |
 | `h_accuracy_m` | float32 | m | Horizontal position accuracy (Android/smartphones). Complementary to hdop |
@@ -889,6 +921,7 @@ Adapters MUST convert raw device units to Telemachus canonical units:
 | Gyroscope | rad/s | deg/s | × π / 180 |
 | Magnetometer | µT | µT | (usually native) |
 | GPS coordinates | decimal degrees | NMEA DDMM.MMMM | `DD + MM.MMMM / 60` |
+| Heading | degrees [0, 360) | degrees [-180, 180] | `% 360` — exact, and a change of representation rather than a correction (§2.5) |
 | GPS coordinates | decimal degrees | decimal degrees | (no conversion) |
 | Odometer | m | km | × 1000 |
 | Voltage | V | V | (no conversion) |

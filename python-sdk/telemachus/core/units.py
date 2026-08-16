@@ -126,6 +126,7 @@ _SCALES: dict[str, dict[str, float]] = {
     },
     "angle": {
         "deg": 1.0, "degree": 1.0, "degrees": 1.0, "°": 1.0,
+
         "rad": 1 / DEG2RAD, "radian": 1 / DEG2RAD, "radians": 1 / DEG2RAD,
     },
     "voltage": {
@@ -150,6 +151,17 @@ CANONICAL: dict[str, str] = {
     "latlon": "deg",
     "time": "datetime64[ns, UTC]",
 }
+
+
+#: Spellings that declare a heading on [-180, 180] rather than [0, 360).
+#:
+#: This is a convention, not a scale, so it cannot live in the factor table: the
+#: conversion is `% 360`, which no multiplication expresses. Declaring it is
+#: OPTIONAL, unlike a unit — a negative heading can only be the signed
+#: convention, so where `50` for a speed says nothing about m/s or km/h, a
+#: heading says which convention it is. The spelling exists for a producer who
+#: would rather be explicit than rely on the reader noticing.
+SIGNED_ANGLE_SPELLINGS = ("degsigned", "deg180", "degreessigned", "signeddeg")
 
 
 def _key(unit: str) -> str:
@@ -233,6 +245,8 @@ def known_units(quantity: str) -> list[str]:
         return sorted(_LATLON)
     if quantity == "time":
         return sorted(set(_EPOCH_UNITS) | {"iso8601"})
+    if quantity == "angle":
+        return sorted(set(_SCALES["angle"]) | {"deg_signed"})
     return sorted(_SCALES.get(quantity, {}))
 
 
@@ -278,6 +292,11 @@ def convert(values, quantity: str, unit: str, *, fmt: str | None = None) -> pd.S
                 f"Unknown lat/lon unit {unit!r}. Expected one of {known_units('latlon')}"
             )
         return fn(numeric)
+
+    if quantity == "angle" and _key(unit) in SIGNED_ANGLE_SPELLINGS:
+        # Exact, and a change of representation rather than a correction: the
+        # same course over ground, written the way SPEC-01 §2.5 requires.
+        return numeric % 360.0
 
     table = _SCALES.get(quantity)
     if table is None:

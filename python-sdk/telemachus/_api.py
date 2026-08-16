@@ -16,7 +16,11 @@ from telemachus.core.accounting import check_row_accounting
 from telemachus.core.breaks import check_acquisition_breaks
 from telemachus.core.carrier import CarrierProfileError, resolve_carrier_profile
 from telemachus.core.corrections import check_corrections
-from telemachus.core.plausibility import check_timestamps, check_units
+from telemachus.core.plausibility import (
+    check_heading_convention,
+    check_timestamps,
+    check_units,
+)
 from telemachus.core.privacy import check_pii
 from telemachus.core.provenance import (
     check_provenance_declaration,
@@ -254,11 +258,14 @@ def validate(
         if len(lon) > 0 and ((lon < -180) | (lon > 180)).any():
             errors.append("lon out of range [-180, 180]")
 
-    # Rule 5: heading_deg range
+    # Rule 5: heading_deg range. "Out of range" alone sends the producer looking
+    # for corrupt data, when the usual cause is a different convention for the
+    # same measurement — and one of the three readings must NOT be normalised.
     if "heading_deg" in df.columns:
-        h = df["heading_deg"].dropna()
-        if len(h) > 0 and ((h < 0) | (h >= 360)).any():
-            errors.append("heading_deg out of range [0, 360)")
+        finding = check_heading_convention(df["heading_deg"])
+        if finding is not None:
+            (errors if finding.severity == "error" else warnings).append(
+                finding.message)
 
     # Rule 6: speed >= 0
     for speed_col in ("speed_mps", "speed_obd_mps"):
