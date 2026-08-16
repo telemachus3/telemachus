@@ -19,7 +19,7 @@ The library is in two tiers, and the import path says which one you are in
     than by reading a property of the data.
 """
 
-__version__ = "1.0.0a2"
+__version__ = "1.0.0a3"
 
 #: Specification version this library implements (SPEC-04 §2).
 __spec_version__ = "telemachus-1.0"

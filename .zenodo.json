@@ -2,7 +2,7 @@
   "title": "Telemachus v1.0 - Specification and Python SDK",
   "upload_type": "software",
   "license": "MIT",
-  "version": "v1.0.0a2",
+  "version": "v1.0.0a3",
   "creators": [
     {
       "name": "Edet, Sébastien"
