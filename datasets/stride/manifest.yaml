@@ -24,6 +24,16 @@ hardware:
   devices:
     - name: "poco_x2"
 
+# SPEC-01 §2.14. speed_mps and heading_deg come from the Android Location
+# API's own speed and bearing, which the GNSS chip supplies.
+column_provenance:
+  speed_mps: measured
+  heading_deg: measured
+  altitude_gps_m: measured
+  ax_mps2: measured
+  ay_mps2: measured
+  az_mps2: measured
+
 sensors:
   gps:
     rate_hz: 1

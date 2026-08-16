@@ -160,6 +160,42 @@ def test_device_id_with_an_unsupported_key_is_refused(fleet_export):
         csv_mapping.load(fleet_export, mapping=mapping)
 
 
+def test_a_mapped_column_is_measured_and_a_missing_one_is_absent(export):
+    m = csv_mapping.manifest(MAPPING)["column_provenance"]
+    assert m["speed_mps"] == "measured"
+    # the watchlist states an absence rather than leaving it to be inferred
+    assert m["heading_deg"] == "absent"
+
+
+def test_a_mapping_can_say_the_source_computed_a_column(export):
+    mapping = {**MAPPING, "columns": {
+        **MAPPING["columns"],
+        "speed_mps": {**MAPPING["columns"]["speed_mps"], "provenance": "derived"},
+    }}
+    assert csv_mapping.manifest(mapping)["column_provenance"]["speed_mps"] == "derived"
+    # the column still converts: provenance describes it, it does not gate it
+    assert len(csv_mapping.load(export, mapping=mapping)) == 200
+
+
+def test_an_unknown_provenance_is_refused(export):
+    mapping = {**MAPPING, "columns": {
+        **MAPPING["columns"],
+        "speed_mps": {**MAPPING["columns"]["speed_mps"], "provenance": "doppler"},
+    }}
+    with pytest.raises(MappingError, match="provenance"):
+        csv_mapping.manifest(mapping)
+
+
+def test_a_constant_column_is_not_reported_as_measured():
+    mapping = {"dataset_id": "d", "columns": {
+        "ts": {"column": "t", "unit": "iso8601"},
+        "lat": {"column": "la", "unit": "deg"},
+        "lon": {"column": "lo", "unit": "deg"},
+        "speed_mps": {"value": 0.0},
+    }}
+    assert csv_mapping.manifest(mapping)["column_provenance"]["speed_mps"] == "derived"
+
+
 def test_a_mapping_can_be_a_yaml_file(export, tmp_path):
     path = tmp_path / "mapping.yaml"
     path.write_text(yaml.safe_dump(MAPPING))

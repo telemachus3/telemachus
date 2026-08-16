@@ -28,6 +28,22 @@ hardware:
     - name: "pvs_left"
       notes: "Left-side sensor, GFS_1000 (±1000 deg/s), AFS_8G (±8g)"
 
+# SPEC-01 §2.14. speed_mps comes from the source's own GPS speed field, not
+# from differentiating positions.
+column_provenance:
+  speed_mps: measured
+  altitude_gps_m: measured
+  ax_mps2: measured
+  ay_mps2: measured
+  az_mps2: measured
+  gx_rad_s: measured
+  gy_rad_s: measured
+  gz_rad_s: measured
+  mx_uT: measured
+  my_uT: measured
+  mz_uT: measured
+  heading_deg: absent
+
 sensors:
   gps:
     rate_hz: 1
