@@ -404,17 +404,27 @@ def check_heading_convention(values) -> Finding | None:
 
     **Why this needs no declaration, where a unit does.** The two cases are not
     symmetric. A speed of 50 does not say whether it is m/s or km/h, so only the
-    producer can tell you. A heading does say: a negative value can only be the
-    signed convention, and where no value is negative the two conventions
-    produce identical numbers, so the question does not arise. The convention is
-    self-evident in exactly the case where it matters.
+    producer can tell you. A heading *does* say — but only when it varies, which
+    is why the order of the checks below is part of the answer rather than an
+    implementation detail.
 
-    What makes this worth a function rather than an inequality is the third
-    case, which the same negative sign hides: a sentinel. A file whose headings
-    reach 350 and also contain a few -1 is not using the signed convention — it
-    is using -1 to mean "unknown", and `% 360` would turn every one of them into
-    a heading of 359, due north. Told apart by the positive side: a signed
-    column never exceeds 180.
+    The checks run from what is knowable to what is inferable:
+
+    1. **A column that never varies carries no convention to identify.** It is
+       the one case where the function must say what it knows and stop. An
+       earlier version went straight to the convention question and answered
+       it, which on a column entirely at -1 produced a confident instruction to
+       take it modulo 360 — turning a file whose heading is unknown everywhere
+       into one that points due north everywhere. A wrong message costs more
+       than an absent one.
+    2. **Negatives that cannot be signed headings are sentinels**, whether they
+       sit beside canonical values above 180 or are simply too far negative to
+       be an angle. Both are the same defect and both are made worse by the
+       same advice: -1 % 360 is 359, -999 % 360 is 81.
+    3. **The closed interval [0, 360]** — a source writing 360 for north — is
+       not a convention error and not corrupt data. It is the single value the
+       half-open range excludes, and it is the commonest deviation there is.
+    4. Only then, the signed convention.
 
     Returns
     -------
@@ -429,27 +439,84 @@ def check_heading_convention(values) -> Finding | None:
     if lo >= 0 and hi < 360:
         return None
 
-    n_neg = int((h < 0).sum())
+    # 1. Degenerate. Reached only for a column that is *also* out of range, so
+    # a stationary vehicle reporting a constant valid heading never lands here.
+    if lo == hi:
+        return Finding(
+            "heading_deg", "error",
+            f"heading_deg is {lo:g} on every row, and {lo:g} is outside the "
+            f"canonical range [0, 360). A heading that never varies identifies "
+            f"no convention: this is indistinguishable from a sentinel meaning "
+            f"'unknown'. If that is what it means, write NaN — a missing "
+            f"heading and a heading of {lo % 360:g} are not the same claim "
+            f"(SPEC-01 §2.5)")
+
+    negatives = h[h < 0]
+    n_neg = int(negatives.size)
+    max_non_negative = float(h[h >= 0].max()) if (h >= 0).any() else float("nan")
+
+    # 2. Sentinels. A signed heading lives in [-180, 180], so a negative is not
+    # one when it falls below -180, or when the same column reaches past 180.
+    # An out-of-scale positive side is the headline, not the negatives: a
+    # column running to 32 515 is not a file with a few sentinels in it.
+    plausible_positive_side = not (max_non_negative > 360)
+
+    if n_neg and plausible_positive_side:
+        worst = float(negatives.min())
+        # Two different reasons, and they deserve two different sentences: one
+        # is about the negative itself, the other about the company it keeps.
+        if worst < -180:
+            why = (f"{worst:g} is not an angle in any convention — the signed "
+                   f"range stops at -180")
+            remainder = h[h >= -180]
+        elif max_non_negative >= 180:
+            why = (f"this column reaches {max_non_negative:.1f}, past the 180 "
+                   f"a signed column never exceeds")
+            remainder = h[h >= 0]
+        else:
+            why = None
+
+        if why is not None:
+            # What is left once the sentinels are NaN may still be in the wrong
+            # convention, and saying so here saves a second round: a producer
+            # who fixes only what the message named re-runs and is told the
+            # rest, which reads as the validator having held something back.
+            rest = ""
+            if not remainder.empty and (remainder < 0).any() \
+                    and float(remainder.max()) < 180:
+                rest = (" Once they are NaN the column that remains is the "
+                        "signed convention on [-180, 180] and still needs "
+                        "`% 360`; both defects are present, and only the "
+                        "sentinels must survive it.")
+            return Finding(
+                "heading_deg", "error",
+                f"heading_deg carries {n_neg} negative value(s), down to "
+                f"{worst:g}, which are not a signed convention: {why}. They are "
+                f"sentinels for a missing heading. Do NOT take them modulo 360 "
+                f"— that turns {worst:g} into {worst % 360:g}, a heading as "
+                f"plausible as any other and entirely invented. Write NaN "
+                f"(SPEC-01 §2.5)." + rest)
+
+    # 3. The closed interval: 360 written for north.
+    if lo >= 0 and hi == 360:
+        n_360 = int((h == 360).sum())
+        return Finding(
+            "heading_deg", "error",
+            f"heading_deg uses the closed interval [0, 360]: {n_360} row(s) "
+            f"carry exactly 360. SPEC-01 §2.5 requires the half-open [0, 360), "
+            f"so that north has one spelling and a consumer never has to test "
+            f"for two. 360 and 0 are the same bearing, so this is a change of "
+            f"representation and not a correction: `heading_deg % 360` fixes it "
+            f"exactly, and the source column needs no `_adj` (SPEC-01 §2.13.1)")
 
     if lo < -180 or hi >= 360:
-        # Outside both conventions. Not a convention question at all.
         return Finding(
             "heading_deg", "error",
             f"heading_deg spans {lo:.1f} to {hi:.1f}, outside both the canonical "
             f"range [0, 360) and the signed convention [-180, 180]. These are not "
             f"a convention, they are values no course over ground can take")
 
-    if n_neg and hi >= 180:
-        # Negatives beside values above 180: the negatives cannot be a signed
-        # heading, because a signed column stops at 180.
-        return Finding(
-            "heading_deg", "error",
-            f"heading_deg carries {n_neg} negative value(s) alongside headings "
-            f"above 180 (up to {hi:.1f}). A signed convention never exceeds 180, "
-            f"so these negatives are sentinels for a missing heading, not a "
-            f"convention. Do NOT take them modulo 360 — that turns every one "
-            f"into 359, due north. Write NaN (SPEC-01 §2.5)")
-
+    # 4. The signed convention, reached only once the alternatives are excluded.
     return Finding(
         "heading_deg", "error",
         f"heading_deg spans {lo:.1f} to {hi:.1f}: this is course over ground on "

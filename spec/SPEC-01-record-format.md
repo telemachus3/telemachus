@@ -330,19 +330,36 @@ These fields SHOULD be present when the hardware provides them:
 > therefore normalises, and a producer who prefers to be explicit may declare
 > `unit: deg_signed`.
 >
-> **One negative sign has three readings, and only one of them may be
-> normalised.** A signed heading never exceeds 180, which is what tells them
-> apart:
+> **A non-canonical column has five readings, and only two of them may be
+> normalised.** They are told apart by two facts: a signed heading never
+> exceeds 180, and a heading identifies its convention only by *varying*. The
+> sentinel takes two rows below because it takes two guises, not because it is
+> two readings.
 >
 > | The column | Reading | What to do |
 > |---|---|---|
-> | negatives, nothing above 180 | the signed convention | `% 360` |
-> | negatives beside headings above 180 | the negatives are sentinels for "unknown" | write `NaN` — `% 360` would make every one of them 359, due north |
-> | anything below -180 or at/above 360 | neither convention | no course over ground takes those values |
+> | in [0, 360] with values at exactly 360 | the closed interval — 360 written for north | `% 360`; the commonest deviation there is |
+> | negatives, nothing at or above 180 | the signed convention | `% 360` |
+> | negatives beside values at or above 180 | the negatives are sentinels for "unknown" | write `NaN` — `% 360` would make -1 into 359, due north |
+> | any value below -180, the rest being angles | that value is a sentinel too | write `NaN` — `% 360` would make -999 into 81 |
+> | one value repeated on every row, outside [0, 360) | no evidence of any convention | write `NaN` if it means "unknown"; nothing else may be inferred |
+> | out of any angular scale (thousands) | neither convention | no course over ground takes those values |
 >
-> A validator MUST tell the three apart rather than report "out of range",
-> which sends a producer looking for corrupt data when the file is merely
-> written in another convention.
+> A validator MUST tell these apart rather than report "out of range", which
+> sends a producer looking for corrupt data when the file is merely written in
+> another convention. It MUST NOT assert a convention for a column that does
+> not vary: a constant -1 is indistinguishable from a sentinel, and advising
+> `% 360` on it converts a file whose heading is unknown everywhere into one
+> pointing due north everywhere. **A wrong message costs more than an absent
+> one.**
+>
+> The two normalisable readings are canonicalisations, not corrections, for the
+> same reason the signed convention is: 360 and 0 are the same bearing, so no
+> information moves. An adapter SHOULD perform them at ingestion, and the
+> source column needs no `_adj`. The canonical range stays half-open — north
+> has one spelling so that a consumer never has to test for two — and a
+> conformance check MUST report a remaining 360 rather than accept it, however
+> few rows carry it.
 | `altitude_gps_m` | float32 | m | GNSS altitude (NMEA GGA). Typical accuracy: 10–30 m |
 | `hdop` | float32 | — (ratio) | Horizontal Dilution of Precision. < 2.0 = good |
 | `h_accuracy_m` | float32 | m | Horizontal position accuracy (Android/smartphones). Complementary to hdop |
