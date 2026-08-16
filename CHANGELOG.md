@@ -24,7 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
   Still to do: `aegis`, `pvs`, `stride` and `csv_mapping` declare nothing yet.
 
-- **SPEC-01 §2.14 / SPEC-02 §3.11 — column provenance.** A dataset declares,
+- **SPEC-01 §2.14 / SPEC-02 §3.15 — column provenance.** A dataset declares,
   per column, whether a value was `measured` by the sensor, `derived` by the
   adapter from other columns, or is `absent`. Declared in the manifest, not
   per row: provenance is a property of the acquisition chain, not of the

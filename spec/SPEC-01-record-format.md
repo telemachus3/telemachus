@@ -655,7 +655,7 @@ produced it coexist in the file:
 - the corrected value goes in `<column>_adj`;
 - its uncertainty, when the producer has one, goes in `<column>_sigma`, in the
   same unit as the column;
-- the producer is declared once in the manifest (SPEC-02 §3.12), not repeated
+- the producer is declared once in the manifest (SPEC-02 §3.14), not repeated
   on every row.
 
 ```
@@ -707,7 +707,7 @@ A dataset therefore SHOULD declare, per column, one of:
 | `derived` | computed by the adapter from other columns of this dataset |
 | `absent` | the sensor does not provide it (column omitted or all-NaN) |
 
-Declaration lives in the manifest (SPEC-02 §3.11), not in the rows: it is a
+Declaration lives in the manifest (SPEC-02 §3.15), not in the rows: it is a
 property of the dataset, not of the sample.
 
 Rules:

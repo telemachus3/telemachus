@@ -586,28 +586,6 @@ whether a reconstruction is trustworthy over the interval. Those are decisions,
 they belong to the consumer, and the format's job is to give them the facts
 they need to make them.
 
-### 3.11 Column Provenance (recommended)
-
-Declares, per column, whether the value was measured by the sensor or computed
-by the adapter. See SPEC-01 §2.14 for the rationale.
-
-```yaml
-column_provenance:
-  speed_mps: measured        # Doppler solution from the receiver
-  heading_deg: derived       # computed from successive positions
-  altitude_gps_m: measured
-  ax_mps2: absent            # no accelerometer on this device
-```
-
-Accepted values: `measured`, `derived`, `absent`.
-
-Only columns whose origin is not obvious need declaring; `lat` and `lon` are
-always measured. In practice the columns that matter are `speed_mps` and
-`heading_deg`, which adapters commonly compute, and any IMU column.
-
-A validator SHOULD warn when a dataset declares a `core` profile and provides
-`speed_mps` without declaring its provenance.
-
 ### 3.10 Volume (optional, informational)
 
 ```yaml
@@ -697,6 +675,29 @@ magnitude less storage.
 chooses, and nothing here constrains or interprets it. A pipeline can therefore
 publish corrected data in an open format without publishing how it corrects —
 which is the intended arrangement, not a loophole (SPEC-04 §5.2).
+
+### 3.15 Column Provenance (recommended)
+
+Declares, per column, whether the value was measured by the sensor or computed
+by the adapter. See SPEC-01 §2.14 for the rationale.
+
+```yaml
+column_provenance:
+  speed_mps: measured        # Doppler solution from the receiver
+  heading_deg: derived       # computed from successive positions
+  altitude_gps_m: measured
+  ax_mps2: absent            # no accelerometer on this device
+```
+
+Accepted values: `measured`, `derived`, `absent`.
+
+Only columns whose origin is not obvious need declaring; `lat` and `lon` are
+always measured. In practice the columns that matter are `speed_mps` and
+`heading_deg`, which adapters commonly compute, and any IMU column.
+
+A validator SHOULD warn when a dataset declares a `core` profile and provides
+`speed_mps` without declaring its provenance.
+
 ---
 
 ## 4. Inheritance Rules
