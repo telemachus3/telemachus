@@ -19,11 +19,20 @@ DATETIME_FIELDS = [
 # ---------------------------------------------------------------------------
 # Group 2 — GNSS (mandatory, all profiles)
 # ---------------------------------------------------------------------------
-GNSS_MANDATORY_FIELDS = [
+# The GNSS columns of profile `core`. Belonging to the profile and being
+# mandatory are two different things, and conflating them is what let SPEC-01
+# §2.3.1 make `speed_mps` conditional while the validator kept refusing files
+# without it: the text moved, this list did not, and nothing tied the two.
+GNSS_CORE_FIELDS = [
     pa.field("lat", pa.float64(), nullable=True),       # NaN between GNSS ticks
     pa.field("lon", pa.float64(), nullable=True),       # NaN between GNSS ticks
     pa.field("speed_mps", pa.float32(), nullable=True), # NaN between GNSS ticks
 ]
+
+# SPEC-01 §2.3.1. A Doppler solution costs energy and many low-power receivers
+# emit a position without ever emitting a speed. The column stays part of the
+# profile — a file that has one puts it here — but its absence is not a defect.
+CONDITIONAL_CORE = {"speed_mps"}
 
 GNSS_RECOMMENDED_FIELDS = [
     pa.field("heading_deg", pa.float32(), nullable=True),     # [0, 360)
@@ -157,7 +166,7 @@ def schema_for_profile(profile: str = "imu", *, include_optional: bool = True) -
     if profile not in PROFILES:
         raise ValueError(f"Unknown profile {profile!r}. Expected one of {PROFILES}")
 
-    fields = list(DATETIME_FIELDS) + list(GNSS_MANDATORY_FIELDS)
+    fields = list(DATETIME_FIELDS) + list(GNSS_CORE_FIELDS)
 
     if profile in ("imu", "full"):
         fields += list(ACCEL_FIELDS)
@@ -192,7 +201,8 @@ FULL_SCHEMA = schema_for_profile("full", include_optional=False)
 COMPLETE_SCHEMA = schema_for_profile("full", include_optional=True)
 
 # Column name sets for quick membership checks
-MANDATORY_CORE = {f.name for f in DATETIME_FIELDS + GNSS_MANDATORY_FIELDS}
+MANDATORY_CORE = ({f.name for f in DATETIME_FIELDS + GNSS_CORE_FIELDS}
+                  - CONDITIONAL_CORE)
 MANDATORY_IMU = MANDATORY_CORE | {f.name for f in ACCEL_FIELDS}
 MANDATORY_FULL = MANDATORY_IMU | {f.name for f in GYRO_FIELDS}
 
