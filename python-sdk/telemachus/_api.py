@@ -16,7 +16,7 @@ from telemachus.core.accounting import check_row_accounting
 from telemachus.core.breaks import check_acquisition_breaks
 from telemachus.core.carrier import CarrierProfileError, resolve_carrier_profile
 from telemachus.core.corrections import check_corrections
-from telemachus.core.plausibility import check_units
+from telemachus.core.plausibility import check_timestamps, check_units
 from telemachus.core.privacy import check_pii
 from telemachus.core.schemas import (
     ALL_KNOWN_COLUMNS,
@@ -283,6 +283,12 @@ def validate(
     # is the one that does not. Findings that name the wrong unit outright are
     # errors, the rest are warnings — see telemachus.core.plausibility.
     for finding in check_units(df, acc_frame=acc_frame):
+        (errors if finding.severity == "error" else warnings).append(finding.message)
+
+    # Rule 12b: the instants themselves. Every rule above accepts a row dated
+    # 1970 without a word, and the descriptive layer downstream then reports a
+    # three-minute drive as spanning fifty-six years.
+    for finding in check_timestamps(df):
         (errors if finding.severity == "error" else warnings).append(finding.message)
 
     # Rule 13: personal data (SPEC-01 §2.4). Reported at every level so a
