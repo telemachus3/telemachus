@@ -8,6 +8,48 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **`gpx` and `nmea` declare `column_provenance`** (SPEC-01 §2.3.1, §2.14).
+  The rule shipped with the specification and no adapter applied it, so every
+  converted dataset was of undetermined origin.
+
+  A bare GPX has no speed field, so `speed_mps` is declared `absent` rather
+  than left as a silent all-NaN column a consumer may read as a vehicle that
+  never moved. NMEA declares it `measured`: the value is the receiver's own
+  solution, independent of the position error, which is the property an
+  analysis leans on when it selects stationary samples by speed and then
+  measures position scatter. Both adapters inspect the file rather than assume
+  a shape, so a GGA-only log declares `absent` and says why.
+
+  Still to do: `aegis`, `pvs`, `stride` and `csv_mapping` declare nothing yet.
+
+- **SPEC-01 §2.14 / SPEC-02 §3.11 — column provenance.** A dataset declares,
+  per column, whether a value was `measured` by the sensor, `derived` by the
+  adapter from other columns, or is `absent`. Declared in the manifest, not
+  per row: provenance is a property of the acquisition chain, not of the
+  sample.
+
+  Motivation, from a real dataset: selecting stationary samples by a Doppler
+  speed and then measuring position scatter yields the receiver noise. Doing
+  the same with a position-derived speed is circular and returns a plausible
+  number that means nothing. Nothing in a file distinguished the two cases.
+
+  Complementary to §2.13, which excludes columns enriched from *external*
+  sources. §2.14 covers columns computed from the dataset's own columns, which
+  legitimately stay in the record and now say so.
+
+- `column_provenance` in the manifest JSON Schema.
+
+### Changed
+
+- **SPEC-01 §2.2 / §2.3.1 — `speed_mps` is now conditional in profile `core`.**
+  A Doppler solution costs energy, and many low-power receivers emit position
+  without ever emitting speed. The previous wording left such a device two ways
+  out and both were bad: declare itself non-conformant, or fill the column by
+  differentiating two positions. The second silently turns an independent
+  measurement into a function of the position error.
+
 ### Fixed
 
 - **`gpx`: a repeated timestamp is judged per track, not per file.** The
@@ -32,52 +74,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   hard-coded to `GPX 1.1` and reported that for a 1.0 file, which is a false
   provenance statement in the block whose job is provenance. The version now
   comes from the root attribute.
-
-### Added
-
-- **`gpx` and `nmea` declare `column_provenance`** (SPEC-01 §2.3.1, §2.14).
-  The rule shipped with the specification and no adapter applied it, so every
-  converted dataset was of undetermined origin.
-
-  A bare GPX has no speed field, so `speed_mps` is declared `absent` rather
-  than left as a silent all-NaN column a consumer may read as a vehicle that
-  never moved. NMEA declares it `measured`: the value is the receiver's own
-  solution, independent of the position error, which is the property an
-  analysis leans on when it selects stationary samples by speed and then
-  measures position scatter. Both adapters inspect the file rather than assume
-  a shape, so a GGA-only log declares `absent` and says why.
-
-  Still to do: `aegis`, `pvs`, `stride` and `csv_mapping` declare nothing yet.
-
-### Changed
-
-- **SPEC-01 §2.2 / §2.3.1 — `speed_mps` is now conditional in profile `core`.**
-  A Doppler solution costs energy, and many low-power receivers emit position
-  without ever emitting speed. The previous wording left such a device two ways
-  out and both were bad: declare itself non-conformant, or fill the column by
-  differentiating two positions. The second silently turns an independent
-  measurement into a function of the position error.
-
-### Added
-
-- **SPEC-01 §2.14 / SPEC-02 §3.11 — column provenance.** A dataset declares,
-  per column, whether a value was `measured` by the sensor, `derived` by the
-  adapter from other columns, or is `absent`. Declared in the manifest, not
-  per row: provenance is a property of the acquisition chain, not of the
-  sample.
-
-  Motivation, from a real dataset: selecting stationary samples by a Doppler
-  speed and then measuring position scatter yields the receiver noise. Doing
-  the same with a position-derived speed is circular and returns a plausible
-  number that means nothing. Nothing in a file distinguished the two cases.
-
-  Complementary to §2.13, which excludes columns enriched from *external*
-  sources. §2.14 covers columns computed from the dataset's own columns, which
-  legitimately stay in the record and now say so.
-
-- `column_provenance` in the manifest JSON Schema.
-
-### Fixed
 
 - **SPEC-01 — four leftovers from the wording that preceded §2.3.1.** Making
   `speed_mps` conditional changed one section and left four places still
@@ -373,7 +369,7 @@ SPEC-01, SPEC-02, SPEC-03 and SPEC-04 move to **1.0**.
 
 ---
 
-## [Unreleased] — 2026-04-15
+## [Monorepo consolidation] — 2026-04-15
 
 ### Added
 - **Monorepo consolidation** : merged the four previous
