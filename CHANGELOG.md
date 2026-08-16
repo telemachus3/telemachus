@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+---
+
+## [1.0.0a3] — 2026-08-16
+
 ### Added
 
 - **`gpx` and `nmea` declare `column_provenance`** (SPEC-01 §2.3.1, §2.14).
@@ -41,6 +45,61 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - `column_provenance` in the manifest JSON Schema.
 
+- **Column provenance in the four adapters that did not declare it** —
+  `csv_mapping`, and the AEGIS, PVS and STRIDE dataset manifests. SPEC-01
+  §2.14 defines the declaration; until now only `gpx` and `nmea` emitted it.
+
+  `csv_mapping` derives it from the mapping: a column read from the file
+  defaults to `measured`, a constant to `derived`, and a column the mapping
+  does not name is stated `absent` rather than left to inference. The adapter
+  cannot know whether the *source* computed a column before writing it — a
+  fleet API that differentiates two positions and calls the result a speed
+  produces a file no adapter can tell from a Doppler one — so a mapping may
+  declare `provenance:` per column, next to its unit. An unknown value is
+  refused.
+
+- **AEGIS declares `speed_mps: derived`.** The adapter computes it by haversine
+  on successive positions; the export carries no Doppler speed. It is a
+  function of the position error, not an independent measurement, and an
+  analysis that selects stationary samples by it is circular. Nothing said so
+  before.
+
+  Measured on the public Movebank corpus, 388 datasets converted through the
+  shipped adapter: of the 110 that carry a `speed_mps`, the validator judges 47
+  of them derived from their own positions — 43 %. Almost one declared speed in
+  two is not a measurement.
+
+- **Changelog fragments** (`changelog.d/`, `tools/changelog.py`). Branches drop
+  one file per change instead of editing `CHANGELOG.md`, and the release folds
+  them in. Two branches never touch the same path, so concurrent appends cannot
+  interfere.
+
+  The motivation is not the merge conflict, which git reports and a human
+  resolves in seconds. It is the quieter failure observed on this repository:
+  two branches each appended their own `### Fixed` and `### Added` under
+  `[Unreleased]`, both merges succeeded, nothing was reported, and the section
+  ended up with five subheadings for three categories. `release.yml` reads this
+  file by regex and falls back silently, so a malformed section surfaces in
+  published release notes rather than in CI.
+
+- **`column_provenance` becomes an input to the validator, not just metadata**
+  (SPEC-02 §3.15.1). The dispersion check of SPEC-03 §4.6 could already tell a
+  measured speed from a computed one, and on its own it could only ever hedge:
+  *tracks its positions exactly* has an innocent reading, since a constant speed
+  on a straight road is indistinguishable from a derivation.
+
+  Beside a declaration the same measurement becomes a check **on the
+  declaration**. A column declared `measured` that tracks its own positions
+  exactly is now an **error** — two sensors do not agree to that precision, so
+  either the column was computed and the manifest is false, or it was measured
+  and something overwrote it. A column declared `derived` is expected to agree,
+  so the checker falls silent: declaring buys the quiet. A wrong unit still
+  outranks everything, because km/h is km/h whatever its provenance.
+
+  Also enforces the declaration itself: an unknown value, a column declared
+  `absent` that carries values, and the `core`-profile warning SPEC-02 §3.15
+  already asked for and nothing implemented.
+
 ### Changed
 
 - **SPEC-01 §2.2 / §2.3.1 — `speed_mps` is now conditional in profile `core`.**
@@ -49,6 +108,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   out and both were bad: declare itself non-conformant, or fill the column by
   differentiating two positions. The second silently turns an independent
   measurement into a function of the position error.
+
+- **`RowAccount(raw_rows_in=...)` now defaults to zero.** The common case is an
+  adapter that counts as it reads and sets the field itself, so callers were
+  writing `RowAccount(raw_rows_in=0)` purely to have it overwritten three lines
+  later — noise at every call site, reported by two consumers independently.
+
+  The default is safe rather than merely convenient: a zero left in place by
+  mistake cannot pass unnoticed, because `finish()` refuses a tally where
+  `rows_out + raw_rows_dropped` does not equal `raw_rows_in`. An adapter that
+  forgets gets an error naming the discrepancy, not a manifest quietly claiming
+  it read nothing. A test locks that property.
 
 ### Fixed
 
@@ -91,6 +161,95 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     same column and gave opposite answers. An all-NaN column now declares
     `absent` explicitly, and §2.3.1 says outright that it raises the SHOULD of
     §2.14 to a MUST for this column.
+
+- **20 stale cross-references in `docs/`.** The April consolidation moved
+  SPEC-01's column definitions from §3 to §2 and the documentation was never
+  followed through, so ten pages pointed readers at sections that had held
+  something else for four months. Every reference was re-read against the
+  current text rather than remapped by arithmetic, because the right target
+  depends on what each sentence claims:
+
+  - mandatory columns: §3.1 → §2.3, but *`device_id` and `trip_id` are
+    declared*: §3.1 → §2.4. Same old number, two different destinations
+  - the AccPeriod default: §3.6 → §2.12
+  - the CarrierState decision tree: SPEC-01 §3.7 → **SPEC-02** §3.8. A
+    different document, not a different number
+  - the multi-rate convention: §3.5 → §2.11
+  - gyro absent-or-all-NaN: §3.3 → §2.6, which carries the sentence about
+    never zero-filling. Validation rule 10 only covers the partial group
+  - enriched and events-layer contracts: §4 → §2.13. §4 is Hardware Mapping
+  - column names and units: §3 → §2 and §5. §3 defines neither
+  - the columns a signal parquet may hold: §3 → §2
+
+  The four surviving bare `§3` and `§4` references are correct and were left
+  alone: they do point at Validation Rules and Hardware Mapping.
+
+- **`decimation_loss` reported a negative loss on a varying cadence.** It kept
+  the samples whose timestamp was a multiple of the step, then summed only the
+  pairs exactly `step` apart. Both filters select a *different subset of the
+  trace for each step*, so the steps did not measure the same ground and their
+  totals were never comparable. Down-sampling appeared to lengthen the path.
+
+  Measured on the public OSM traces over Rouen, where the dominant cadence
+  covers only 62 % of samples: decimating to 2 s reported 840 km against
+  764 km native, a **loss of -9.9 %**, and the native step itself reported
+  764 km where `path_length_m` reported 2 846 km on the same frame.
+
+  The contiguity split is now computed **once, on the native signal**, and
+  every step decimates inside those same stretches, keeping the last sample of
+  each so the path is not shortened by truncating its end. The reference is the
+  native path rather than the first step, so each row answers one question:
+  what fraction of the travelled distance survives this cadence. On the same
+  corpus the losses are now 0.13 %, 0.58 %, 1.39 %, 4.11 % and 7.30 % at 2, 5,
+  10, 30 and 60 s, and the native step agrees with `path_length_m` to the
+  metre.
+
+  `max_gap_s` is now accepted, as on `path_length_m`, so a real hole is not
+  crossed by a chord.
+
+- **`speed_from_pos` differenced across entity boundaries.** It had no `by=`
+  parameter, unlike `stops` and `path_length_m`, so on a frame sorted by
+  `(device_id, ts)` it also computed a speed between one device's last fix and
+  the next device's first. At that row time runs backwards, `dt` is negative,
+  and the speed comes out **signed**: values from -81 to +204 m/s were measured
+  on a 120-badge export.
+
+  A threshold applied to a quantity assumed positive then reports either every
+  row as a stop or none of them, depending on which way the comparison runs.
+  The first measurement on that export returned zero stops, which was absurd
+  enough to be noticed. With less extreme values it would have been plausible
+  and wrong.
+
+  `by=` now defaults to `device_id`, and each entity starts at NaN rather than
+  only the first row of the frame — the old `v[0] = nan` left every later
+  boundary carrying a wrong value even when the caller grouped upstream.
+  `compute_dt` takes a Series and cannot group, which its docstring now says.
+
+  Neither function had a test. They have seven.
+
+  Same family as the `csv_mapping` defect of 1.0.0a2 and the `gpx` one that
+  followed: a function mixing entities in silence. There the dedup key was null
+  or constant; here the function could not group at all.
+
+- **A heading on [-180, 180] is now diagnosed as a convention, not reported as
+  corrupt data** (SPEC-01 §2.5). Movebank and many receivers use the signed
+  range; this format requires [0, 360). Twenty-five public datasets fail on it,
+  and the validator said only `heading_deg out of range [0, 360)` — which sends
+  a producer hunting for bad data when `% 360` converts exactly.
+
+  It needs no declaration, where a unit does, and the asymmetry is the point: a
+  speed of `50` does not say whether it is m/s or km/h, but a negative heading
+  can only be the signed convention, and where nothing is negative the two
+  conventions give identical numbers. The convention is self-evident in exactly
+  the case where it matters.
+
+  One negative sign has three readings and **only one may be normalised**. A
+  file whose headings reach 350 and also carry a few `-1` is not signed — it is
+  using `-1` for "unknown", and `% 360` would turn every one into 359, due
+  north. A signed column never exceeds 180, which is what tells them apart. The
+  validator now names which of the three it is seeing.
+
+  `unit: deg_signed` is available for a producer who prefers to be explicit.
 
 ---
 
