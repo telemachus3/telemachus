@@ -43,7 +43,7 @@ import pandas as pd
 
 from .units import G0
 
-__all__ = ["Finding", "check_units"]
+__all__ = ["Finding", "check_timestamps", "check_units"]
 
 # Ratios worth naming when a cross-check finds one. Half a percent of tolerance
 # either side: a real unit error lands on the ratio almost exactly, while a
@@ -58,6 +58,19 @@ _SPEED_RATIOS = [
 # Above this, a ground carrier is no longer plausible. SPEC-03 §4.4 states the
 # same bound as a physics check.
 MAX_GROUND_SPEED_MPS = 100.0
+
+#: No GNSS receiver can date a fix before GPS time began. A timestamp under this
+#: floor was not read from the constellation, which is the only clock a
+#: telematics device has that survives a power cut.
+GPS_EPOCH = pd.Timestamp("1980-01-06T00:00:00Z")
+
+#: Tolerance on "the future". Generous on purpose: a device clock drifts, a
+#: gateway stamps on receipt, and neither is worth an error. Days ahead is not
+#: drift.
+FUTURE_TOLERANCE = pd.Timedelta(days=2)
+
+#: A single Telemachus file spanning longer than this is not one collection.
+MAX_PLAUSIBLE_SPAN = pd.Timedelta(days=3653)   # ten years
 
 
 @dataclass(frozen=True)
@@ -328,6 +341,103 @@ def _check_altitude(df: pd.DataFrame) -> list[Finding]:
             f"road on Earth: the column is most likely in feet",
         )]
     return []
+
+
+def check_timestamps(df: pd.DataFrame, *, ts: str = "ts",
+                     now: pd.Timestamp | None = None) -> list[Finding]:
+    """Check that the instants in a frame can be instants at all.
+
+    :func:`check_units` asks whether a number can be the quantity its column
+    claims. This asks the same of time, and nothing did: a trace carrying four
+    rows stamped ``1970-01-01`` passes every rule in SPEC-01 §3 without a word,
+    and the descriptive summary downstream then reports a three-minute drive as
+    spanning fifty-six years.
+
+    The two bounds are not arbitrary thresholds, which is what makes them
+    usable as errors rather than warnings:
+
+    * **Below the GPS epoch.** GNSS *is* the clock. A receiver that has a
+      position has the constellation's time, so a fix dated before 1980-01-06
+      was stamped by something else — almost always a real-time clock that lost
+      power and restarted at the Unix epoch.
+    * **In the future.** Recorded data cannot postdate its own reading.
+
+    Between them they also catch the epoch-unit confusion, and the message
+    names it the way the speed check names km/h: seconds read as milliseconds
+    land in January 1970, milliseconds read as seconds land some fifty thousand
+    years out. Neither is a plausible date, and both are a one-character fix.
+
+    The two are less distinct than they look, which is why the first message
+    offers both readings rather than picking one. A far-future instant that
+    passes back through ``pd.to_datetime`` on a plain list wraps silently into
+    1970 — so by the time a frame reaches a validator, "milliseconds read as
+    seconds" and "clock never set" can be the same four rows.
+
+    Parameters
+    ----------
+    now : pd.Timestamp or None
+        Upper reference, defaulting to the current instant. Explicit so the
+        check is reproducible: a validator whose verdict depends on the day it
+        runs cannot be regression-tested.
+
+    Returns
+    -------
+    list[Finding]
+        Empty when the instants are plausible. Errors first.
+    """
+    if ts not in df.columns or not len(df):
+        return []
+
+    t = pd.to_datetime(df[ts], utc=True, errors="coerce").dropna()
+    if t.empty:
+        return []
+
+    now = pd.Timestamp.now(tz="UTC") if now is None else pd.Timestamp(now)
+    if now.tzinfo is None:
+        now = now.tz_localize("UTC")
+
+    findings: list[Finding] = []
+
+    stale = t[t < GPS_EPOCH]
+    if len(stale):
+        # January 1970 is the signature of an uninitialised clock *and* of
+        # epoch seconds read as milliseconds. Both are real, both are fixed
+        # where the timestamp is produced, so the message offers both readings
+        # rather than picking one.
+        near_epoch = int((stale < pd.Timestamp("1971-01-01T00:00:00Z")).sum())
+        cause = ("a real-time clock that restarted at the Unix epoch, or epoch "
+                 "seconds read as milliseconds"
+                 if near_epoch == len(stale)
+                 else "a clock that was never set from the constellation")
+        findings.append(Finding(
+            ts, "error",
+            f"{len(stale)} row(s) are dated before GPS time began "
+            f"({GPS_EPOCH.date()}), the earliest {t.min()}. A receiver that has "
+            f"a position has the constellation's clock, so these were stamped by "
+            f"something else: {cause}"))
+
+    ahead = t[t > now + FUTURE_TOLERANCE]
+    if len(ahead):
+        latest = t.max()
+        cause = (" — around fifty thousand years out is epoch milliseconds read "
+                 "as seconds" if latest.year > 5000 else "")
+        findings.append(Finding(
+            ts, "error",
+            f"{len(ahead)} row(s) are dated in the future, the latest {latest}. "
+            f"Recorded data cannot postdate its own reading{cause}"))
+
+    # Only worth saying when neither bound fired: otherwise it restates them.
+    if not findings:
+        span = t.max() - t.min()
+        if span > MAX_PLAUSIBLE_SPAN:
+            findings.append(Finding(
+                ts, "warning",
+                f"the file spans {span.days / 365.25:.0f} years "
+                f"({t.min().date()} to {t.max().date()}). That is longer than "
+                f"one collection campaign, so the file probably concatenates "
+                f"unrelated periods or carries a few stray instants"))
+
+    return findings
 
 
 # ---------------------------------------------------------------------------

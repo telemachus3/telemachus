@@ -317,7 +317,7 @@ arbitrary number of days is worse than a conversion that failed.
 
 | Level | Checks | Use Case |
 |-------|--------|----------|
-| `basic` | Mandatory columns for declared profile present, correct types, value ranges (lat/lon bounds, speed >= 0, `hdop`/`pdop` > 0, `n_satellites` >= 0, `heading_deg` in [0, 360), \|a\| finite), **unit plausibility (§4.6)** | Quick conformance |
+| `basic` | Mandatory columns for declared profile present, correct types, value ranges (lat/lon bounds, speed >= 0, `hdop`/`pdop` > 0, `n_satellites` >= 0, `heading_deg` in [0, 360), \|a\| finite), **unit plausibility (§4.6)**, **temporal plausibility (§4.7)** | Quick conformance |
 | `strict` | All of `basic` + monotonic ts, AccPeriod gravity check (profiles `imu`/`full`). NaN is allowed in GNSS columns between ticks (multi-rate convention) but at least one non-NaN GPS fix MUST exist | Research-grade |
 | `manifest` | SPEC-02 §5 rules (required fields, acc_periods consistency, sensor config) | Manifest-only check |
 | `full` | `strict` + `manifest` + cross-validation (manifest vs parquet agreement) | Publication-ready |
@@ -457,6 +457,38 @@ and asks for the declaration rather than picking one.
 
 Every check needs at least 30 usable samples. Below that it stays silent:
 silence is more useful than a coin toss.
+
+### 4.7 Temporal Plausibility
+
+§4.6 asks whether a number can be the quantity its column claims. This asks the
+same of time, and nothing did: a trace carrying four rows stamped
+`1970-01-01` satisfies every rule in §3 of SPEC-01 — the timestamps are
+monotonic, typed, timezone-aware — and the descriptive layer then reports a
+three-minute drive as spanning fifty-six years.
+
+Two bounds, both **errors**, because neither is a threshold somebody chose:
+
+| Bound | Why it is not arbitrary |
+|-------|-------------------------|
+| Before **1980-01-06**, the GPS epoch | GNSS *is* the clock. A receiver holding a position holds the constellation's time, so an earlier fix was stamped by something else — almost always a real-time clock that lost power and restarted at the Unix epoch |
+| After **now**, with two days of tolerance | Recorded data cannot postdate its own reading. The tolerance absorbs device drift and gateway stamping; days ahead is not drift |
+
+Between them they also catch the epoch-unit confusion, and the report names it
+the way §4.6 names km/h: **seconds read as milliseconds land in January 1970,
+milliseconds read as seconds land some fifty thousand years out**.
+
+The two are less distinct than they look. A far-future instant that passes back
+through a datetime conversion on a plain list wraps silently into 1970, so by
+the time a frame reaches a validator "milliseconds read as seconds" and "clock
+never set" can be the same four rows. The message therefore offers both
+readings rather than picking one.
+
+A span longer than ten years is a **warning**, and only when neither bound
+fired — a 1970 row makes the span absurd by construction, and reporting both
+would restate one fault as two.
+
+The reference instant is injectable. A validator whose verdict depends on the
+day it runs cannot be regression-tested.
 
 ---
 

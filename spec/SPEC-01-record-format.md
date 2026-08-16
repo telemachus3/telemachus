@@ -753,6 +753,7 @@ A Telemachus file is valid if:
 12. If `device_id` / `trip_id` are absent from columns, they MUST be resolvable from the manifest (SPEC-02 §4.1)
 13. Every `<column>_adj` / `<column>_sigma` present is declared in the manifest `corrections` block (SPEC-02 §3.14), and its source `<column>` is present (§2.13.1). Removing all declared `_adj` and `_sigma` columns leaves exactly the source columns
 14. No personal-data column (§2.4) carries values in a dataset whose manifest declares an intent to publish (§2.4.1)
+15. `ts` values fall between the GPS epoch (1980-01-06) and the present, and the file does not span more than one collection campaign (SPEC-03 §4.7)
 
 ---
 

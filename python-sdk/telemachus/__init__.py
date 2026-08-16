@@ -56,7 +56,7 @@ from telemachus.core.corrections import (
     strip_corrections,
 )
 from telemachus.core.multirate import merge_multirate
-from telemachus.core.plausibility import check_units
+from telemachus.core.plausibility import check_timestamps, check_units
 from telemachus.core.privacy import check_pii, strip_pii
 from telemachus.core.units import convert as convert_unit
 
@@ -70,6 +70,7 @@ __all__ = [
     "validate_manifest",
     "validate_dataset",
     "check_units",
+    "check_timestamps",
     "check_row_accounting",
     "check_pii",
     "strip_pii",
