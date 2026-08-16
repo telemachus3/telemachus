@@ -38,7 +38,7 @@ CLI, and reference datasets into a single source of truth.
 | Artifact | Version |
 |----------|---------|
 | **Current spec** | **v1.0** (2026-08-15) — 4 SPEC pillars |
-| **Library** | **1.0.0a1** — pre-release; `pip` does not install it by default |
+| **Library** | **1.0.0a4** — pre-release; `pip` does not install it by default |
 
 The specification defines the Telemachus record format (column contracts,
 AccPeriod frame tracking, CarrierState classification, burst sampling,
