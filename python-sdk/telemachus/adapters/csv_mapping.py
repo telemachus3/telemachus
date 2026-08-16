@@ -87,6 +87,49 @@ def _suggest(name: str, candidates) -> str:
     return f" Did you mean {', '.join(repr(c) for c in close)}?" if close else ""
 
 
+PROVENANCE_VALUES = ("measured", "derived", "absent")
+
+# Columns whose provenance decides whether an analysis is valid, so their
+# absence is stated rather than left to inference. A speed and a heading are
+# the two an adapter commonly computes; an altitude is the one a source
+# commonly omits.
+_PROVENANCE_WATCHED = ("speed_mps", "heading_deg", "altitude_gps_m")
+
+
+def _provenance_of(columns: dict[str, dict]) -> dict[str, str]:
+    """Declare, per column, where the value came from (SPEC-01 §2.14).
+
+    The adapter knows one thing for certain: whether it read a column from the
+    file or made it up. It cannot know whether the *source* computed that
+    column before writing it — a fleet API that differentiates two positions
+    and calls the result a speed produces a file the adapter cannot tell from a
+    Doppler one. So a column read from the file defaults to ``measured`` and
+    the mapping may say otherwise, per column, next to its unit.
+
+    Getting this wrong is not cosmetic. Selecting stationary samples by a
+    Doppler speed and then measuring position scatter yields the receiver
+    noise; doing it with a position-derived speed is circular and returns a
+    plausible number that means nothing, with no error raised anywhere.
+    """
+    out: dict[str, str] = {}
+    for target, rule in columns.items():
+        declared = rule.get("provenance")
+        if declared is not None:
+            if declared not in PROVENANCE_VALUES:
+                raise MappingError(
+                    f"columns.{target}: provenance must be one of "
+                    f"{list(PROVENANCE_VALUES)}, got {declared!r}")
+            out[target] = declared
+        elif "column" in rule:
+            out[target] = "measured"
+        else:
+            # a constant is neither measured nor computed from the data
+            out[target] = "derived"
+    for target in _PROVENANCE_WATCHED:
+        out.setdefault(target, "absent")
+    return out
+
+
 def _normalise_columns(spec) -> dict[str, dict]:
     """Accept both ``{target: source}`` and ``{target: {column:, unit:}}``."""
     if not spec:
@@ -299,7 +342,9 @@ def manifest(mapping, *, account: RowAccount | None = None,
     out = dict(spec.get("manifest") or {})
     out.setdefault("dataset_id", spec.get("dataset_id", "unnamed_dataset"))
     out.setdefault("schema_version", "telemachus-1.0")
-    out.setdefault("profile", _profile_of(_normalise_columns(spec.get("columns"))))
+    columns = _normalise_columns(spec.get("columns"))
+    out.setdefault("profile", _profile_of(columns))
+    out.setdefault("column_provenance", _provenance_of(columns))
     source = dict(out.get("source") or {})
     source.setdefault("type", "open_external")
     source.setdefault("adapter_status", "draft")

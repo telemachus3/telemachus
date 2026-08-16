@@ -24,6 +24,22 @@ hardware:
   devices:
     - name: "1"
 
+# SPEC-01 §2.14. The adapter computes speed_mps by haversine on successive
+# positions (adapters/aegis.py, "GPS-derived speed"): it is a function of the
+# position error, not an independent measurement, and an analysis that selects
+# stationary samples by it is circular. The AEGIS export carries no Doppler
+# speed, so this is not a defect of the adapter, only a fact the file must say.
+column_provenance:
+  speed_mps: derived
+  altitude_gps_m: measured
+  ax_mps2: measured
+  ay_mps2: measured
+  az_mps2: measured
+  gx_rad_s: measured
+  gy_rad_s: measured
+  gz_rad_s: measured
+  heading_deg: absent
+
 sensors:
   gps:
     rate_hz: 5
