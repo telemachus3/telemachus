@@ -196,6 +196,123 @@ def test_a_constant_column_is_not_reported_as_measured():
     assert csv_mapping.manifest(mapping)["column_provenance"]["speed_mps"] == "derived"
 
 
+# ---------------------------------------------------------------------------
+# Guards against a silent column shift
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def headerless(tmp_path):
+    """A headerless export addressed by index, with two fields always empty.
+
+    The shape the guard exists for: no header to disagree with, so nothing
+    detects that a field left the middle of the line.
+    """
+    def write(shift=False):
+        rows = []
+        for i in range(120):
+            lat, lon = 49.33 + i * 1e-5, 1.38 + i * 1e-5
+            fields = [f"2026-03-01T08:{i//60:02d}:{i%60:02d}Z", lat, lon,
+                      12.5, "", "", 90.0]          # 7 fields, 4 and 5 empty
+            if shift:
+                # The observed failure: a field leaves the middle of the line
+                # and the count stays right, so counting fields sees nothing.
+                del fields[4]
+                fields.append("")
+            rows.append(";".join(str(f) for f in fields))
+        path = tmp_path / ("shifted.csv" if shift else "clean.csv")
+        path.write_text("\n".join(rows) + "\n")
+        return path
+    return write
+
+
+HEADERLESS_MAPPING = {
+    "dataset_id": "FR_headerless_2026",
+    "device_id": "unit_01",
+    "read": {"sep": ";", "header": None},
+    "columns": {
+        "ts": {"column": 0, "unit": "iso8601"},
+        "lat": {"column": 1, "unit": "deg"},
+        "lon": {"column": 2, "unit": "deg"},
+        "speed_mps": {"column": 3, "unit": "m/s"},
+        "heading_deg": {"column": 6, "unit": "deg"},
+    },
+    "guards": {"expected_fields": 7, "always_empty": [4, 5]},
+}
+
+
+def test_guards_are_silent_when_the_export_is_the_expected_shape(headerless):
+    found = []
+    csv_mapping.load(headerless(), mapping=HEADERLESS_MAPPING, anomalies=found)
+    assert found == []
+
+
+def test_a_removed_field_is_caught_by_the_always_empty_invariant(headerless):
+    found = []
+    csv_mapping.load(headerless(shift=True), mapping=HEADERLESS_MAPPING,
+                     anomalies=found)
+    # the field count alone would only see six fields for seven; the invariant
+    # is what names the shift
+    assert any("always_empty" in f for f in found), found
+
+
+def test_a_shift_still_converts_because_a_guard_reports_and_does_not_refuse(headerless):
+    found = []
+    df = csv_mapping.load(headerless(shift=True), mapping=HEADERLESS_MAPPING,
+                          anomalies=found)
+    assert len(df) == 120 and found
+
+
+def test_a_trailing_separator_does_not_cry_wolf(headerless, tmp_path):
+    src = headerless()
+    path = tmp_path / "trailing.csv"
+    path.write_text("".join(line + ";\n" for line in
+                            src.read_text().splitlines()))
+    found = []
+    csv_mapping.load(path, mapping=HEADERLESS_MAPPING, anomalies=found)
+    assert found == [], found
+
+
+def test_the_manifest_records_what_was_checked_and_what_was_found(headerless):
+    found = []
+    csv_mapping.load(headerless(shift=True), mapping=HEADERLESS_MAPPING,
+                     anomalies=found)
+    g = csv_mapping.manifest(HEADERLESS_MAPPING, anomalies=found)["source"]["guards"]
+    assert g["declared"]["always_empty"] == [4, 5]
+    assert g["findings"] == found and g["findings"]
+
+
+def test_the_default_path_does_not_lose_a_finding(headerless):
+    """The caller who never read the signature is the one to protect.
+
+    Running the guards and dropping their result would reproduce, inside the
+    guard, the silent loss the guard exists to prevent.
+    """
+    with pytest.warns(csv_mapping.GuardWarning, match="always_empty"):
+        csv_mapping.load(headerless(shift=True), mapping=HEADERLESS_MAPPING)
+
+
+def test_a_manifest_says_unknown_rather_than_empty_when_nobody_collected(headerless):
+    with pytest.warns(csv_mapping.GuardWarning):
+        csv_mapping.load(headerless(shift=True), mapping=HEADERLESS_MAPPING)
+    g = csv_mapping.manifest(HEADERLESS_MAPPING)["source"]["guards"]
+    # `[]` here would read as "checked, nothing found" on a source that is
+    # in fact shifted
+    assert g["findings"] is None
+
+
+def test_a_clean_source_warns_nothing_on_the_default_path(headerless):
+    import warnings as _w
+    with _w.catch_warnings():
+        _w.simplefilter("error", csv_mapping.GuardWarning)
+        csv_mapping.load(headerless(), mapping=HEADERLESS_MAPPING)
+
+
+def test_an_unsupported_guard_key_is_refused(headerless):
+    mapping = {**HEADERLESS_MAPPING, "guards": {"alway_empty": [4]}}
+    with pytest.raises(MappingError, match="guards"):
+        csv_mapping.load(headerless(), mapping=mapping)
+
+
 def test_a_mapping_can_be_a_yaml_file(export, tmp_path):
     path = tmp_path / "mapping.yaml"
     path.write_text(yaml.safe_dump(MAPPING))

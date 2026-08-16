@@ -39,6 +39,7 @@ conversion runs from Python or from ``tele convert csv``.
 from __future__ import annotations
 
 import difflib
+import warnings
 from pathlib import Path
 
 import pandas as pd
@@ -53,6 +54,10 @@ __all__ = ["MappingError", "load", "load_mapping", "manifest", "template"]
 _READ_KEYS = {"sep", "delimiter", "decimal", "encoding", "skiprows", "header",
               "thousands", "na_values", "comment", "quotechar", "nrows",
               "skipfooter", "engine", "true_values", "false_values"}
+
+
+class GuardWarning(UserWarning):
+    """A declared guard found something, and no caller asked for the findings."""
 
 
 class MappingError(ValueError):
@@ -82,8 +87,21 @@ def load_mapping(mapping) -> dict:
     raise MappingError(f"Cannot read a mapping from {type(mapping).__name__}")
 
 
-def _suggest(name: str, candidates) -> str:
-    close = difflib.get_close_matches(name, list(candidates), n=3, cutoff=0.6)
+def _suggest(name, candidates) -> str:
+    """A "did you mean" for a column name, when one can be offered.
+
+    A headerless source addresses columns by index, so both the name and the
+    candidates may be integers. ``difflib`` works on sequences and raises
+    ``TypeError`` on an int, which replaced the clear "source has no such
+    column" message with a traceback from inside the standard library — in
+    precisely the case where the message matters most, a positional mapping
+    whose file lost a field. There is no useful spelling suggestion for an
+    index, so the honest answer is to offer none.
+    """
+    names = [c for c in candidates if isinstance(c, str)]
+    if not isinstance(name, str) or not names:
+        return ""
+    close = difflib.get_close_matches(name, names, n=3, cutoff=0.6)
     return f" Did you mean {', '.join(repr(c) for c in close)}?" if close else ""
 
 
@@ -128,6 +146,114 @@ def _provenance_of(columns: dict[str, dict]) -> dict[str, str]:
     for target in _PROVENANCE_WATCHED:
         out.setdefault(target, "absent")
     return out
+
+
+# ---------------------------------------------------------------------------
+# Guards against a silent column shift
+# ---------------------------------------------------------------------------
+
+# Rows read to test the guards. A shift is structural: it is there on the first
+# line or it is not there at all. Re-reading a whole export to check it would
+# double the load time of a large source for nothing.
+GUARD_SAMPLE_ROWS = 500
+
+
+def _is_blank(series) -> bool:
+    """True when a column carries no value at all in the rows examined."""
+    if series.isna().all():
+        return True
+    return series.astype("string").str.strip().replace("", pd.NA).isna().all()
+
+
+def _check_guards(raw: pd.DataFrame, out: pd.DataFrame, spec: dict) -> list[str]:
+    """Test the invariants the mapping declares, and report what fails.
+
+    Why this exists. The docstring of this module argues that a wrong unit is
+    the most common silent failure a declarative mapping can carry. A wrong
+    *position* is the same failure and it is worse. A wrong unit usually
+    produces implausible values — a speed in the hundreds eventually gets
+    noticed — whereas a shifted column produces plausible values in plausible
+    columns. Observed on a real headerless export: one field removed mid-file,
+    and `lat` reads 7.79, which is the longitude, while the speed reads
+    133 km/h, which is the heading. Nothing raises, and no range check helps,
+    because 7.79 is a perfectly valid latitude.
+
+    Positional addressing is what this adapter introduces in its own right: it
+    is what lets someone map a headerless CSV without writing Python. The
+    exposure comes with the feature, so the guard belongs here.
+
+    What actually catches it. Not the field count — in the observed case the
+    count stayed correct and only the order moved. Not a range check either,
+    for the reason above. What caught it was a *semantic* invariant: four
+    columns empty across every extract received since April started carrying
+    values. That does not prove a shift, but it is the only signal that arrives
+    before the numbers are wrong.
+
+    Reporting, not refusing. A column may legitimately start being filled one
+    day. Blocking a conversion on that would cost more than it saves; passing
+    it over in silence publishes shifted numbers. So the findings are returned
+    and the caller decides.
+    """
+    guards = spec.get("guards") or {}
+    if not guards:
+        return []
+    unknown = set(guards) - {"expected_fields", "always_empty", "range"}
+    if unknown:
+        raise MappingError(
+            f"guards: unsupported key(s) {sorted(unknown)}. "
+            f"Supported: ['always_empty', 'expected_fields', 'range']")
+
+    head = raw.head(GUARD_SAMPLE_ROWS)
+    found: list[str] = []
+
+    expected = guards.get("expected_fields")
+    if expected is not None:
+        n = len(raw.columns)
+        if n < int(expected):
+            found.append(
+                f"expected_fields: source has {n} fields, mapping expects at "
+                f"least {expected}; a field was removed and every column after "
+                f"it now reads its neighbour")
+        elif n > int(expected):
+            # A trailing separator adds an empty field without shifting
+            # anything, and exports acquire one without warning. Crying wolf on
+            # that is how a guard gets switched off.
+            surplus = [c for c in raw.columns[int(expected):]
+                       if not _is_blank(head[c])]
+            if surplus:
+                found.append(
+                    f"expected_fields: source has {n} fields for an expected "
+                    f"{expected}, and the surplus carries values ({surplus})")
+
+    for idx in guards.get("always_empty") or []:
+        if not isinstance(idx, int) or not 0 <= idx < len(raw.columns):
+            found.append(
+                f"always_empty: index {idx} is outside the source's "
+                f"{len(raw.columns)} fields")
+            continue
+        col = raw.columns[idx]
+        if not _is_blank(head[col]):
+            # a headerless source names its columns by index, so repeating the
+            # index as a name says nothing
+            named = "" if str(col) == str(idx) else f" ({col})"
+            found.append(
+                f"always_empty: field {idx}{named} was empty in every known "
+                f"extract and now carries values; the columns after it may be "
+                f"shifted")
+
+    for target, bounds in (guards.get("range") or {}).items():
+        if target not in out.columns:
+            found.append(f"range: {target} is not produced by this mapping")
+            continue
+        lo, hi = bounds
+        v = pd.to_numeric(out[target].head(GUARD_SAMPLE_ROWS), errors="coerce")
+        n_bad = int(((v < lo) | (v > hi)).sum())
+        if n_bad:
+            found.append(
+                f"range: {target} leaves [{lo}, {hi}] on {n_bad} of the first "
+                f"{min(len(out), GUARD_SAMPLE_ROWS)} rows")
+
+    return found
 
 
 def _normalise_columns(spec) -> dict[str, dict]:
@@ -188,6 +314,7 @@ def _check_targets(columns: dict[str, dict]) -> None:
 # ---------------------------------------------------------------------------
 
 def load(source_path, *, mapping, account: RowAccount | None = None,
+         anomalies: list | None = None,
          extras: str = "drop") -> pd.DataFrame:
     """Read a CSV through a declarative mapping and return a conformant frame.
 
@@ -205,6 +332,17 @@ def load(source_path, *, mapping, account: RowAccount | None = None,
         adapter drops only what SPEC-01 §3 forbids it to keep — rows with an
         unreadable timestamp, and repeats of a timestamp already seen — and
         each of those is counted under its own reason.
+    anomalies : list or None
+        Filled in with what the ``guards`` block of the mapping found, one
+        string per finding. A guard reports and does not refuse: a column may
+        legitimately start being filled one day, and blocking a conversion on
+        that would cost more than it saves.
+
+        Left at ``None`` the guards still run, and anything they find is
+        raised as a ``GuardWarning`` rather than dropped. It cannot reach the
+        manifest, which is why :func:`manifest` then records ``findings: null``
+        — an unknown that says so, rather than an empty list that would read as
+        "checked, nothing found".
     extras : {"drop", "keep"}
         What to do with source columns the mapping does not name. ``keep``
         carries them through as ``x_csv_<name>``, which satisfies the coverage
@@ -291,6 +429,23 @@ def load(source_path, *, mapping, account: RowAccount | None = None,
         else:
             out[key] = rule
 
+    # The guards run whether or not the caller wants the findings: a mapping
+    # that declares an invalid guard should say so at conversion time, not the
+    # first time someone asks for the report.
+    found = _check_guards(raw, out, spec)
+    if anomalies is not None:
+        anomalies.extend(found)
+    elif found:
+        # A caller who did not read the signature still gets told. Losing a
+        # guard's report in silence is the failure this whole block exists to
+        # prevent, and it would be a poor joke to reproduce it here.
+        warnings.warn(
+            "csv_mapping guards found "
+            + ("; ".join(found))
+            + ". Pass anomalies=[] to collect them and record them in the "
+              "manifest.",
+            GuardWarning, stacklevel=2)
+
     return _finish(out, account)
 
 
@@ -330,7 +485,8 @@ def _slug(name: str) -> str:
 # ---------------------------------------------------------------------------
 
 def manifest(mapping, *, account: RowAccount | None = None,
-             rows_out: int | None = None) -> dict:
+             rows_out: int | None = None,
+             anomalies: list | None = None) -> dict:
     """Build the SPEC-02 manifest the mapping describes.
 
     Whatever the mapping declares under ``manifest`` is carried through as-is,
@@ -350,6 +506,17 @@ def manifest(mapping, *, account: RowAccount | None = None,
     source.setdefault("adapter_status", "draft")
     if account is not None and rows_out is not None:
         source["metrics"] = account.finish(rows_out=rows_out)
+    guards = spec.get("guards")
+    if guards or anomalies:
+        # What was checked, and what it found. `findings: null` when the
+        # caller never collected them: an empty list here would read as
+        # "checked, nothing found" when it means "checked, result not kept",
+        # and a manifest that asserts a clean result it never saw is worse than
+        # one that admits it does not know.
+        source["guards"] = {
+            "declared": dict(guards or {}),
+            "findings": list(anomalies) if anomalies is not None else None,
+        }
     out["source"] = source
     return out
 

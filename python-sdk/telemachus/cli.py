@@ -133,6 +133,9 @@ def convert_cmd(adapter_name, source_path, outdir, mapping, extras, date, device
 
     click.echo(f"Converting {adapter_name} from {source_path}")
     module = _module(adapter_name)
+    anomalies: list[str] = []
+    if adapter_name == "csv":
+        kwargs["anomalies"] = anomalies
     df = module.load(source_path, **kwargs)
 
     out = Path(outdir)
@@ -144,7 +147,9 @@ def convert_cmd(adapter_name, source_path, outdir, mapping, extras, date, device
     # Manifest, with the row accounting this conversion just produced.
     manifest_source = mapping if adapter_name == "csv" else source_path
     if adapter_name in FORMAT_ADAPTERS:
-        manifest = module.manifest(manifest_source, account=account, rows_out=len(df))
+        manifest = module.manifest(
+            manifest_source, account=account, rows_out=len(df),
+            **({"anomalies": anomalies} if adapter_name == "csv" else {}))
         manifest.setdefault("data_files", []).append(
             {"path": pq_path.name, "format": "parquet",
              "size_mb": round(pq_path.stat().st_size / 1e6, 3)})
@@ -157,6 +162,8 @@ def convert_cmd(adapter_name, source_path, outdir, mapping, extras, date, device
             click.echo(f"  dropped {metrics['raw_rows_dropped']} of "
                        f"{metrics['raw_rows_in']} rows: "
                        f"{metrics.get('drop_reasons', {})}")
+        for finding in anomalies:
+            click.echo(f"  guard: {finding}")
         report = tele_api.validate_dataset(out, level="full")
     else:
         click.echo("  no manifest: this adapter does not describe its own output "
