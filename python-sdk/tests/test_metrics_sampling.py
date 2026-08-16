@@ -122,6 +122,55 @@ def test_decimation_loss_grows_monotonically_on_a_zigzag():
     assert losses[-1] > 50.0
 
 
+def _irregular_zigzag(n=300):
+    """A zigzag whose cadence varies, which is the normal shape of real feeds."""
+    pattern = np.array([1, 1, 3, 1, 7, 2, 1, 1, 4, 1])
+    gaps_s = np.tile(pattern, n // len(pattern) + 1)[:n - 1]
+    ts = (pd.Timestamp("2026-01-01T00:00:00Z")
+          + pd.to_timedelta(np.concatenate([[0], gaps_s.cumsum()]), unit="s"))
+    zig = np.where(np.arange(n) % 2 == 0, 0.0, 1e-4)
+    return pd.DataFrame({"ts": ts, "lat": 48.0 + np.arange(n) * 1e-5,
+                         "lon": 2.0 + zig, "speed_mps": 10.0, "device_id": "z"})
+
+
+def test_decimation_loss_is_never_negative_on_a_varying_cadence():
+    """Down-sampling cannot lengthen a path: it replaces two sides with one.
+
+    The defect this pins used a per-step contiguity filter (`dt == step`),
+    which selected a different subset of the trace for each step, so the steps
+    did not measure the same ground and their totals were not comparable.
+    Measured on the public OSM traces over Rouen, whose dominant cadence covers
+    only 62 % of samples: decimating to 2 s reported 840 km against 764 km
+    native, a loss of -9.9 %.
+    """
+    res = decimation_loss(_irregular_zigzag(), [1, 2, 5, 10, 30, 60])
+    assert (res["loss_pct"] >= 0).all(), res
+    native = res.loc[res["step_s"].idxmin(), "km"]
+    assert (res["km"] <= native + 1e-9).all(), res
+
+
+def test_decimation_loss_at_the_native_step_is_the_path_length():
+    """Two functions, one distance. They disagreed by a factor of 3.7."""
+    df = _irregular_zigzag()
+    res = decimation_loss(df, [1]).set_index("step_s")
+    # `km` is rounded to the metre for reading, hence the tolerance.
+    assert res.loc[1, "km"] == pytest.approx(path_length_m(df) / 1000.0, abs=1e-3)
+
+
+def test_decimation_loss_does_not_cross_a_hole():
+    """A chord over a gap is not travelled distance, at any step."""
+    df = _track(n=100, step_s=1, dlat=1e-5)
+    far = _track(n=100, step_s=1, dlat=1e-5, start="2026-01-01T05:00:00Z")
+    far["lat"] += 5.0                                   # elsewhere entirely
+    joined = pd.concat([df, far], ignore_index=True)
+    res = decimation_loss(joined, [1, 30], max_gap_s=10).set_index("step_s")
+    expected = 2 * path_length_m(df) / 1000.0
+    assert res.loc[1, "km"] == pytest.approx(expected, abs=1e-3)
+    # Without the guard the teleport enters as a chord and dwarfs the track.
+    open_res = decimation_loss(joined, [1]).set_index("step_s")
+    assert open_res.loc[1, "km"] > 100 * expected
+
+
 # --- stops -----------------------------------------------------------------
 
 def test_stops_respects_minimum_duration():

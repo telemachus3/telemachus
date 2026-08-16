@@ -28,39 +28,87 @@ __all__ = [
 
 def decimation_loss(df: pd.DataFrame, steps: Iterable[int],
                     by: str = "device_id", ts: str = "ts",
-                    lat: str = "lat", lon: str = "lon") -> pd.DataFrame:
+                    lat: str = "lat", lon: str = "lon",
+                    max_gap_s: float | None = None) -> pd.DataFrame:
     """Travelled distance retained after down-sampling, per time step.
 
-    For each step, only samples whose timestamp is a multiple of that step are
-    kept, then only **strictly contiguous** segments are summed — those whose
-    gap equals the step exactly. A looser filter lets real holes in the trace
-    enter the sum as chords, which makes the result non-monotonic and
-    understates the loss at coarse steps.
+    Down-sampling a path can only shorten it: dropping a sample replaces two
+    sides of a triangle with the third. So the loss is a corner-cutting
+    measurement, it is bounded below by zero, and a coarser step throws away
+    more of the turns.
 
-    The first step in ``steps`` is the reference against which loss is computed,
-    so pass the native cadence first.
+    The reference is the **native** path, not the first step, so every row of
+    the result answers the same question: what fraction of the travelled
+    distance survives this cadence. Passing a step finer than the actual
+    cadence therefore reports a loss near zero rather than a spurious gain.
+
+    ``max_gap_s`` splits the trace into contiguous stretches first, so a real
+    hole is never crossed by a chord. The split is computed **once, on the
+    native signal**, and every step then decimates inside those same stretches.
+    That is what makes the steps comparable: they measure the same ground.
+
+    A caveat rather than a guarantee: two steps that are not multiples of one
+    another sample different instants, so their losses can cross by a little on
+    a feed whose cadence varies. What cannot happen is a negative loss, which
+    is what a per-step contiguity filter used to produce.
+
+    Parameters
+    ----------
+    steps : iterable of int
+        Sampling steps in seconds, e.g. ``[1, 5, 30, 60]``. Order does not
+        affect the numbers.
+    max_gap_s : float or None
+        Beyond this, two consecutive samples no longer describe an observed
+        movement. ``None`` treats each entity as one uninterrupted stretch.
 
     Returns
     -------
     pd.DataFrame
-        Columns ``step_s``, ``km``, ``loss_pct``.
+        Columns ``step_s``, ``km``, ``loss_pct``, ordered by ``step_s``.
     """
-    epoch = epoch_s(df[ts])
-    rows: list[dict] = []
-    reference: float | None = None
-    for step in steps:
-        sub = df[(epoch % step) == 0]
-        ordered = sub.sort_values([by, ts])
-        grp = ordered.groupby(by, sort=False)
-        d = np.asarray(haversine_m(grp[lat].shift(), grp[lon].shift(),
-                                   ordered[lat], ordered[lon]))
-        dt = grp[ts].diff().dt.total_seconds().to_numpy()
-        km = float(np.nansum(np.where(dt == step, d, 0.0))) / 1000.0
-        if reference is None:
-            reference = km
-        loss = 100.0 * (1 - km / reference) if reference else 0.0
-        rows.append({"step_s": step, "km": round(km, 3), "loss_pct": round(loss, 2)})
+    ordered = df.sort_values([by, ts]).reset_index(drop=True)
+    if ordered.empty:
+        return pd.DataFrame(columns=["step_s", "km", "loss_pct"])
+
+    dt = ordered.groupby(by, sort=False)[ts].diff().dt.total_seconds()
+    starts = dt.isna()
+    if max_gap_s is not None:
+        starts = starts | (dt > max_gap_s)
+    stretch = starts.cumsum().to_numpy()
+
+    native = _stretch_km(ordered, stretch, lat, lon)
+    epoch = epoch_s(ordered[ts]).to_numpy()
+    # Last sample of each stretch, always kept: decimating must not shorten the
+    # path by truncating its end, which would be measured as corner-cutting.
+    last = np.empty(len(stretch), dtype=bool)
+    last[-1] = True
+    last[:-1] = stretch[:-1] != stretch[1:]
+
+    rows = []
+    for step in sorted({int(s) for s in steps}):
+        window = np.floor_divide(epoch, step)
+        first = np.empty(len(window), dtype=bool)
+        first[0] = True
+        first[1:] = (window[1:] != window[:-1]) | (stretch[1:] != stretch[:-1])
+        keep = first | last
+        km = _stretch_km(ordered[keep], stretch[keep], lat, lon)
+        loss = 100.0 * (1 - km / native) if native else 0.0
+        rows.append({"step_s": step, "km": round(km, 3),
+                     "loss_pct": round(loss, 2)})
     return pd.DataFrame(rows)
+
+
+def _stretch_km(frame: pd.DataFrame, stretch: np.ndarray,
+                lat: str, lon: str) -> float:
+    """Path length of a frame, summed within contiguous stretches."""
+    if len(frame) < 2:
+        return 0.0
+    same = stretch[1:] == stretch[:-1]
+    d = np.asarray(haversine_m(frame[lat].to_numpy()[:-1],
+                               frame[lon].to_numpy()[:-1],
+                               frame[lat].to_numpy()[1:],
+                               frame[lon].to_numpy()[1:]), dtype=float)
+    return float(np.nansum(np.where(same, d, 0.0))) / 1000.0
 
 
 def stops(df: pd.DataFrame, by: str = "device_id", ts: str = "ts",
