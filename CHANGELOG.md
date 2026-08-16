@@ -10,6 +10,225 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.0.0a4] — 2026-08-16
+
+### Added
+
+- **`guards` in a CSV mapping, against a silent column shift.** A wrong unit is
+  the failure this adapter's docstring already argues about. A wrong *position*
+  is the same failure and worse: a wrong unit usually produces implausible
+  values, which eventually get noticed, whereas a shifted column produces
+  plausible values in plausible columns. Observed on a real headerless export —
+  one field removed mid-file, `lat` reading 7.79 which is the longitude, and a
+  speed of 133 km/h which is the heading. Nothing raised, and no range check
+  helps, because 7.79 is a perfectly valid latitude.
+
+  Positional addressing is what this adapter introduces in its own right: it is
+  what lets someone map a headerless CSV without writing Python. The exposure
+  comes with the feature, so the guard belongs here.
+
+  ```yaml
+  guards:
+    expected_fields: 16          # at least N; a surplus must be empty
+    always_empty: [5, 6, 11, 13] # fields empty in every extract so far
+    range: {lat: [-90, 90]}      # per-target bounds
+  ```
+
+  `always_empty` is the one that earns its place. In the observed case the
+  field count stayed correct and only the order moved, so counting fields saw
+  nothing; what caught it was four columns, empty across every extract received
+  since April, starting to carry values. That does not prove a shift, but it is
+  the only signal that arrives before the numbers are wrong.
+
+  A guard reports and does not refuse. A column may legitimately start being
+  filled one day, and blocking a conversion on that would cost more than it
+  saves. Findings reach the caller through `load(..., anomalies=[])`, the
+  console through `tele convert`, and the manifest under `source.guards`, which
+  records both what was declared and what it found.
+
+  A caller who passes nothing still gets told: the findings are raised as a
+  `GuardWarning` rather than dropped, and the manifest then records
+  `findings: null`. An empty list there would read as "checked, nothing found"
+  when it means "checked, result not kept", and a manifest that asserts a clean
+  result it never saw is worse than one that admits it does not know.
+
+  Checks run on the first 500 rows: a shift is structural, and re-reading a
+  whole export for it would double the load time of a large source for nothing.
+  A trailing separator — an export acquiring a 17th empty field without
+  shifting anything — is tolerated rather than reported, because a guard that
+  cries wolf is a guard someone switches off.
+
+Fixed
+
+- **`_suggest` crashed on a mapping addressed by index.** A headerless source
+  names its columns by integer, `difflib` works on sequences, and the
+  `TypeError` it raised replaced the clear "source has no such column" message
+  with a traceback from inside the standard library. This happened in exactly
+  the case where the message matters most: a positional mapping whose file just
+  lost a field. There is no useful spelling suggestion for an index, so none is
+  offered.
+
+### Fixed
+
+- **The speed cross-check raised a false alarm on any frame carrying more than
+  one device.** It differences consecutive rows, and on a time-sorted
+  multi-device export the rows interleave, so every step jumped between
+  vehicles. Measured on two devices forty kilometres apart: the implied speed
+  explodes, the median ratio collapses to `0.00x`, and a checker built to catch
+  wrong units reports sound data as wrong. It now groups by `device_id`.
+
+  Found by writing the generic test below rather than by a report, which is the
+  argument for the test: this was the **fourth** occurrence of one pattern
+  during 1.0, after a null key in `csv_mapping`, a constant key in `gpx`, and
+  no key at all in `speed_from_pos`.
+
+Added
+
+- **A generic test for the entity-boundary invariant**
+  (`test_entity_boundary_invariant.py`). Any function that differences two
+  consecutive rows must say what it does when those rows belong to different
+  devices — group by the entity, or state that it does not. The test
+  interleaves two entities and requires each one's answer to match what it
+  would have been alone, across the whole family at once rather than one
+  function at a time.
+
+  It carries a test of itself: a case that models the ungrouped form and fails
+  if it does not produce an absurd result. A suite that cannot fail proves
+  nothing.
+
+- **`speed_mps` is conditional in the validator, not only in the text.**
+  SPEC-01 §2.3.1 was written to say a receiver that measures no speed may omit
+  the column. `MANDATORY_CORE` in `core/schemas.py` was never touched, so
+  1.0.0a3 shipped a specification saying a column may be absent next to a
+  validator that refused every file without it.
+
+  Measured on the public Movebank corpus: 388 datasets converted through the
+  shipped adapter, 274 of the 309 non-conformities caused by this single
+  column, and **not one dataset changed status between 1.0.0a2 and 1.0.0a3**.
+  The relaxation was announced and never applied.
+
+  The cause was one list serving two purposes. `GNSS_MANDATORY_FIELDS` built
+  both the arrow schema and the mandatory set, so a column could not belong to
+  a profile without being required by it. Split into `GNSS_CORE_FIELDS`, which
+  says what a `core` file may contain, and `CONDITIONAL_CORE`, which says what
+  it need not.
+
+Added
+
+- **A test that the specification and the validator agree** (`tests/
+  test_spec_matches_code.py`). It parses the tables of SPEC-01 §2.3 out of the
+  markdown and compares them to `MANDATORY_BY_PROFILE`, treating a row marked
+  conditional as not mandatory.
+
+  This exists because the failure above survived two careful readings. The
+  normative text was changed deliberately, reviewed, and four inconsistencies
+  inside it were corrected — and nobody looked at the Python set the validator
+  reads. A prose specification and a Python set are two encodings of one
+  decision, and nothing tied them together.
+
+  Deliberately narrow: it checks one table, the one whose disagreement with the
+  code silently invalidates every conformance claim the project makes.
+
+  It recognises a conditional row by the word "conditional" in its description
+  cell, which is prose and therefore fragile: reword it and the parser would
+  read every column as mandatory and pass by comparing everything to
+  everything. So it carries canaries that fail when it stops measuring — one if
+  a table parses as empty, one if no row is marked conditional any more. A test
+  that can no longer fail has to say so.
+
+  This is a stopgap. The durable fix is to restructure §2.3 so conditionality
+  is a property of the table rather than of a sentence, and to key the
+  invariant on that structure; this file is written to be replaced by it, not
+  composed with.
+
+- **A `heading_deg` column that never varies is no longer diagnosed as a
+  convention** (SPEC-01 §2.5). One dataset of the reference campaign carries
+  `-1` on every row. The previous release answered the convention question
+  anyway — "this is course over ground on [-180, 180]... converts exactly with
+  `heading_deg % 360`" — and a producer following that instruction turns a file
+  whose heading is unknown *everywhere* into one pointing due north
+  *everywhere*.
+
+  The discriminant that failed was "negatives beside values above 180", which
+  assumes the sentinel keeps company with real headings. Alone, it has no
+  company, and the case fell through to the confident answer.
+
+  A heading identifies its convention only by varying, so variance is now
+  checked before convention is inferred, and a constant column gets a message
+  that says what is known and stops. The rule is the variance and not the
+  value: `-1` and `-999` are conventions of habit, and a column constant at
+  `999` is diagnosed the same way. A stationary vehicle reporting a valid
+  constant heading is untouched, because the check runs only on columns already
+  outside [0, 360).
+
+  This was a regression against 1.0.0a2, whose "out of range" was less useful
+  and misled nobody. **A wrong message costs more than an absent one.**
+
+- **A sentinel below -180 is named as one instead of reported as a span.** A
+  signed column carrying `-999` has two defects and the previous message named
+  neither, leaving the producer to discover that `% 360` — the fix the signed
+  convention genuinely needs — silently turns `-999` into a heading of 81. Both
+  defects are now stated in one message, so nobody is sent round twice. A
+  column running to 32 515 is still reported by its scale: that is not a file
+  with a few sentinels in it.
+
+- **The closed interval [0, 360] is told apart from data out of any angular
+  scale** (SPEC-01 §2.5). Twelve of the twenty-five heading datasets in the
+  reference campaign write `360` for north — as few as 6 rows in 422 596. They
+  were reported as "outside both the canonical range and the signed
+  convention", which is technically true and misleading: 360 and 0 are the same
+  bearing, and the source is not using another convention.
+
+  The canonical range stays half-open and the finding stays an error, because
+  north having one spelling is what spares every consumer a test for two, and a
+  rule nothing verifies is the defect this project has just spent a release
+  removing. What changes is that the message names the deviation, counts the
+  rows, and states the one-line fix — including that `360 -> 0` is a
+  canonicalisation and not a correction, so the source column needs no `_adj`
+  (§2.13.1). Adapters SHOULD normalise at ingestion; the conformance check
+  reports what reaches it unnormalised.
+
+- **`speed_mps` moves out of the "All profiles" mandatory table into its own
+  conditional one** (SPEC-01 §2.3). Version 1.0.0a3 relaxed the column in prose
+  — §2.3.1 said plainly that it MAY be absent — while the table still listed it
+  under **All profiles**, carrying the conditionality only in a note inside its
+  Description cell. The implementation followed the table, and on the reference
+  corpus the release changed nothing at all: the same 388 datasets converted,
+  the same 273 refused for the absence of `speed_mps` alone, not one more than
+  the version before it.
+
+  What makes it worth recording is how it survived review. A human reads the
+  note and concludes the matter is settled; a parser reads the structure and
+  concludes the opposite; the code followed the structure. Two readers of the
+  same table came away with different rules and both were reading correctly.
+  The specification was not ambiguous to people — it was ambiguous *between*
+  people and machines.
+
+  §2.3.2 now states the constraint that follows: a column's obligation is
+  expressed by the heading it sits under, never by prose inside a cell. A cell
+  may explain; it may not qualify. That makes the section machine-comparable
+  against the table the validator consults, so the two can be held to each
+  other by a test instead of by attention.
+
+- **The specification and the validator are now compared by a test.** Nothing
+  compared them before, which is how they spent a release disagreeing while
+  every test was green. The check reads §2.3 structurally — which table a row
+  sits under, not a word inside a cell — and covers the conditional set as well
+  as the mandatory ones, since dropping a column from `CONDITIONAL_CORE` leaves
+  both mandatory sets untouched.
+
+  Its canary is the part that matters. It does not assert that rows were found,
+  which stays true while a parser silently ignores a table it does not
+  recognise; it asserts that every table in §2.3 was accounted for. A table
+  nobody reads is a rule nobody enforces.
+
+  Not mechanised, and said plainly so it is not mistaken for mechanised: the
+  prose of §2.3.1 can still drift from the table. What the restructuring buys
+  is that the table is now the only structural statement of the rule, which is
+  what makes a table-to-code check sufficient.
+
+---
+
 ## [1.0.0a3] — 2026-08-16
 
 ### Added
