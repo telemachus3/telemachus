@@ -33,9 +33,9 @@ que chaque flux contient vraiment :
 Si une colonne Telemachus attendue manque, décidez tout de suite comment la
 gérer :
 
-- **Colonnes GPS absentes** au rythme IMU → laisser en `NaN` (convention multi-rate, SPEC-01 §3.5)
+- **Colonnes GPS absentes** au rythme IMU → laisser en `NaN` (convention multi-rate, SPEC-01 §2.11)
 - **Heading manquant** → le recalculer depuis deux points GPS consécutifs (bearing Haversine)
-- **Gyro absent** → laisser les colonnes gyro absentes (SPEC-01 §3.3 : absentes ou full-NaN, jamais remplies avec des zéros)
+- **Gyro absent** → laisser les colonnes gyro absentes (SPEC-01 §2.6 : absentes ou full-NaN, jamais remplies avec des zéros)
 
 ## 2. Télécharger et décompresser
 

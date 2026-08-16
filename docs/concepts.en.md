@@ -60,7 +60,7 @@ unambiguous across datasets that merge multiple vendors.
 | **events layer** | Events & Situations | enriched | enriched + event column + event table (harsh brake, pothole, curve, …) |
 
 The Telemachus spec is **normative on Telemachus** (SPEC-01). enriched and events layer
-column contracts are documented in SPEC-01 §4 but their *algorithms*
+column contracts are documented in SPEC-01 §2.13 but their *algorithms*
 are intentionally out of scope — different consumers can compute enriched/events layer
 differently as long as they emit conformant columns.
 
@@ -119,7 +119,7 @@ acc_periods:
 ```
 
 Default if absent: a single implicit period with `frame: "raw"`. See
-SPEC-01 §3.6 for the full normative definition.
+SPEC-01 §2.12 for the full normative definition.
 
 ## CarrierState — is this trip real driving?
 
@@ -142,7 +142,7 @@ contexts:
 
 Classification combines four signals: external power voltage, GPS
 speed, accelerometer norm variance, GPS position drift. See
-SPEC-01 §3.7 for the decision tree.
+SPEC-02 §3.8 for the decision tree.
 
 In the manifest, declare them via `trip_carrier_states`:
 

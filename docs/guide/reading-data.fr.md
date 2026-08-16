@@ -11,7 +11,7 @@ mon-dataset/
 ```
 
 Le parquet de signal est volontairement « pur » : uniquement les
-colonnes définies par SPEC-01 §3 (`ts`, `lat`, `lon`, `speed_mps`,
+colonnes définies par SPEC-01 §2 (`ts`, `lat`, `lon`, `speed_mps`,
 `ax/ay/az_mps2`, gyro optionnel, GNSS metadata recommandés).
 
 Tout le reste vit dans le manifest.
