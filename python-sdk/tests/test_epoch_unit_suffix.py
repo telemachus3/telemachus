@@ -170,11 +170,32 @@ def test_microseconds_in_a_ms_column_are_refused_and_named():
     assert "// 1000" in f.message
 
 
-def test_seconds_in_a_ms_column_are_refused_and_named():
-    """The other direction, which lands in 1926 rather than in the far future."""
+def test_seconds_in_a_ms_column_are_refused_and_repaired_the_other_way():
+    """The other direction, and it is not symmetric.
+
+    A column carrying microseconds is divided; one carrying seconds is
+    multiplied. Naming the divisor in both cases is how the message came to
+    offer `// 0` to anyone whose source was in seconds — which the first version
+    of this test did not catch, because it only asserted the word "seconds".
+    """
     findings = check_epoch_columns(_frame([RECV_MS // 1000]), now=NOW)
     assert len(findings) == 1
-    assert "seconds" in findings[0].message
+    message = findings[0].message
+    assert "carries seconds" in message
+    assert "* 1000" in message
+
+
+@pytest.mark.parametrize("values", [
+    [RECV_MS * 1000],           # microseconds
+    [RECV_MS * 1000_000],       # nanoseconds
+    [RECV_MS // 1000],          # seconds
+    [17, 42],                   # no resolution at all
+])
+def test_no_message_ever_advises_dividing_by_zero(values):
+    """The repair offered has to be arithmetic that runs."""
+    for finding in check_epoch_columns(_frame(values), now=NOW):
+        assert "// 0" not in finding.message
+        assert "* 0" not in finding.message
 
 
 def test_values_that_are_no_resolution_at_all_are_not_blamed_on_a_unit():

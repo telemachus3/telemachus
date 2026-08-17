@@ -690,48 +690,69 @@ def check_epoch_columns(df: pd.DataFrame, *,
         # in the language of the wrong rule.
         if pd.api.types.is_datetime64_any_dtype(df[column]):
             continue
-        values = _finite(df[column])
+        # An integer column stays integral: routing 19-digit nanoseconds through
+        # float64 would round the very digits the message is about.
+        raw = df[column]
+        values = (raw.dropna().astype("Int64") if pd.api.types.is_integer_dtype(raw)
+                  else _finite(raw))
         if values.empty:
             continue
 
-        read = from_epoch(values, promised)
-        outside = (read < GPS_EPOCH) | (read > ceiling)
+        # The comparison is made on the integers, against the bounds expressed in
+        # ticks — never by decoding first. Decoding is what a reader would try,
+        # and it is a trap: 1.79e15 milliseconds is a date pandas cannot
+        # represent below version 3, so `to_datetime` answers NaT, every
+        # comparison against NaT is False, and the check reports a clean file. A
+        # guard that goes quiet on the largest errors is worse than no guard, and
+        # it took running the suite at the declared dependency floor to see it.
+        low, high = _ticks_of(GPS_EPOCH, promised), _ticks_of(ceiling, promised)
+        outside = (values < low) | (values > high)
         n = int(outside.sum())
         if not n:
             continue
 
         # Which resolution *would* be plausible. Naming it is the difference
         # between "these values are odd" and "divide by a thousand": the
-        # candidates are a factor of a thousand apart, so at most one of them
-        # can put the same integers in a plausible window.
-        candidates = []
-        for other in EPOCH_UNIT_BY_SUFFIX:
-            if other == promised:
-                continue
-            alt = from_epoch(values, other)
-            if ((alt >= GPS_EPOCH) & (alt <= ceiling)).all():
-                candidates.append((other, alt))
+        # candidates are a factor of a thousand apart, so at most one of them can
+        # put the same integers in a plausible window — and being in that window
+        # is also what makes the candidate safe to decode for the message.
+        candidates = [other for other in EPOCH_UNIT_BY_SUFFIX
+                      if other != promised
+                      and (values >= _ticks_of(GPS_EPOCH, other)).all()
+                      and (values <= _ticks_of(ceiling, other)).all()]
 
         if len(candidates) == 1:
-            other, alt = candidates[0]
-            factor = _NS_PER_TICK[promised] // _NS_PER_TICK[other]
+            other = candidates[0]
+            alt = from_epoch(values, other)
+            # Both directions occur and they do not have the same repair. A
+            # column carrying microseconds is divided; one carrying seconds is
+            # multiplied. Stating the divisor either way would have offered
+            # `// 0` to anyone whose source was in seconds.
+            promised_ns, other_ns = _NS_PER_TICK[promised], _NS_PER_TICK[other]
+            if other_ns > promised_ns:
+                factor = other_ns // promised_ns
+                repair = f"`{column} * {factor}`"
+            else:
+                factor = promised_ns // other_ns
+                repair = f"`{column} // {factor}`"
             fix = (f"Read as {_RESOLUTION_NAMES[other]} the same integers date "
                    f"{alt.min()} to {alt.max()}, so the column carries "
                    f"{_RESOLUTION_NAMES[other]}: it is a factor {factor} out and "
-                   f"`{column} // {factor}` is the whole of the fix")
+                   f"{repair} is the whole of the fix")
         else:
             fix = ("No other epoch resolution puts these integers in a "
                    "plausible window either, so this is not a confusion between "
                    "two units but values that were never instants")
 
+        span = f"{int(values.min())} to {int(values.max())}"
         digits = len(str(_ticks_of(now, promised)))
         findings.append(Finding(
             column, "error",
             f"{n} of {len(values)} value(s) in {column} are not "
-            f"{_RESOLUTION_NAMES[promised]} since the Unix epoch: read as the "
-            f"name promises, they date {read.min()} to {read.max()}. {fix}. The "
-            f"suffix is the unit (SPEC-01 §1.1), and today a {promised} instant "
-            f"is {digits} digits long"))
+            f"{_RESOLUTION_NAMES[promised]} since the Unix epoch: they run "
+            f"{span}, outside {low} to {high}, the window between the start of "
+            f"GPS time and two days from now. {fix}. The suffix is the unit "
+            f"(SPEC-01 §1.1), and today a {promised} instant is {digits} digits"))
 
     return findings
 

@@ -64,6 +64,15 @@ Fixed
   which SPEC-01 §3 rule 9 owns, and reporting it here would say the same thing
   twice in the language of the wrong rule.
 
+  The comparison is made on the integers, against bounds expressed in ticks,
+  and never by decoding the values first. Decoding is the obvious
+  implementation and it is a trap: 1.79e15 milliseconds is a date pandas cannot
+  represent before version 3, so `to_datetime` answers `NaT`, every comparison
+  against `NaT` is False, and the check reports a clean file. A guard that goes
+  quiet on the *largest* errors is worse than no guard. It took running the
+  suite at the dependency floor this package declares — pandas 2.1 — to see it,
+  which is now part of the pre-flight rather than a matrix CI does not have.
+
 - **No published dataset is affected, and nothing needs to be withdrawn.**
   Verified rather than assumed, on 2 631 Parquet files carrying a `ts_*_<unit>`
   column across the consuming pipeline's local and server stores: 2 603 non-empty,
