@@ -17,6 +17,7 @@ from telemachus.core.breaks import check_acquisition_breaks
 from telemachus.core.carrier import CarrierProfileError, resolve_carrier_profile
 from telemachus.core.corrections import check_corrections
 from telemachus.core.plausibility import (
+    check_epoch_columns,
     check_heading_convention,
     check_timestamps,
     check_units,
@@ -306,6 +307,15 @@ def validate(
     # 1970 without a word, and the descriptive layer downstream then reports a
     # three-minute drive as spanning fifty-six years.
     for finding in check_timestamps(df):
+        (errors if finding.severity == "error" else warnings).append(finding.message)
+
+    # Rule 12c: an integer instant, at the resolution its name promises. Rule 12b
+    # reads `ts`, which is a datetime and says its own resolution. `ts_received_ms`
+    # is an int64, and an int64 is only an instant once something states which
+    # tick it counts — so a value a thousand times out passes every rule above
+    # while remaining a plausible integer, and only shows up as a latency in
+    # hours once someone subtracts it from something else.
+    for finding in check_epoch_columns(df):
         (errors if finding.severity == "error" else warnings).append(finding.message)
 
     # Rule 13: personal data (SPEC-01 §2.4). Reported at every level so a

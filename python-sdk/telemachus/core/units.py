@@ -23,12 +23,16 @@ import numpy as np
 import pandas as pd
 
 __all__ = [
+    "EPOCH_UNIT_BY_SUFFIX",
     "QUANTITY_BY_COLUMN",
     "UnknownUnitError",
     "canonical_unit",
     "convert",
+    "epoch_unit_of",
+    "from_epoch",
     "known_units",
     "quantity_of",
+    "to_epoch",
 ]
 
 # Standard gravity (SI brochure, 9th ed.) and the degree, both exact.
@@ -77,6 +81,45 @@ QUANTITY_BY_COLUMN: dict[str, str] = {
 def quantity_of(column: str) -> str | None:
     """Physical quantity carried by a Telemachus column, or None if unitless."""
     return QUANTITY_BY_COLUMN.get(column)
+
+
+# ---------------------------------------------------------------------------
+# The unit a column *name* announces
+# ---------------------------------------------------------------------------
+# SPEC-01 §1.1 makes the suffix part of the contract: `speed_mps` promises
+# metres per second, `ax_mps2` promises m/s². For every quantity but time that
+# promise is kept by the table above, because the quantity has one canonical
+# unit and the name states it.
+#
+# Time is the exception, and the reason this table exists. Its canonical form is
+# a datetime, so a column that wants an integer count of ticks has to say which
+# tick — and the only place it can say so is its name. `ts` is a datetime;
+# `ts_received_ms` is milliseconds since the Unix epoch. Nothing in the quantity
+# ("time", for both) can tell them apart, which is how `ts_received_ms` shipped
+# microseconds from 1.0.0a1 to 1.0.0a4: the conversion produced a datetime, the
+# integer cast downstream read whatever resolution the datetime happened to
+# carry, and the suffix was never consulted by anything.
+
+EPOCH_UNIT_BY_SUFFIX: dict[str, str] = {
+    "s": "s",
+    "ms": "ms",
+    "us": "us",
+    "ns": "ns",
+}
+
+
+def epoch_unit_of(column: str) -> str | None:
+    """Epoch resolution a column *name* promises, or None for a datetime column.
+
+    Only a column this module already classifies as time is considered. That is
+    not a detail: ``gx_rad_s`` also ends in ``_s``, and reading its suffix as a
+    unit of time would turn an angular rate into an instant. The quantity
+    decides whether the suffix is even about time; the suffix then decides the
+    resolution.
+    """
+    if QUANTITY_BY_COLUMN.get(str(column)) != "time":
+        return None
+    return EPOCH_UNIT_BY_SUFFIX.get(str(column).rsplit("_", 1)[-1])
 
 
 # ---------------------------------------------------------------------------
@@ -149,6 +192,8 @@ CANONICAL: dict[str, str] = {
     "voltage": "V",
     "current": "A",
     "latlon": "deg",
+    # For `ts`. A time column whose name ends in a unit suffix is an integer
+    # epoch at that resolution instead — see EPOCH_UNIT_BY_SUFFIX.
     "time": "datetime64[ns, UTC]",
 }
 
@@ -215,11 +260,54 @@ _EPOCH_UNITS = {
 }
 
 
+def from_epoch(values, unit: str) -> pd.Series:
+    """Integer ticks since the Unix epoch, read as instants.
+
+    ``unit`` is a resolution — ``"s"``, ``"ms"``, ``"us"``, ``"ns"`` — and not a
+    unit spelling: this is the inverse of :func:`to_epoch` and the two must
+    agree on one vocabulary, which is that of :data:`EPOCH_UNIT_BY_SUFFIX`.
+    """
+    if unit not in EPOCH_UNIT_BY_SUFFIX:
+        raise UnknownUnitError(
+            f"Unknown epoch resolution {unit!r}. Expected one of "
+            f"{sorted(EPOCH_UNIT_BY_SUFFIX)}")
+    return pd.to_datetime(pd.to_numeric(values, errors="coerce"),
+                          unit=unit, utc=True, errors="coerce")
+
+
+def to_epoch(values, unit: str) -> pd.Series:
+    """Instants as integer ticks since the Unix epoch, at the given resolution.
+
+    The input must already be datetime-like. An integer column carries no
+    resolution of its own, and guessing one here is exactly the mistake this
+    function exists to undo — so it refuses rather than assume.
+
+    Returns a nullable ``Int64``: a missing instant is missing, and the sentinel
+    ``pd.NaT`` becomes when cast blindly to int64 is a date in 1677.
+    """
+    if unit not in EPOCH_UNIT_BY_SUFFIX:
+        raise UnknownUnitError(
+            f"Unknown epoch resolution {unit!r}. Expected one of "
+            f"{sorted(EPOCH_UNIT_BY_SUFFIX)}")
+    s = values if isinstance(values, pd.Series) else pd.Series(values)
+    if not pd.api.types.is_datetime64_any_dtype(s):
+        raise TypeError(
+            f"to_epoch expects datetime-like values, got dtype {s.dtype}. "
+            f"Integers carry no resolution: parse them with from_epoch first, "
+            f"declaring which one they are in.")
+    if s.dt.tz is None:
+        s = s.dt.tz_localize("UTC")
+    naive = s.dt.tz_convert("UTC").dt.tz_localize(None)
+    # The resolution is expressed as a cast rather than as a division, so that
+    # truncation happens once, in the type, where it can be read.
+    ticks = naive.astype(f"datetime64[{unit}]").astype("int64")
+    return pd.Series(pd.array(ticks, dtype="Int64"), index=s.index).mask(s.isna())
+
+
 def _to_utc(values: pd.Series, unit: str, *, fmt: str | None = None) -> pd.Series:
     k = _key(unit)
     if k in _EPOCH_UNITS:
-        ts = pd.to_datetime(pd.to_numeric(values, errors="coerce"),
-                            unit=_EPOCH_UNITS[k], utc=True, errors="coerce")
+        ts = from_epoch(values, _EPOCH_UNITS[k])
     elif k in ("iso8601", "iso", "rfc3339", "datetime", "string", "str"):
         ts = pd.to_datetime(values, utc=True, errors="coerce", format=fmt)
     else:
@@ -255,7 +343,8 @@ def canonical_unit(quantity: str) -> str:
     return CANONICAL[quantity]
 
 
-def convert(values, quantity: str, unit: str, *, fmt: str | None = None) -> pd.Series:
+def convert(values, quantity: str, unit: str, *, fmt: str | None = None,
+            column: str | None = None) -> pd.Series:
     """Convert a column of declared unit to the Telemachus canonical unit.
 
     Parameters
@@ -270,6 +359,14 @@ def convert(values, quantity: str, unit: str, *, fmt: str | None = None) -> pd.S
     fmt : str or None
         ``strftime`` pattern, for a timestamp column whose text form pandas
         cannot infer.
+    column : str or None
+        Telemachus column the result is destined for. It decides the *form* a
+        timestamp takes and nothing else: ``ts`` is a datetime, while
+        ``ts_received_ms`` is the integer milliseconds its name promises
+        (:func:`epoch_unit_of`). Left at None a timestamp comes back as a
+        datetime — which is what every caller got up to 1.0.0a4, and why
+        ``ts_received_ms`` carried microseconds. Prefer
+        :func:`convert_column`, which cannot forget to pass it.
 
     Returns
     -------
@@ -281,7 +378,9 @@ def convert(values, quantity: str, unit: str, *, fmt: str | None = None) -> pd.S
     s = values if isinstance(values, pd.Series) else pd.Series(values)
 
     if quantity == "time":
-        return _to_utc(s, unit, fmt=fmt)
+        ts = _to_utc(s, unit, fmt=fmt)
+        epoch_unit = None if column is None else epoch_unit_of(column)
+        return ts if epoch_unit is None else to_epoch(ts, epoch_unit)
 
     numeric = pd.to_numeric(s, errors="coerce")
 
@@ -312,6 +411,10 @@ def convert(values, quantity: str, unit: str, *, fmt: str | None = None) -> pd.S
 def convert_column(values, column: str, unit: str, *, fmt: str | None = None) -> pd.Series:
     """Convert towards the unit implied by a Telemachus *column name*.
 
+    This is the entry point an adapter should use. It reads both halves of the
+    name's promise — which quantity, and at which resolution when the quantity
+    is time — where :func:`convert` reads only the first unless told the column.
+
     Raises ``UnknownUnitError`` if the column carries no unit — declaring one
     for ``hdop`` or ``n_satellites`` is a sign the mapping is confused about
     what the column holds.
@@ -321,7 +424,7 @@ def convert_column(values, column: str, unit: str, *, fmt: str | None = None) ->
         raise UnknownUnitError(
             f"Column {column!r} is unitless; remove the 'unit' key from its mapping"
         )
-    return convert(values, quantity, unit, fmt=fmt)
+    return convert(values, quantity, unit, fmt=fmt, column=column)
 
 
 def describe_units() -> Mapping[str, list[str]]:

@@ -56,13 +56,18 @@ from telemachus.core.corrections import (
     strip_corrections,
 )
 from telemachus.core.multirate import merge_multirate
-from telemachus.core.plausibility import check_timestamps, check_units
+from telemachus.core.plausibility import (
+    check_epoch_columns,
+    check_timestamps,
+    check_units,
+)
 from telemachus.core.privacy import check_pii, strip_pii
 from telemachus.core.provenance import (
     check_provenance_declaration,
     resolve_column_provenance,
 )
 from telemachus.core.units import convert as convert_unit
+from telemachus.core.units import convert_column as convert_unit_for_column
 
 __all__ = [
     "__version__",
@@ -75,6 +80,7 @@ __all__ = [
     "validate_dataset",
     "check_units",
     "check_timestamps",
+    "check_epoch_columns",
     "check_row_accounting",
     "check_provenance_declaration",
     "resolve_column_provenance",
@@ -95,6 +101,7 @@ __all__ = [
     # building a conformant dataset
     "merge_multirate",
     "convert_unit",
+    "convert_unit_for_column",
     "RowAccount",
     "drop_duplicate_ts",
     # sensor introspection
