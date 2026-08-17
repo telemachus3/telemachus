@@ -41,9 +41,10 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from .units import G0
+from .units import EPOCH_UNIT_BY_SUFFIX, G0, epoch_unit_of, from_epoch
 
-__all__ = ["Finding", "check_heading_convention", "check_timestamps", "check_units"]
+__all__ = ["Finding", "check_epoch_columns", "check_heading_convention",
+           "check_timestamps", "check_units"]
 
 # Ratios worth naming when a cross-check finds one. Half a percent of tolerance
 # either side: a real unit error lands on the ratio almost exactly, while a
@@ -71,6 +72,20 @@ FUTURE_TOLERANCE = pd.Timedelta(days=2)
 
 #: A single Telemachus file spanning longer than this is not one collection.
 MAX_PLAUSIBLE_SPAN = pd.Timedelta(days=3653)   # ten years
+
+#: Nanoseconds in one tick of each epoch resolution, used to name the factor
+#: between the resolution a column promises and the one its values carry.
+_NS_PER_TICK = {"s": 1_000_000_000, "ms": 1_000_000, "us": 1_000, "ns": 1}
+
+#: Written out, because "the column carries microseconds" is a diagnosis and
+#: "the column carries us" is a typo.
+_RESOLUTION_NAMES = {"s": "seconds", "ms": "milliseconds",
+                     "us": "microseconds", "ns": "nanoseconds"}
+
+
+def _ticks_of(instant: pd.Timestamp, unit: str) -> int:
+    """Ticks since the Unix epoch, for stating how long a correct value is."""
+    return int((instant - pd.Timestamp(0, tz="UTC")) // pd.Timedelta(1, unit))
 
 
 @dataclass(frozen=True)
@@ -619,6 +634,104 @@ def check_timestamps(df: pd.DataFrame, *, ts: str = "ts",
                 f"({t.min().date()} to {t.max().date()}). That is longer than "
                 f"one collection campaign, so the file probably concatenates "
                 f"unrelated periods or carries a few stray instants"))
+
+    return findings
+
+
+def check_epoch_columns(df: pd.DataFrame, *,
+                        now: pd.Timestamp | None = None) -> list[Finding]:
+    """Check that an integer instant is at the resolution its name promises.
+
+    :func:`check_timestamps` reads ``ts``, which is a datetime and therefore
+    carries its own resolution. A column like ``ts_received_ms`` carries an
+    integer, and an integer means nothing until something says which tick it
+    counts. The only thing that says so is the suffix, so the suffix is what
+    this check holds the values to.
+
+    Why it is worth its own check. A wrong factor here is invisible in every way
+    the format can normally see: the column is named right, the type is right,
+    the value is a positive integer of the right order of magnitude for *a*
+    timestamp. It only shows up once the number is subtracted from something
+    else — and then only if the result is absurd enough to notice. A factor of a
+    million produced a latency of 1.78e12 seconds, which got caught; the same
+    defect at a factor of a thousand yields a latency in hours, which is
+    plausible and wrong, and nobody writes a bug report about it.
+
+    That asymmetry is why the check is here and not only in the conversion. The
+    conversion repairs what this library produces. This repairs nothing, and
+    catches what arrived from somewhere else — the point of a pivot format being
+    precisely that most of its files were written by someone else's code.
+
+    The bounds are :func:`check_timestamps`', for the same reasons: a receipt
+    instant before GPS time began or days in the future is not a threshold
+    someone chose, it is an impossibility. Read at the promised resolution, a
+    2026 millisecond timestamp is thirteen digits; sixteen is microseconds
+    wearing the wrong name.
+
+    Returns
+    -------
+    list[Finding]
+        Empty when every epoch column decodes to a plausible instant. Errors:
+        the values cannot be what the column name says.
+    """
+    now = pd.Timestamp.now(tz="UTC") if now is None else pd.Timestamp(now)
+    if now.tzinfo is None:
+        now = now.tz_localize("UTC")
+    ceiling = now + FUTURE_TOLERANCE
+
+    findings: list[Finding] = []
+    for column in df.columns:
+        promised = epoch_unit_of(column)
+        if promised is None:
+            continue
+        # A datetime in an integer column is a type mismatch, which SPEC-01 §3
+        # rule 9 owns and `coerce_schema_dtypes` fixes. This check is about
+        # magnitude, and reporting the type here would say the same thing twice
+        # in the language of the wrong rule.
+        if pd.api.types.is_datetime64_any_dtype(df[column]):
+            continue
+        values = _finite(df[column])
+        if values.empty:
+            continue
+
+        read = from_epoch(values, promised)
+        outside = (read < GPS_EPOCH) | (read > ceiling)
+        n = int(outside.sum())
+        if not n:
+            continue
+
+        # Which resolution *would* be plausible. Naming it is the difference
+        # between "these values are odd" and "divide by a thousand": the
+        # candidates are a factor of a thousand apart, so at most one of them
+        # can put the same integers in a plausible window.
+        candidates = []
+        for other in EPOCH_UNIT_BY_SUFFIX:
+            if other == promised:
+                continue
+            alt = from_epoch(values, other)
+            if ((alt >= GPS_EPOCH) & (alt <= ceiling)).all():
+                candidates.append((other, alt))
+
+        if len(candidates) == 1:
+            other, alt = candidates[0]
+            factor = _NS_PER_TICK[promised] // _NS_PER_TICK[other]
+            fix = (f"Read as {_RESOLUTION_NAMES[other]} the same integers date "
+                   f"{alt.min()} to {alt.max()}, so the column carries "
+                   f"{_RESOLUTION_NAMES[other]}: it is a factor {factor} out and "
+                   f"`{column} // {factor}` is the whole of the fix")
+        else:
+            fix = ("No other epoch resolution puts these integers in a "
+                   "plausible window either, so this is not a confusion between "
+                   "two units but values that were never instants")
+
+        digits = len(str(_ticks_of(now, promised)))
+        findings.append(Finding(
+            column, "error",
+            f"{n} of {len(values)} value(s) in {column} are not "
+            f"{_RESOLUTION_NAMES[promised]} since the Unix epoch: read as the "
+            f"name promises, they date {read.min()} to {read.max()}. {fix}. The "
+            f"suffix is the unit (SPEC-01 §1.1), and today a {promised} instant "
+            f"is {digits} digits long"))
 
     return findings
 

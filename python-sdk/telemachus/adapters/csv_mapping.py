@@ -47,7 +47,7 @@ import yaml
 
 from ..core.accounting import RowAccount, drop_duplicate_ts
 from ..core.schemas import ALL_KNOWN_COLUMNS, coerce_schema_dtypes
-from ..core.units import UnknownUnitError, convert, known_units, quantity_of
+from ..core.units import UnknownUnitError, convert_column, known_units, quantity_of
 
 __all__ = ["MappingError", "load", "load_mapping", "manifest", "template"]
 
@@ -387,9 +387,12 @@ def load(source_path, *, mapping, account: RowAccount | None = None,
         if unit is None:
             out[target] = values
             continue
-        quantity = quantity_of(target)
         try:
-            out[target] = convert(values, quantity, unit, fmt=rule.get("format"))
+            # convert_column, not convert: the target name carries half the
+            # unit. `ts_received_ms` asks for milliseconds and calling convert()
+            # with the quantity alone silently returned a datetime, which the
+            # integer cast then published at whatever resolution it found.
+            out[target] = convert_column(values, target, unit, fmt=rule.get("format"))
         except UnknownUnitError as exc:
             raise MappingError(f"columns.{target}: {exc}") from exc
 

@@ -249,6 +249,8 @@ def coerce_schema_dtypes(df, *, columns=None):
     """
     import pandas as pd
 
+    from .units import epoch_unit_of, to_epoch
+
     out = df.copy()
     targets = [c for c in (columns if columns is not None else out.columns)
                if c in ALL_KNOWN_COLUMNS and c in out.columns]
@@ -267,7 +269,17 @@ def coerce_schema_dtypes(df, *, columns=None):
             elif pa.types.is_integer(arrow_type):
                 # Nullable integer: a missing satellite count is missing, not 0.
                 width = {8: "Int8", 16: "Int16", 32: "Int32", 64: "Int64"}[arrow_type.bit_width]
-                out[col] = pd.to_numeric(out[col], errors="coerce").astype(width)
+                values = out[col]
+                epoch_unit = epoch_unit_of(col)
+                if epoch_unit is not None and pd.api.types.is_datetime64_any_dtype(values):
+                    # An integer instant is only an integer once someone says
+                    # which tick, and the column name is where it is said.
+                    # `pd.to_numeric` below would answer with pandas' own
+                    # resolution — nanoseconds or microseconds depending on the
+                    # version — which is how `ts_received_ms` shipped a value a
+                    # thousand times too large up to 1.0.0a4.
+                    values = to_epoch(values, epoch_unit)
+                out[col] = pd.to_numeric(values, errors="coerce").astype(width)
             elif pa.types.is_floating(arrow_type):
                 out[col] = pd.to_numeric(out[col], errors="coerce").astype(
                     "float32" if arrow_type.bit_width == 32 else "float64")
