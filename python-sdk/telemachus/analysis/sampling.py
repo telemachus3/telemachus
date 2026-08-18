@@ -20,6 +20,7 @@ from ..metrics.sampling import epoch_s
 
 __all__ = [
     "decimation_loss",
+    "phase_profile",
     "stops",
     "session_contiguity",
     "session_profile",
@@ -96,6 +97,65 @@ def decimation_loss(df: pd.DataFrame, steps: Iterable[int],
         rows.append({"step_s": step, "km": round(km, 3),
                      "loss_pct": round(loss, 2)})
     return pd.DataFrame(rows)
+
+
+def phase_profile(df: pd.DataFrame, period_s: int, ts: str = "ts",
+                  bins: int = 60) -> pd.DataFrame:
+    """Where samples fall inside a repeating cycle — clock, or interval?
+
+    A feed that reports "every two minutes" can mean two different things, and
+    they are not interchangeable downstream. Either a shared clock fires on the
+    multiples of the period, in which case every device is sampled at the same
+    instants; or each device waits an interval since its own last transmission,
+    in which case no two devices are ever sampled together.
+
+    The distinction decides what a consumer is allowed to compute. Anything
+    that compares vehicles to each other — convoy detection, queue length, site
+    occupancy — needs simultaneous samples. Under an interval rule it has to
+    interpolate, and the interpolation error is bounded by the cadence rather
+    than by positioning accuracy. That is a large difference to discover late.
+
+    Reading the result: under an interval rule the counts are flat around
+    ``expected``. A shared clock puts nearly everything in one bin. Anything in
+    between is worth a look — a partial clock usually means part of the fleet
+    runs a different firmware.
+
+    Parameters
+    ----------
+    period_s : int
+        Cycle length to fold on, in seconds. The caller chooses it, which is
+        why this belongs here and not in :mod:`telemachus.metrics`.
+    bins : int
+        Number of equal slices of the cycle. Keep it a divisor of ``period_s``
+        so a bin edge never splits a second.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns ``phase_s`` (left edge of the slice), ``n``, ``share_pct`` and
+        ``expected_pct``, the last being the flat share a uniform phase would
+        give. Ordered by ``phase_s``.
+    """
+    if period_s <= 0 or bins <= 0:
+        raise ValueError("period_s and bins must be positive")
+    if df.empty:
+        return pd.DataFrame(columns=["phase_s", "n", "share_pct",
+                                     "expected_pct"])
+
+    phase = np.mod(epoch_s(df[ts]).to_numpy(), period_s)
+    edges = np.linspace(0.0, float(period_s), bins + 1)
+    counts, _ = np.histogram(phase, bins=edges)
+    total = int(counts.sum())
+    # No rounding here. Three equal shares rounded to four decimals sum to
+    # 99.9999, and a caller who checks that the parts make a whole would be
+    # right to complain. Rounding is a presentation choice, so it stays with
+    # whoever presents.
+    return pd.DataFrame({
+        "phase_s": edges[:-1],
+        "n": counts.astype(int),
+        "share_pct": 100.0 * counts / total,
+        "expected_pct": 100.0 / bins,
+    })
 
 
 def _stretch_km(frame: pd.DataFrame, stretch: np.ndarray,

@@ -18,7 +18,8 @@ series. Nothing here writes one.
 
 from .derived import compute_dt, speed_from_pos
 from .describe import stream_summary
-from .sampling import decimation_loss, session_contiguity, session_profile, stops
+from .sampling import (decimation_loss, phase_profile, session_contiguity,
+                       session_profile, stops)
 from .trips import TripSegmenter, by_gap, by_stop, segment_trips, trip_profile
 
 __all__ = [
@@ -30,6 +31,7 @@ __all__ = [
     "trip_profile",
     # cadence analysis
     "decimation_loss",
+    "phase_profile",
     "stops",
     "session_contiguity",
     "session_profile",

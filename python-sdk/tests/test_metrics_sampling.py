@@ -4,7 +4,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from telemachus.analysis import decimation_loss, session_contiguity, stops
+from telemachus.analysis import (decimation_loss, phase_profile,
+                                 session_contiguity, stops)
 from telemachus.metrics import (
     epoch_s,
     gap_profile,
@@ -226,3 +227,44 @@ def test_session_contiguity_detects_holes():
     res = session_contiguity(pd.concat([a, b], ignore_index=True), session="packet")
     assert res.loc[0, "contiguous"] == 0
     assert res.loc[0, "median_gap_s"] > 3000
+
+
+# --- phase_profile ---------------------------------------------------------
+
+def _at_phases(phases, period_s=120, cycles=50):
+    """One sample per cycle, at fixed offsets inside the cycle."""
+    base = pd.Timestamp("2026-01-01T00:00:00Z")
+    ts = [base + pd.Timedelta(seconds=c * period_s + p)
+          for c in range(cycles) for p in phases]
+    return pd.DataFrame({"ts": pd.DatetimeIndex(ts), "device_id": "dev1"})
+
+
+def test_phase_profile_finds_a_shared_clock():
+    """Every sample on the multiple of the period lands in the first bin."""
+    out = phase_profile(_at_phases([0]), 120, bins=60)
+    assert out.loc[0, "share_pct"] == pytest.approx(100.0)
+    assert out.loc[1:, "n"].sum() == 0
+
+
+def test_phase_profile_flat_under_an_interval_rule():
+    """Spread phases stay near the uniform share, which the frame carries."""
+    out = phase_profile(_at_phases(range(0, 120, 2)), 120, bins=60)
+    assert out["share_pct"].max() == pytest.approx(out["expected_pct"].iloc[0])
+
+
+def test_phase_profile_counts_every_sample_once():
+    df = _at_phases([0, 37, 119], cycles=10)
+    out = phase_profile(df, 120, bins=60)
+    assert out["n"].sum() == len(df)
+    assert out["share_pct"].sum() == pytest.approx(100.0)
+
+
+def test_phase_profile_rejects_a_zero_period():
+    with pytest.raises(ValueError):
+        phase_profile(_at_phases([0]), 0)
+
+
+def test_phase_profile_on_an_empty_frame():
+    out = phase_profile(pd.DataFrame(columns=["ts", "device_id"]), 120)
+    assert out.empty
+    assert list(out.columns) == ["phase_s", "n", "share_pct", "expected_pct"]
